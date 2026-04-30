@@ -74,7 +74,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="flex min-h-dvh w-full bg-background text-foreground">
         <AppSidebar />
-        <main className="flex-1 min-w-0 overflow-x-hidden pt-14">
+        <main className="flex-1 min-w-0 overflow-x-hidden pt-14 pl-16 sm:pl-20 lg:pl-0">
           <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto">
             <Outlet />
           </div>
