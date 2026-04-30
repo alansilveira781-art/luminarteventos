@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, History, Pencil } from "lucide-react";
+import { Plus, Search, History, Pencil, Upload } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ImportDialog } from "@/components/ImportDialog";
+import { ITEM_TEMPLATE } from "@/lib/import-utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/estoque/")({
@@ -21,6 +23,7 @@ function EstoquePage() {
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const { data: itens, isLoading } = useQuery({
     queryKey: ["itens"],
@@ -71,9 +74,14 @@ function EstoquePage() {
         title="Estoque"
         description="Cadastro e consulta de itens"
         actions={
-          <Button type="button" size="lg" onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Novo item
-          </Button>
+          <>
+            <Button type="button" size="lg" variant="outline" onClick={() => setImporting(true)}>
+              <Upload className="h-4 w-4 mr-1" /> Nova importação
+            </Button>
+            <Button type="button" size="lg" onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Novo item
+            </Button>
+          </>
         }
       />
 
@@ -151,6 +159,45 @@ function EstoquePage() {
           />
         </DialogContent>
       </Dialog>
+
+      <ImportDialog
+        open={importing}
+        onOpenChange={setImporting}
+        title="Importar itens"
+        description="Envie uma planilha (.xlsx, .xls ou .csv) com os itens a serem cadastrados. Itens com código já existente serão ignorados."
+        templateFilename="modelo_itens.xlsx"
+        templateHeaders={ITEM_TEMPLATE.headers}
+        templateExample={ITEM_TEMPLATE.example}
+        onImport={async (rows) => {
+          const errors: string[] = [];
+          let inserted = 0, skipped = 0;
+          const { data: existentes } = await supabase.from("itens").select("codigo");
+          const setCodigos = new Set((existentes ?? []).map((i: any) => String(i.codigo).toLowerCase()));
+          for (const [idx, r] of rows.entries()) {
+            const codigo = String(r.codigo ?? "").trim();
+            const nome = String(r.nome ?? "").trim();
+            if (!codigo || !nome) { skipped++; errors.push(`Linha ${idx + 2}: código e nome obrigatórios`); continue; }
+            if (setCodigos.has(codigo.toLowerCase())) { skipped++; continue; }
+            const payload = {
+              codigo, nome,
+              categoria: r.categoria || null,
+              subcategoria: r.subcategoria || null,
+              unidade: String(r.unidade || "un"),
+              quantidade_atual: Number(r.quantidade_atual || 0),
+              quantidade_minima: Number(r.quantidade_minima || 0),
+              localizacao: r.localizacao || null,
+              descricao: r.descricao || null,
+              observacoes: r.observacoes || null,
+              foto_url: r.foto_url || null,
+            };
+            const { error } = await supabase.from("itens").insert(payload);
+            if (error) { skipped++; errors.push(`Linha ${idx + 2}: ${error.message}`); }
+            else { inserted++; setCodigos.add(codigo.toLowerCase()); }
+          }
+          qc.invalidateQueries({ queryKey: ["itens"] });
+          return { inserted, skipped, errors };
+        }}
+      />
     </>
   );
 }
