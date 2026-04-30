@@ -102,6 +102,41 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
   );
 }
 
+function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: () => void }) {
+  return (
+    <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-sidebar-border bg-sidebar lg:hidden sm:w-20">
+      <button
+        type="button"
+        onClick={onOpenMenu}
+        className="mt-3 flex h-10 w-10 items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Abrir navegação"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      <nav className="mt-5 flex flex-1 flex-col items-center gap-2">
+        {items.map((item) => {
+          const active = isActiveUrl(pathname, item.url);
+          return (
+            <Link
+              key={item.url}
+              to={item.url}
+              title={item.title}
+              aria-label={item.title}
+              className={`flex h-10 w-10 items-center justify-center rounded-md transition-colors ${
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <item.icon className="h-5 w-5" />
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
@@ -110,6 +145,8 @@ export function AppSidebar() {
 
   return (
     <>
+      <MobileRail pathname={pathname} onOpenMenu={() => setOpen(true)} />
+
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
         <SidebarBody pathname={pathname} />
@@ -117,15 +154,16 @@ export function AppSidebar() {
 
       {/* Mobile drawer */}
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-[70] lg:hidden">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-background/85 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r border-sidebar-border shadow-2xl">
+          <aside className="absolute left-0 top-0 bottom-0 w-[20rem] max-w-[86vw] bg-sidebar border-r border-sidebar-border shadow-2xl">
             <button
+              type="button"
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-4 h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-sidebar-accent"
+              className="absolute right-3 top-4 h-9 w-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Fechar menu"
             >
               <X className="h-4 w-4" />
@@ -143,9 +181,10 @@ export function AppSidebar() {
 
 function TopBar({ onOpenMenu, currentTitle }: { onOpenMenu: () => void; currentTitle: string }) {
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-64 z-40 h-14 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="fixed top-0 right-0 left-16 sm:left-20 lg:left-64 z-40 h-14 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="h-full px-4 sm:px-6 flex items-center gap-3">
         <button
+          type="button"
           onClick={onOpenMenu}
           className="lg:hidden h-9 w-9 rounded-md flex items-center justify-center text-foreground hover:bg-muted"
           aria-label="Abrir menu"

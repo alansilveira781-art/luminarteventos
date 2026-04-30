@@ -73,7 +73,7 @@ function SaidasPage() {
       <PageHeader
         title="Saídas"
         description="Retiradas de itens do estoque"
-        actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
+        actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
       />
 
       <Card className="overflow-hidden">
@@ -112,7 +112,7 @@ function SaidasPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader><DialogTitle>Nova saída</DialogTitle></DialogHeader>
           <SaidaForm itens={itens ?? []} solicitantes={solicitantes ?? []} onSubmit={(p: any) => mut.mutate(p)} submitting={mut.isPending} />
         </DialogContent>
