@@ -14,16 +14,293 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fornecedores: {
+        Row: {
+          contato_nome: string | null
+          created_at: string
+          documento: string | null
+          email: string | null
+          endereco: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: Database["public"]["Enums"]["entity_status"]
+          telefone: string | null
+          tipo_fornecimento: string | null
+          updated_at: string
+        }
+        Insert: {
+          contato_nome?: string | null
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          tipo_fornecimento?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contato_nome?: string | null
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          tipo_fornecimento?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      itens: {
+        Row: {
+          categoria: string | null
+          codigo: string
+          created_at: string
+          descricao: string | null
+          foto_url: string | null
+          id: string
+          localizacao: string | null
+          nome: string
+          observacoes: string | null
+          quantidade_atual: number
+          quantidade_minima: number
+          status: Database["public"]["Enums"]["item_status"]
+          subcategoria: string | null
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          foto_url?: string | null
+          id?: string
+          localizacao?: string | null
+          nome: string
+          observacoes?: string | null
+          quantidade_atual?: number
+          quantidade_minima?: number
+          status?: Database["public"]["Enums"]["item_status"]
+          subcategoria?: string | null
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          foto_url?: string | null
+          id?: string
+          localizacao?: string | null
+          nome?: string
+          observacoes?: string | null
+          quantidade_atual?: number
+          quantidade_minima?: number
+          status?: Database["public"]["Enums"]["item_status"]
+          subcategoria?: string | null
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      movimentacoes: {
+        Row: {
+          condicao: Database["public"]["Enums"]["devolucao_condicao"] | null
+          created_at: string
+          data_movimento: string
+          data_prevista_devolucao: string | null
+          entrada_tipo: Database["public"]["Enums"]["entrada_tipo"] | null
+          finalidade: string | null
+          fornecedor_id: string | null
+          id: string
+          item_id: string
+          nota_fiscal: string | null
+          observacoes: string | null
+          quantidade: number
+          quantidade_solicitada: number | null
+          responsavel_lancamento: string | null
+          responsavel_recebimento: string | null
+          responsavel_retirada: string | null
+          saida_origem_id: string | null
+          saida_status: Database["public"]["Enums"]["saida_status"] | null
+          saida_tipo: Database["public"]["Enums"]["saida_tipo"] | null
+          solicitante_id: string | null
+          tipo: Database["public"]["Enums"]["movement_kind"]
+          valor_unitario: number | null
+        }
+        Insert: {
+          condicao?: Database["public"]["Enums"]["devolucao_condicao"] | null
+          created_at?: string
+          data_movimento?: string
+          data_prevista_devolucao?: string | null
+          entrada_tipo?: Database["public"]["Enums"]["entrada_tipo"] | null
+          finalidade?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          item_id: string
+          nota_fiscal?: string | null
+          observacoes?: string | null
+          quantidade: number
+          quantidade_solicitada?: number | null
+          responsavel_lancamento?: string | null
+          responsavel_recebimento?: string | null
+          responsavel_retirada?: string | null
+          saida_origem_id?: string | null
+          saida_status?: Database["public"]["Enums"]["saida_status"] | null
+          saida_tipo?: Database["public"]["Enums"]["saida_tipo"] | null
+          solicitante_id?: string | null
+          tipo: Database["public"]["Enums"]["movement_kind"]
+          valor_unitario?: number | null
+        }
+        Update: {
+          condicao?: Database["public"]["Enums"]["devolucao_condicao"] | null
+          created_at?: string
+          data_movimento?: string
+          data_prevista_devolucao?: string | null
+          entrada_tipo?: Database["public"]["Enums"]["entrada_tipo"] | null
+          finalidade?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          item_id?: string
+          nota_fiscal?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          quantidade_solicitada?: number | null
+          responsavel_lancamento?: string | null
+          responsavel_recebimento?: string | null
+          responsavel_retirada?: string | null
+          saida_origem_id?: string | null
+          saida_status?: Database["public"]["Enums"]["saida_status"] | null
+          saida_tipo?: Database["public"]["Enums"]["saida_tipo"] | null
+          solicitante_id?: string | null
+          tipo?: Database["public"]["Enums"]["movement_kind"]
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_saida_origem_id_fkey"
+            columns: ["saida_origem_id"]
+            isOneToOne: false
+            referencedRelation: "movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "solicitantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitantes: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          setor: string | null
+          status: Database["public"]["Enums"]["entity_status"]
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          setor?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          setor?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      refresh_item_status: { Args: { p_item_id: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      devolucao_condicao:
+        | "perfeito"
+        | "danificado"
+        | "quebrado"
+        | "faltando_peca"
+        | "em_manutencao"
+        | "perdido"
+      entity_status: "ativo" | "inativo"
+      entrada_tipo:
+        | "compra"
+        | "doacao"
+        | "ajuste"
+        | "retorno"
+        | "transferencia"
+        | "outros"
+      item_status:
+        | "disponivel"
+        | "baixo_estoque"
+        | "sem_estoque"
+        | "em_manutencao"
+        | "inativo"
+      movement_kind: "entrada" | "saida" | "devolucao" | "ajuste"
+      saida_status:
+        | "aberta"
+        | "parcialmente_devolvida"
+        | "devolvida"
+        | "finalizada"
+        | "cancelada"
+      saida_tipo:
+        | "evento"
+        | "emprestimo"
+        | "consumo"
+        | "perda"
+        | "quebra"
+        | "manutencao"
+        | "transferencia"
+        | "outros"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +427,49 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      devolucao_condicao: [
+        "perfeito",
+        "danificado",
+        "quebrado",
+        "faltando_peca",
+        "em_manutencao",
+        "perdido",
+      ],
+      entity_status: ["ativo", "inativo"],
+      entrada_tipo: [
+        "compra",
+        "doacao",
+        "ajuste",
+        "retorno",
+        "transferencia",
+        "outros",
+      ],
+      item_status: [
+        "disponivel",
+        "baixo_estoque",
+        "sem_estoque",
+        "em_manutencao",
+        "inativo",
+      ],
+      movement_kind: ["entrada", "saida", "devolucao", "ajuste"],
+      saida_status: [
+        "aberta",
+        "parcialmente_devolvida",
+        "devolvida",
+        "finalizada",
+        "cancelada",
+      ],
+      saida_tipo: [
+        "evento",
+        "emprestimo",
+        "consumo",
+        "perda",
+        "quebra",
+        "manutencao",
+        "transferencia",
+        "outros",
+      ],
+    },
   },
 } as const
