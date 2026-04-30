@@ -91,7 +91,7 @@ function FornecedoresPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} fornecedor</DialogTitle></DialogHeader>
-          <FornecedorForm initial={editing} onSubmit={(p) => mut.mutate(editing ? { ...p, id: editing.id } : p)} submitting={mut.isPending} />
+          <FornecedorForm initial={editing} onSubmit={(p: any) => mut.mutate(editing ? { ...p, id: editing.id } : p)} submitting={mut.isPending} />
         </DialogContent>
       </Dialog>
     </>

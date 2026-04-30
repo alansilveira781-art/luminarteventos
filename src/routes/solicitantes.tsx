@@ -93,7 +93,7 @@ function SolicitantesPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} solicitante</DialogTitle></DialogHeader>
-          <SolicitanteForm initial={editing} onSubmit={(p) => mut.mutate(editing ? { ...p, id: editing.id } : p)} submitting={mut.isPending} />
+          <SolicitanteForm initial={editing} onSubmit={(p: any) => mut.mutate(editing ? { ...p, id: editing.id } : p)} submitting={mut.isPending} />
         </DialogContent>
       </Dialog>
     </>
