@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, Upload, FileCode2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { entradaTipoLabels } from "@/lib/labels";
+import { ImportDialog } from "@/components/ImportDialog";
+import { ENTRADA_TEMPLATE } from "@/lib/import-utils";
+import { parseNfeXml } from "@/lib/nfe-parser";
 
 export const Route = createFileRoute("/entradas")({
   component: EntradasPage,
@@ -22,6 +25,8 @@ export const Route = createFileRoute("/entradas")({
 function EntradasPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [importingExcel, setImportingExcel] = useState(false);
+  const [importingXml, setImportingXml] = useState(false);
 
   const { data: entradas } = useQuery({
     queryKey: ["entradas"],
@@ -66,7 +71,19 @@ function EntradasPage() {
       <PageHeader
         title="Entradas"
         description="Registro de itens recebidos no estoque"
-        actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova entrada</Button>}
+        actions={
+          <>
+            <Button type="button" size="lg" variant="outline" onClick={() => setImportingXml(true)}>
+              <FileCode2 className="h-4 w-4 mr-1" /> Importar NF-e (XML)
+            </Button>
+            <Button type="button" size="lg" variant="outline" onClick={() => setImportingExcel(true)}>
+              <Upload className="h-4 w-4 mr-1" /> Importar Excel
+            </Button>
+            <Button type="button" size="lg" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />Nova entrada
+            </Button>
+          </>
+        }
       />
 
       <Card className="overflow-hidden">
@@ -112,7 +129,168 @@ function EntradasPage() {
           <EntradaForm itens={itens ?? []} fornecedores={fornecedores ?? []} onSubmit={(p: any) => mut.mutate(p)} submitting={mut.isPending} />
         </DialogContent>
       </Dialog>
+
+      <ImportDialog
+        open={importingExcel}
+        onOpenChange={setImportingExcel}
+        title="Importar entradas via Excel"
+        description="Envie uma planilha com as entradas. O item é localizado pelo campo 'codigo_item' e o fornecedor pelo nome (criado se não existir)."
+        templateFilename="modelo_entradas.xlsx"
+        templateHeaders={ENTRADA_TEMPLATE.headers}
+        templateExample={ENTRADA_TEMPLATE.example}
+        onImport={async (rows) => {
+          const errors: string[] = []; let inserted = 0, skipped = 0;
+          const { data: itensAll } = await supabase.from("itens").select("id,codigo");
+          const itensMap = new Map((itensAll ?? []).map((i: any) => [String(i.codigo).toLowerCase(), i.id]));
+          const { data: fornAll } = await supabase.from("fornecedores").select("id,nome");
+          const fornMap = new Map((fornAll ?? []).map((f: any) => [String(f.nome).toLowerCase(), f.id]));
+
+          for (const [idx, r] of rows.entries()) {
+            const cod = String(r.codigo_item ?? "").trim().toLowerCase();
+            const item_id = itensMap.get(cod);
+            if (!item_id) { skipped++; errors.push(`Linha ${idx + 2}: item '${r.codigo_item}' não encontrado`); continue; }
+            const qtd = Number(r.quantidade || 0);
+            if (qtd <= 0) { skipped++; errors.push(`Linha ${idx + 2}: quantidade inválida`); continue; }
+            let fornecedor_id: string | null = null;
+            const fornNome = String(r.fornecedor_nome ?? "").trim();
+            if (fornNome) {
+              fornecedor_id = fornMap.get(fornNome.toLowerCase()) ?? null;
+              if (!fornecedor_id) {
+                const { data: novo } = await supabase.from("fornecedores").insert({ nome: fornNome }).select("id").single();
+                if (novo) { fornecedor_id = novo.id; fornMap.set(fornNome.toLowerCase(), novo.id); }
+              }
+            }
+            const data_movimento = r.data_movimento ? new Date(r.data_movimento).toISOString() : new Date().toISOString();
+            const { error } = await supabase.from("movimentacoes").insert({
+              tipo: "entrada", entrada_tipo: "compra", item_id, fornecedor_id,
+              quantidade: qtd, valor_unitario: r.valor_unitario ? Number(r.valor_unitario) : null,
+              nota_fiscal: r.nota_fiscal || null, data_movimento,
+              responsavel_lancamento: r.responsavel_lancamento || null, observacoes: r.observacoes || null,
+            });
+            if (error) { skipped++; errors.push(`Linha ${idx + 2}: ${error.message}`); }
+            else inserted++;
+          }
+          qc.invalidateQueries({ queryKey: ["entradas"] });
+          qc.invalidateQueries({ queryKey: ["itens"] });
+          return { inserted, skipped, errors };
+        }}
+      />
+
+      <NfeImportDialog open={importingXml} onOpenChange={setImportingXml} onDone={() => {
+        qc.invalidateQueries({ queryKey: ["entradas"] });
+        qc.invalidateQueries({ queryKey: ["itens"] });
+        qc.invalidateQueries({ queryKey: ["fornecedores"] });
+      }} />
     </>
+  );
+}
+
+function NfeImportDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (v: boolean) => void; onDone: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<any | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadPreview = async (f: File) => {
+    try { setPreview(await parseNfeXml(f)); }
+    catch (e: any) { toast.error(e.message); setPreview(null); }
+  };
+
+  const handleImport = async () => {
+    if (!preview) return;
+    setBusy(true);
+    try {
+      // 1) Garantir fornecedor
+      let fornecedor_id: string | null = null;
+      const nome = preview.fornecedor.nome;
+      const { data: existente } = await supabase.from("fornecedores").select("id").ilike("nome", nome).maybeSingle();
+      if (existente) fornecedor_id = existente.id;
+      else {
+        const { data: novo, error } = await supabase.from("fornecedores").insert({
+          nome, documento: preview.fornecedor.cnpj ?? null,
+        }).select("id").single();
+        if (error) throw error;
+        fornecedor_id = novo.id;
+      }
+
+      let inserted = 0;
+      for (const it of preview.itens) {
+        // Criar/obter item por código
+        let item_id: string | null = null;
+        const { data: existenteItem } = await supabase.from("itens").select("id").eq("codigo", it.codigo).maybeSingle();
+        if (existenteItem) item_id = existenteItem.id;
+        else {
+          const { data: novoItem, error: errIt } = await supabase.from("itens").insert({
+            codigo: it.codigo, nome: it.nome, unidade: it.unidade || "un",
+          }).select("id").single();
+          if (errIt) { toast.error(`Item ${it.codigo}: ${errIt.message}`); continue; }
+          item_id = novoItem.id;
+        }
+        const { error: errMov } = await supabase.from("movimentacoes").insert({
+          tipo: "entrada", entrada_tipo: "compra", item_id, fornecedor_id,
+          quantidade: it.quantidade, valor_unitario: it.valor_unitario,
+          nota_fiscal: preview.numero ?? null,
+          data_movimento: preview.emissao ? new Date(preview.emissao).toISOString() : new Date().toISOString(),
+        });
+        if (!errMov) inserted++;
+      }
+      toast.success(`${inserted} item(ns) importado(s) da NF-e`);
+      onDone();
+      onOpenChange(false);
+      setFile(null); setPreview(null);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setFile(null); setPreview(null); } }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader><DialogTitle>Importar NF-e (XML)</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <Card className="p-4 bg-muted/30 text-sm">
+            <div className="font-medium mb-1">Formato esperado</div>
+            <div className="text-muted-foreground text-xs">
+              XML padrão SEFAZ (NF-e), normalmente disponibilizado pelo fornecedor após a emissão. Contém os dados do emitente, itens, quantidades e valores.
+              O sistema vai criar fornecedor e itens automaticamente caso ainda não existam.
+            </div>
+          </Card>
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Arquivo XML</label>
+            <Input type="file" accept=".xml" onChange={async (e) => {
+              const f = e.target.files?.[0] ?? null;
+              setFile(f); setPreview(null);
+              if (f) await loadPreview(f);
+            }} />
+          </div>
+
+          {preview && (
+            <Card className="p-3 text-sm space-y-2">
+              <div><span className="text-muted-foreground">Fornecedor:</span> <strong>{preview.fornecedor.nome}</strong> {preview.fornecedor.cnpj ? `(${preview.fornecedor.cnpj})` : ""}</div>
+              <div><span className="text-muted-foreground">NF nº:</span> {preview.numero ?? "—"}</div>
+              <div className="text-xs text-muted-foreground">{preview.itens.length} item(ns)</div>
+              <div className="max-h-48 overflow-auto text-xs border-t border-border pt-2">
+                {preview.itens.map((i: any, idx: number) => (
+                  <div key={idx} className="flex justify-between gap-2 py-0.5 border-b border-border/50 last:border-0">
+                    <span className="font-mono text-muted-foreground">{i.codigo}</span>
+                    <span className="flex-1 truncate">{i.nome}</span>
+                    <span className="tabular-nums">{i.quantidade} {i.unidade}</span>
+                    <span className="tabular-nums text-muted-foreground">R$ {i.valor_unitario.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" onClick={handleImport} disabled={!preview || busy}>
+              {busy ? "Importando…" : "Importar entrada"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

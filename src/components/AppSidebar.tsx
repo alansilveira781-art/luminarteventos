@@ -8,6 +8,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Undo2,
+  BarChart3,
   Sparkles,
   Menu,
   X,
@@ -24,9 +25,10 @@ const items = [
   { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Movimentações" },
   { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Movimentações" },
   { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Movimentações" },
+  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Análises" },
 ];
 
-const groups = ["Visão geral", "Cadastros", "Movimentações"];
+const groups = ["Visão geral", "Cadastros", "Movimentações", "Análises"];
 
 function isActiveUrl(pathname: string, url: string) {
   return url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
