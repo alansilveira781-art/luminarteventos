@@ -73,7 +73,7 @@ function DevolucoesPage() {
       <PageHeader
         title="Devoluções"
         description="Itens retornando ao estoque"
-        actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova devolução</Button>}
+        actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova devolução</Button>}
       />
 
       <Card className="overflow-hidden">
@@ -110,7 +110,7 @@ function DevolucoesPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader><DialogTitle>Nova devolução</DialogTitle></DialogHeader>
           <DevolucaoForm saidas={saidasAbertas ?? []} onSubmit={(p: any) => mut.mutate(p)} submitting={mut.isPending} />
         </DialogContent>
