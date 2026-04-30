@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { saidaTipoLabels } from "@/lib/labels";
+import { listEventos } from "@/server/sheets.functions";
 
 export const Route = createFileRoute("/saidas")({
   component: SaidasPage,
@@ -47,9 +48,17 @@ function SaidasPage() {
     queryFn: async () => (await supabase.from("solicitantes").select("id,nome").eq("status", "ativo").order("nome")).data ?? [],
   });
 
+  const eventosQuery = useQuery({
+    queryKey: ["eventos-sheets"],
+    queryFn: async () => {
+      const r = await listEventos();
+      return r;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const mut = useMutation({
     mutationFn: async (p: any) => {
-      // valida estoque
       const item = (itens ?? []).find((i: any) => i.id === p.item_id);
       if (!item) throw new Error("Item inválido");
       if (Number(p.quantidade) > Number(item.quantidade_atual)) {
@@ -83,9 +92,9 @@ function SaidasPage() {
               <tr className="text-left text-xs uppercase text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Data</th>
                 <th className="px-4 py-3 font-medium">Item</th>
+                <th className="px-4 py-3 font-medium">Evento/Projeto</th>
                 <th className="px-4 py-3 font-medium">Solicitante</th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Finalidade</th>
                 <th className="px-4 py-3 font-medium text-right">Qtd</th>
                 <th className="px-4 py-3 font-medium">Devolver até</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -96,9 +105,9 @@ function SaidasPage() {
                 <tr key={m.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
                   <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
+                  <td className="px-4 py-3 text-foreground">{m.evento_projeto ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.saida_tipo ? saidaTipoLabels[m.saida_tipo] : "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{m.finalidade ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)} {m.item?.unidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
@@ -114,19 +123,29 @@ function SaidasPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader><DialogTitle>Nova saída</DialogTitle></DialogHeader>
-          <SaidaForm itens={itens ?? []} solicitantes={solicitantes ?? []} onSubmit={(p: any) => mut.mutate(p)} submitting={mut.isPending} />
+          <SaidaForm
+            itens={itens ?? []}
+            solicitantes={solicitantes ?? []}
+            eventos={eventosQuery.data?.eventos ?? []}
+            eventosError={eventosQuery.data?.error}
+            onReloadEventos={() => eventosQuery.refetch()}
+            reloadingEventos={eventosQuery.isFetching}
+            onSubmit={(p: any) => mut.mutate(p)}
+            submitting={mut.isPending}
+          />
         </DialogContent>
       </Dialog>
     </>
   );
 }
 
-function SaidaForm({ itens, solicitantes, onSubmit, submitting }: any) {
+function SaidaForm({ itens, solicitantes, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
   const [f, setF] = useState({
     data_movimento: new Date().toISOString().slice(0, 16),
     saida_tipo: "evento",
     item_id: "",
     solicitante_id: "",
+    evento_projeto: "",
     quantidade_solicitada: 1,
     quantidade: 1,
     finalidade: "",
@@ -142,6 +161,7 @@ function SaidaForm({ itens, solicitantes, onSubmit, submitting }: any) {
     <form onSubmit={(e) => {
       e.preventDefault();
       if (!f.item_id) return toast.error("Selecione um item");
+      if (!f.evento_projeto) return toast.error("Evento/Projeto é obrigatório");
       onSubmit({
         ...f,
         data_movimento: new Date(f.data_movimento).toISOString(),
@@ -159,6 +179,23 @@ function SaidaForm({ itens, solicitantes, onSubmit, submitting }: any) {
             <SelectContent>{Object.entries(saidaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
           </Select>
         </FormField>
+
+        <FormField label="Evento / Projeto* (Google Sheets)" wide>
+          <div className="flex gap-2">
+            <Select value={f.evento_projeto} onValueChange={(v) => set("evento_projeto", v)}>
+              <SelectTrigger><SelectValue placeholder={eventos.length ? "Selecione…" : "Carregando ou nenhum encontrado"} /></SelectTrigger>
+              <SelectContent>
+                {eventos.map((ev: string) => <SelectItem key={ev} value={ev}>{ev}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" size="icon" onClick={onReloadEventos} disabled={reloadingEventos} title="Recarregar lista">
+              <RefreshCw className={`h-4 w-4 ${reloadingEventos ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+          {eventosError && <p className="text-xs text-destructive mt-1">Erro: {eventosError}</p>}
+          {!eventosError && eventos.length === 0 && <p className="text-xs text-muted-foreground mt-1">Lista vazia. Verifique a planilha conectada.</p>}
+        </FormField>
+
         <FormField label="Item*">
           <Select value={f.item_id} onValueChange={(v) => set("item_id", v)}>
             <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
@@ -174,7 +211,7 @@ function SaidaForm({ itens, solicitantes, onSubmit, submitting }: any) {
         </FormField>
         <FormField label="Qtd solicitada"><Input type="number" min="0.01" step="0.01" value={f.quantidade_solicitada} onChange={(e) => set("quantidade_solicitada", e.target.value)} /></FormField>
         <FormField label="Qtd liberada*"><Input required type="number" min="0.01" step="0.01" value={f.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
-        <FormField label="Evento / finalidade" wide><Input value={f.finalidade} onChange={(e) => set("finalidade", e.target.value)} /></FormField>
+        <FormField label="Finalidade / detalhes" wide><Input value={f.finalidade} onChange={(e) => set("finalidade", e.target.value)} /></FormField>
         <FormField label="Responsável pela retirada"><Input value={f.responsavel_retirada} onChange={(e) => set("responsavel_retirada", e.target.value)} /></FormField>
         <FormField label="Responsável pelo lançamento"><Input value={f.responsavel_lancamento} onChange={(e) => set("responsavel_lancamento", e.target.value)} /></FormField>
         <FormField label="Data prevista de devolução"><Input type="date" value={f.data_prevista_devolucao} onChange={(e) => set("data_prevista_devolucao", e.target.value)} /></FormField>
