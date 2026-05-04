@@ -325,8 +325,8 @@ function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={graficoMensal}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <XAxis dataKey="mes" stroke="#ffffff" tick={{ fill: "#ffffff" }} fontSize={11} />
+                  <YAxis stroke="#ffffff" tick={{ fill: "#ffffff" }} fontSize={11} />
                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Bar dataKey="entradas" fill="hsl(var(--success))" name="Entradas" radius={[4, 4, 0, 0]} />
@@ -358,9 +358,9 @@ function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={abc}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="nome" stroke="hsl(var(--muted-foreground))" fontSize={10} interval={0} angle={-25} textAnchor="end" height={60} />
-                    <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                    <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" fontSize={11} domain={[0, 100]} unit="%" />
+                    <XAxis dataKey="nome" stroke="#ffffff" tick={{ fill: "#ffffff" }} fontSize={10} interval={0} angle={-25} textAnchor="end" height={60} />
+                    <YAxis yAxisId="left" stroke="#ffffff" tick={{ fill: "#ffffff" }} fontSize={11} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#ffffff" tick={{ fill: "#ffffff" }} fontSize={11} domain={[0, 100]} unit="%" />
                     <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar yAxisId="left" dataKey="valor" fill="hsl(var(--primary))" name="Valor R$" radius={[4, 4, 0, 0]} />

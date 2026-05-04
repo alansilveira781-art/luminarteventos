@@ -233,44 +233,53 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, onSubmit, submitting }: any
         <div className="space-y-2">
           <h3 className="text-sm font-semibold">Itens da saída</h3>
           <Card className="p-0 overflow-hidden">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr className="text-left text-xs uppercase text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">Item</th>
-                  <th className="px-3 py-2 font-medium text-right">Saída</th>
-                  <th className="px-3 py-2 font-medium text-right">Já devolvido</th>
-                  <th className="px-3 py-2 font-medium text-right">Saldo</th>
-                  <th className="px-3 py-2 font-medium text-right w-32">Devolver agora</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grupo.itens.map((s: any) => {
-                  const jaDev = devolvidoPorOrigem.get(s.id) ?? 0;
-                  const saldo = Number(s.quantidade) - jaDev;
-                  return (
-                    <tr key={s.id} className="border-t border-border">
-                      <td className="px-3 py-2 font-medium">{s.item?.nome}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{Number(s.quantidade)} {s.item?.unidade}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{jaDev}</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{saldo}</td>
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          max={saldo}
-                          step="0.01"
-                          value={qtds[s.id] ?? ""}
-                          onChange={(e) => setQtds((q) => ({ ...q, [s.id]: e.target.value }))}
-                          placeholder="0"
-                          disabled={saldo <= 0}
-                          className="h-8 text-right"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm table-fixed">
+                <colgroup>
+                  <col />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                  <col className="w-24" />
+                  <col className="w-32" />
+                </colgroup>
+                <thead className="bg-muted/50">
+                  <tr className="text-xs uppercase text-muted-foreground">
+                    <th className="px-3 py-2 font-medium text-left whitespace-nowrap">Item</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Saída</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Já devolvido</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Saldo</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Devolver agora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grupo.itens.map((s: any) => {
+                    const jaDev = devolvidoPorOrigem.get(s.id) ?? 0;
+                    const saldo = Number(s.quantidade) - jaDev;
+                    return (
+                      <tr key={s.id} className="border-t border-border">
+                        <td className="px-3 py-2 font-medium truncate">{s.item?.nome}</td>
+                        <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{Number(s.quantidade)} {s.item?.unidade}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground whitespace-nowrap">{jaDev}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{saldo}</td>
+                        <td className="px-3 py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max={saldo}
+                            step="0.01"
+                            value={qtds[s.id] ?? ""}
+                            onChange={(e) => setQtds((q) => ({ ...q, [s.id]: e.target.value }))}
+                            placeholder="0"
+                            disabled={saldo <= 0}
+                            className="h-8 text-right"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </Card>
           <p className="text-xs text-muted-foreground">Deixe em branco ou 0 nos itens que não estão sendo devolvidos agora.</p>
         </div>
