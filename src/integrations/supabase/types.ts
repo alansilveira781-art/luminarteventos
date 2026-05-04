@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      categorias: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       fornecedores: {
         Row: {
           contato_nome: string | null
@@ -76,6 +94,7 @@ export type Database = {
           subcategoria: string | null
           unidade: string
           updated_at: string
+          valor_unitario: number | null
         }
         Insert: {
           categoria?: string | null
@@ -93,6 +112,7 @@ export type Database = {
           subcategoria?: string | null
           unidade?: string
           updated_at?: string
+          valor_unitario?: number | null
         }
         Update: {
           categoria?: string | null
@@ -110,8 +130,44 @@ export type Database = {
           subcategoria?: string | null
           unidade?: string
           updated_at?: string
+          valor_unitario?: number | null
         }
         Relationships: []
+      }
+      movimentacao_itens: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          movimentacao_id: string
+          quantidade: number
+          valor_unitario: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          movimentacao_id: string
+          quantidade: number
+          valor_unitario?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          movimentacao_id?: string
+          quantidade?: number
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacao_itens_movimentacao_id_fkey"
+            columns: ["movimentacao_id"]
+            isOneToOne: false
+            referencedRelation: "movimentacoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       movimentacoes: {
         Row: {

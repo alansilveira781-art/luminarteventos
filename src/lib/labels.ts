@@ -1,10 +1,8 @@
 export const entradaTipoLabels: Record<string, string> = {
   compra: "Compra",
-  doacao: "Doação",
   ajuste: "Ajuste",
   retorno: "Retorno",
   transferencia: "Transferência",
-  outros: "Outros",
 };
 
 export const saidaTipoLabels: Record<string, string> = {

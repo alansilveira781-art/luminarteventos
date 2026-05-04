@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -50,27 +50,35 @@ function SaidasPage() {
 
   const eventosQuery = useQuery({
     queryKey: ["eventos-sheets"],
-    queryFn: async () => {
-      const r = await listEventos();
-      return r;
-    },
+    queryFn: async () => await listEventos(),
     staleTime: 5 * 60 * 1000,
   });
 
   const mut = useMutation({
-    mutationFn: async (p: any) => {
-      const item = (itens ?? []).find((i: any) => i.id === p.item_id);
-      if (!item) throw new Error("Item inválido");
-      if (Number(p.quantidade) > Number(item.quantidade_atual)) {
-        throw new Error(`Estoque insuficiente. Disponível: ${item.quantidade_atual} ${item.unidade}`);
+    mutationFn: async (p: { meta: any; linhas: Array<{ item_id: string; quantidade: number }> }) => {
+      // Validar estoque por item
+      for (const l of p.linhas) {
+        const it = (itens ?? []).find((x: any) => x.id === l.item_id);
+        if (!it) throw new Error("Item inválido");
+        if (l.quantidade > Number(it.quantidade_atual)) {
+          throw new Error(`Estoque insuficiente para ${it.nome}. Disponível: ${it.quantidade_atual} ${it.unidade}`);
+        }
       }
-      const { error } = await supabase.from("movimentacoes").insert({ ...p, tipo: "saida" });
+      const inserts = p.linhas.map((l) => ({
+        ...p.meta,
+        tipo: "saida" as const,
+        item_id: l.item_id,
+        quantidade: l.quantidade,
+      }));
+      const { error } = await supabase.from("movimentacoes").insert(inserts);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["saidas"] });
       qc.invalidateQueries({ queryKey: ["itens"] });
       qc.invalidateQueries({ queryKey: ["itens-select-saida"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-itens"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-movs"] });
       toast.success("Saída registrada");
       setOpen(false);
     },
@@ -121,7 +129,7 @@ function SaidasPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader><DialogTitle>Nova saída</DialogTitle></DialogHeader>
           <SaidaForm
             itens={itens ?? []}
@@ -130,7 +138,7 @@ function SaidasPage() {
             eventosError={eventosQuery.data?.error}
             onReloadEventos={() => eventosQuery.refetch()}
             reloadingEventos={eventosQuery.isFetching}
-            onSubmit={(p: any) => mut.mutate(p)}
+            onSubmit={(meta: any, linhas: any) => mut.mutate({ meta, linhas })}
             submitting={mut.isPending}
           />
         </DialogContent>
@@ -139,42 +147,56 @@ function SaidasPage() {
   );
 }
 
+type Linha = { item_id: string; quantidade: string };
+
 function SaidaForm({ itens, solicitantes, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
-  const [f, setF] = useState({
+  const [meta, setMeta] = useState({
     data_movimento: new Date().toISOString().slice(0, 16),
     saida_tipo: "evento",
-    item_id: "",
     solicitante_id: "",
     evento_projeto: "",
-    quantidade_solicitada: 1,
-    quantidade: 1,
     finalidade: "",
     responsavel_retirada: "",
     responsavel_lancamento: "",
     data_prevista_devolucao: "",
     observacoes: "",
   });
-  const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
-  const item = itens.find((i: any) => i.id === f.item_id);
+  const [linhas, setLinhas] = useState<Linha[]>([{ item_id: "", quantidade: "1" }]);
+
+  const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
+  const setL = (i: number, k: keyof Linha, v: string) => setLinhas((arr) => {
+    const novo = [...arr];
+    novo[i] = { ...novo[i], [k]: v };
+    return novo;
+  });
+  const addLinha = () => setLinhas((a) => [...a, { item_id: "", quantidade: "1" }]);
+  const remLinha = (i: number) => setLinhas((a) => (a.length === 1 ? a : a.filter((_, idx) => idx !== i)));
 
   return (
     <form onSubmit={(e) => {
       e.preventDefault();
-      if (!f.item_id) return toast.error("Selecione um item");
-      if (!f.evento_projeto) return toast.error("Evento/Projeto é obrigatório");
-      onSubmit({
-        ...f,
-        data_movimento: new Date(f.data_movimento).toISOString(),
-        quantidade: Number(f.quantidade),
-        quantidade_solicitada: Number(f.quantidade_solicitada),
-        solicitante_id: f.solicitante_id || null,
-        data_prevista_devolucao: f.data_prevista_devolucao || null,
-      });
+      if (!meta.evento_projeto) return toast.error("Evento/Projeto é obrigatório");
+      const validas = linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
+      if (validas.length === 0) return toast.error("Adicione pelo menos um item");
+      onSubmit(
+        {
+          data_movimento: new Date(meta.data_movimento).toISOString(),
+          saida_tipo: meta.saida_tipo,
+          solicitante_id: meta.solicitante_id || null,
+          evento_projeto: meta.evento_projeto,
+          finalidade: meta.finalidade || null,
+          responsavel_retirada: meta.responsavel_retirada || null,
+          responsavel_lancamento: meta.responsavel_lancamento || null,
+          data_prevista_devolucao: meta.data_prevista_devolucao || null,
+          observacoes: meta.observacoes || null,
+        },
+        validas.map((l) => ({ item_id: l.item_id, quantidade: Number(l.quantidade) })),
+      );
     }} className="space-y-4">
       <FormSection>
-        <FormField label="Data*"><Input required type="datetime-local" value={f.data_movimento} onChange={(e) => set("data_movimento", e.target.value)} /></FormField>
+        <FormField label="Data*"><Input required type="datetime-local" value={meta.data_movimento} onChange={(e) => setM("data_movimento", e.target.value)} /></FormField>
         <FormField label="Tipo*">
-          <Select value={f.saida_tipo} onValueChange={(v) => set("saida_tipo", v)}>
+          <Select value={meta.saida_tipo} onValueChange={(v) => setM("saida_tipo", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(saidaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
           </Select>
@@ -182,7 +204,7 @@ function SaidaForm({ itens, solicitantes, eventos, eventosError, onReloadEventos
 
         <FormField label="Evento / Projeto* (Google Sheets)" wide>
           <div className="flex gap-2">
-            <Select value={f.evento_projeto} onValueChange={(v) => set("evento_projeto", v)}>
+            <Select value={meta.evento_projeto} onValueChange={(v) => setM("evento_projeto", v)}>
               <SelectTrigger><SelectValue placeholder={eventos.length ? "Selecione…" : "Carregando ou nenhum encontrado"} /></SelectTrigger>
               <SelectContent>
                 {eventos.map((ev: string) => <SelectItem key={ev} value={ev}>{ev}</SelectItem>)}
@@ -196,28 +218,55 @@ function SaidaForm({ itens, solicitantes, eventos, eventosError, onReloadEventos
           {!eventosError && eventos.length === 0 && <p className="text-xs text-muted-foreground mt-1">Lista vazia. Verifique a planilha conectada.</p>}
         </FormField>
 
-        <FormField label="Item*">
-          <Select value={f.item_id} onValueChange={(v) => set("item_id", v)}>
-            <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-            <SelectContent>{itens.map((i: any) => <SelectItem key={i.id} value={i.id}>{i.codigo} — {i.nome} ({i.quantidade_atual} {i.unidade})</SelectItem>)}</SelectContent>
-          </Select>
-          {item && <p className="text-xs text-muted-foreground mt-1">Disponível: {Number(item.quantidade_atual)} {item.unidade}</p>}
-        </FormField>
         <FormField label="Solicitante">
-          <Select value={f.solicitante_id} onValueChange={(v) => set("solicitante_id", v)}>
+          <Select value={meta.solicitante_id} onValueChange={(v) => setM("solicitante_id", v)}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{solicitantes.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
           </Select>
         </FormField>
-        <FormField label="Qtd solicitada"><Input type="number" min="0.01" step="0.01" value={f.quantidade_solicitada} onChange={(e) => set("quantidade_solicitada", e.target.value)} /></FormField>
-        <FormField label="Qtd liberada*"><Input required type="number" min="0.01" step="0.01" value={f.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
-        <FormField label="Finalidade / detalhes" wide><Input value={f.finalidade} onChange={(e) => set("finalidade", e.target.value)} /></FormField>
-        <FormField label="Responsável pela retirada"><Input value={f.responsavel_retirada} onChange={(e) => set("responsavel_retirada", e.target.value)} /></FormField>
-        <FormField label="Responsável pelo lançamento"><Input value={f.responsavel_lancamento} onChange={(e) => set("responsavel_lancamento", e.target.value)} /></FormField>
-        <FormField label="Data prevista de devolução"><Input type="date" value={f.data_prevista_devolucao} onChange={(e) => set("data_prevista_devolucao", e.target.value)} /></FormField>
-        <FormField label="Observações" wide><Textarea rows={2} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></FormField>
-        <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Registrando…" : "Registrar saída"}</Button></FormActions>
+        <FormField label="Data prevista de devolução"><Input type="date" value={meta.data_prevista_devolucao} onChange={(e) => setM("data_prevista_devolucao", e.target.value)} /></FormField>
+        <FormField label="Finalidade / detalhes" wide><Input value={meta.finalidade} onChange={(e) => setM("finalidade", e.target.value)} /></FormField>
+        <FormField label="Responsável pela retirada"><Input value={meta.responsavel_retirada} onChange={(e) => setM("responsavel_retirada", e.target.value)} /></FormField>
+        <FormField label="Responsável pelo lançamento"><Input value={meta.responsavel_lancamento} onChange={(e) => setM("responsavel_lancamento", e.target.value)} /></FormField>
+        <FormField label="Observações" wide><Textarea rows={2} value={meta.observacoes} onChange={(e) => setM("observacoes", e.target.value)} /></FormField>
       </FormSection>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Itens da saída</h3>
+          <Button type="button" size="sm" variant="outline" onClick={addLinha}>
+            <Plus className="h-3 w-3 mr-1" /> Adicionar item
+          </Button>
+        </div>
+        <Card className="p-3 space-y-2">
+          {linhas.map((l, i) => {
+            const it = itens.find((x: any) => x.id === l.item_id);
+            return (
+              <div key={i} className="grid grid-cols-12 gap-2 items-end">
+                <div className="col-span-8">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
+                  <Select value={l.item_id} onValueChange={(v) => setL(i, "item_id", v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                    <SelectContent>{itens.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.codigo} — {x.nome} ({x.quantidade_atual} {x.unidade})</SelectItem>)}</SelectContent>
+                  </Select>
+                  {it && <p className="text-[10px] text-muted-foreground mt-1">Disponível: {Number(it.quantidade_atual)} {it.unidade}</p>}
+                </div>
+                <div className="col-span-3">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Quantidade</label>
+                  <Input type="number" min="0.01" step="0.01" value={l.quantidade} onChange={(e) => setL(i, "quantidade", e.target.value)} />
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remLinha(i)} disabled={linhas.length === 1} title="Remover">
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+
+      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Registrando…" : "Registrar saída"}</Button></FormActions>
     </form>
   );
 }
