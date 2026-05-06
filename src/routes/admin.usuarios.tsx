@@ -199,6 +199,15 @@ function EditAccess({ user, onClose }: { user: any; onClose: () => void }) {
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>{user.display_name || user.email}</DialogTitle></DialogHeader>
         <div className="space-y-4">
+          <div className="space-y-3 border-b border-border pb-4">
+            <div className="text-xs uppercase text-muted-foreground">Conta</div>
+            <div><Label>Nome</Label><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
+            <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label>Nova senha</Label><Input type="password" placeholder="Deixe em branco para manter" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <Button size="sm" variant="outline" onClick={() => updateAccount.mutate()} disabled={updateAccount.isPending}>
+              Atualizar conta
+            </Button>
+          </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox checked={isAdmin} onCheckedChange={(v) => setIsAdmin(!!v)} />
             <span className="text-sm font-medium">Administrador (acessa tudo)</span>
