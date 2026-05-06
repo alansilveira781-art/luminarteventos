@@ -46,6 +46,7 @@ export type Compra = {
   valor_total?: number | null;
   observacoes?: string | null;
   motivo_negacao?: string | null;
+  tipo_compra?: string | null;
 };
 
 export function CompraDialog({
