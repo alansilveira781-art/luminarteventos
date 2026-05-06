@@ -61,7 +61,9 @@ export function ItemSearchSelect({
           <span className="truncate text-left">
             {selected ? (
               <>
-                <span className="font-mono text-xs text-muted-foreground mr-2">{selected.codigo}</span>
+                <span className="font-mono text-xs text-muted-foreground mr-2">
+                  {selected.codigo}
+                </span>
                 {selected.nome}
                 {showStock && selected.quantidade_atual != null && (
                   <span className="text-xs text-muted-foreground ml-2">
@@ -76,7 +78,11 @@ export function ItemSearchSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[320px]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent
+        className="p-0 w-[--radix-popover-trigger-width] min-w-[320px]"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="flex items-center border-b px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
@@ -89,7 +95,9 @@ export function ItemSearchSelect({
         </div>
         <div className="max-h-[300px] overflow-y-auto p-1">
           {filteredItens.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">Nenhum item encontrado.</div>
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              Nenhum item encontrado.
+            </div>
           ) : (
             filteredItens.map((it) => (
               <button
@@ -99,18 +107,28 @@ export function ItemSearchSelect({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => selectItem(it.id)}
               >
-                <Check className={cn("h-4 w-4 shrink-0", value === it.id ? "opacity-100" : "opacity-0")} />
+                <Check
+                  className={cn("h-4 w-4 shrink-0", value === it.id ? "opacity-100" : "opacity-0")}
+                />
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm">
-                    <span className="font-mono text-xs text-muted-foreground mr-2">{it.codigo}</span>
+                    <span className="font-mono text-xs text-muted-foreground mr-2">
+                      {it.codigo}
+                    </span>
                     {it.nome}
                   </span>
                   {(it.codigo_proprio || (showStock && it.quantidade_atual != null)) && (
                     <span className="text-[11px] text-muted-foreground">
-                      {it.codigo_proprio && <>cód. próprio: <span className="font-mono">{it.codigo_proprio}</span></>}
+                      {it.codigo_proprio && (
+                        <>
+                          cód. próprio: <span className="font-mono">{it.codigo_proprio}</span>
+                        </>
+                      )}
                       {it.codigo_proprio && showStock && it.quantidade_atual != null && " · "}
                       {showStock && it.quantidade_atual != null && (
-                        <>disponível: {it.quantidade_atual} {it.unidade}</>
+                        <>
+                          disponível: {it.quantidade_atual} {it.unidade}
+                        </>
                       )}
                     </span>
                   )}
