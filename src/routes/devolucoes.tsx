@@ -122,7 +122,7 @@ function DevolucoesPage() {
                   <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{m.observacoes ?? ""}</td>
                 </tr>
               )) : (
-                <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">Nenhuma devolução registrada.</td></tr>
+                <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">Nenhuma devolução registrada.</td></tr>
               )}
             </tbody>
           </table>
