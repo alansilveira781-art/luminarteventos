@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Pencil, Upload } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -88,6 +88,7 @@ function SolicitantesPage() {
                   <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-3 text-right">
                     <Button size="sm" variant="ghost" onClick={() => { setEditing(s); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (confirm(`Remover "${s.nome}"?`)) del.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </td>
                 </tr>
               )) : (
