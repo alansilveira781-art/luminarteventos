@@ -25,28 +25,39 @@ type NavItem = { title: string; url: string; icon: any; group: string; module?: 
 
 const allItems: NavItem[] = [
   { title: "Início", url: "/", icon: LayoutDashboard, group: "Visão geral" },
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, group: "Visão geral", module: "estoque" },
-  { title: "Estoque", url: "/estoque", icon: Package, group: "Cadastros", module: "estoque" },
-  { title: "Solicitantes", url: "/solicitantes", icon: Users, group: "Cadastros", module: "estoque" },
-  { title: "Fornecedores", url: "/fornecedores", icon: Truck, group: "Cadastros", module: "estoque" },
-  { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Movimentações", module: "estoque" },
-  { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Movimentações", module: "estoque" },
-  { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Movimentações", module: "estoque" },
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Análises", module: "estoque" },
-  { title: "Administração", url: "/admin", icon: Shield, group: "Sistema", adminOnly: true },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, group: "Estoque", module: "estoque" },
+  { title: "Estoque", url: "/estoque", icon: Package, group: "Estoque", module: "estoque" },
+  { title: "Solicitantes", url: "/solicitantes", icon: Users, group: "Estoque", module: "estoque" },
+  { title: "Fornecedores", url: "/fornecedores", icon: Truck, group: "Estoque", module: "estoque" },
+  { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Estoque", module: "estoque" },
+  { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Estoque", module: "estoque" },
+  { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Estoque", module: "estoque" },
+  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Estoque", module: "estoque" },
+  { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Cadastros", "Movimentações", "Análises", "Sistema"];
+const groups = ["Visão geral", "Estoque", "Administração"];
+
+const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 
 function isActiveUrl(pathname: string, url: string) {
   return url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
 }
 
-function useNavItems() {
+function getContext(pathname: string): "home" | "estoque" | "admin" {
+  if (pathname.startsWith("/admin")) return "admin";
+  if (ESTOQUE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "estoque";
+  return "home";
+}
+
+function useNavItems(pathname: string) {
   const { isAdmin, hasModule } = useAuth();
+  const ctx = getContext(pathname);
   return allItems.filter((i) => {
-    if (i.adminOnly) return isAdmin;
-    if (i.module) return isAdmin || hasModule(i.module);
+    // Always show "Início"
+    if (i.url === "/") return true;
+    if (i.adminOnly) return ctx === "admin" && isAdmin;
+    if (i.module === "estoque") return ctx === "estoque" && (isAdmin || hasModule("estoque"));
     return true;
   });
 }
@@ -62,7 +73,7 @@ function SidebarBody({
   onNavigate?: () => void;
   onToggleCollapse?: () => void;
 }) {
-  const items = useNavItems();
+  const items = useNavItems(pathname);
   const { user, signOut } = useAuth();
   return (
     <div className="flex h-full flex-col">
@@ -189,7 +200,7 @@ function SidebarBody({
 }
 
 function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: () => void }) {
-  const items = useNavItems();
+  const items = useNavItems(pathname);
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-sidebar-border bg-sidebar lg:hidden sm:w-20">
       <button
@@ -280,7 +291,7 @@ export function AppSidebar() {
 
 export function AppTopBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = useNavItems();
+  const items = useNavItems(pathname);
   const current = items.find((i) => isActiveUrl(pathname, i.url));
   const currentTitle = current?.title ?? "Dashboard";
 
