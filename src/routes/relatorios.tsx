@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormField, FormSection } from "@/components/FormSection";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/relatorios")({
   component: RelatoriosPage,
