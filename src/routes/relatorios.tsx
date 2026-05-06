@@ -120,9 +120,14 @@ function RelatoriosPage() {
         title="Relatórios"
         description="Escolha um relatório, defina o período e visualize antes de exportar"
         actions={
-          <Button type="button" size="lg" variant="outline" onClick={exportCsv} disabled={!body.length}>
-            <Download className="h-4 w-4 mr-1" /> Exportar CSV
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="lg" variant="outline" onClick={exportCsv} disabled={!body.length}>
+              <Download className="h-4 w-4 mr-1" /> Exportar CSV
+            </Button>
+            <Button type="button" size="lg" onClick={exportPdf} disabled={!body.length}>
+              <Printer className="h-4 w-4 mr-1" /> Exportar PDF
+            </Button>
+          </div>
         }
       />
 
