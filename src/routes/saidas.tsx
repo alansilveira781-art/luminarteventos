@@ -130,6 +130,7 @@ function SaidasPage() {
                 <th className="px-4 py-3 font-medium">UN</th>
                 <th className="px-4 py-3 font-medium">Devolver até</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
               </tr>
             </thead>
             <tbody>
@@ -144,9 +145,18 @@ function SaidasPage() {
                   <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => {
+                        if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
+                      }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               )) : (
-                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Nenhuma saída registrada.</td></tr>
+                <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma saída registrada.</td></tr>
               )}
             </tbody>
           </table>
