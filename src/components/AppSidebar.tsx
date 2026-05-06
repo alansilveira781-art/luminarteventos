@@ -73,7 +73,7 @@ function SidebarBody({
   onNavigate?: () => void;
   onToggleCollapse?: () => void;
 }) {
-  const items = useNavItems();
+  const items = useNavItems(pathname);
   const { user, signOut } = useAuth();
   return (
     <div className="flex h-full flex-col">
@@ -200,7 +200,7 @@ function SidebarBody({
 }
 
 function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: () => void }) {
-  const items = useNavItems();
+  const items = useNavItems(pathname);
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-sidebar-border bg-sidebar lg:hidden sm:w-20">
       <button
@@ -291,7 +291,7 @@ export function AppSidebar() {
 
 export function AppTopBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = useNavItems();
+  const items = useNavItems(pathname);
   const current = items.find((i) => isActiveUrl(pathname, i.url));
   const currentTitle = current?.title ?? "Dashboard";
 
