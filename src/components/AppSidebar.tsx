@@ -150,13 +150,16 @@ function SidebarBody({
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-4">
+      <div className="border-t border-sidebar-border p-3">
         {collapsed ? (
-          <div className="flex justify-center">
-            <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-              <CircleUser className="h-4 w-4" />
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            title="Sair"
+            className="mx-auto h-9 w-9 rounded-md flex items-center justify-center text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         ) : (
           <>
             <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/40 px-3 py-2">
@@ -164,13 +167,19 @@ function SidebarBody({
                 <CircleUser className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-sidebar-foreground truncate">Operador</div>
-                <div className="text-[10px] text-muted-foreground truncate">operacao@luminart</div>
+                <div className="text-xs font-medium text-sidebar-foreground truncate">
+                  {user?.user_metadata?.full_name ?? user?.email ?? "Usuário"}
+                </div>
+                <div className="text-[10px] text-muted-foreground truncate">{user?.email}</div>
               </div>
             </div>
-            <div className="mt-3 text-[10px] text-muted-foreground/70 text-center">
-              v1.0 · Operação interna
-            </div>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Sair
+            </button>
           </>
         )}
       </div>
