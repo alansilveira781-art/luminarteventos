@@ -229,7 +229,7 @@ function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: ()
       </button>
       <nav className="mt-5 flex flex-1 flex-col items-center gap-2">
         {items.map((item) => {
-          const active = isActiveUrl(pathname, item.url);
+          const active = isActiveUrl(pathname, item.url, items.map((i) => i.url));
           return (
             <Link
               key={item.url}
