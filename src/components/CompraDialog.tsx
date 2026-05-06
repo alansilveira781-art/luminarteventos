@@ -326,23 +326,6 @@ export function CompraDialog({
 
         </Tabs>
 
-        {compraId && (
-          <div className="mt-6 border-t border-border pt-4">
-            <Tabs defaultValue="comentarios">
-              <TabsList>
-                <TabsTrigger value="comentarios">Comentários</TabsTrigger>
-                <TabsTrigger value="historico">Histórico</TabsTrigger>
-              </TabsList>
-              <TabsContent value="comentarios" className="pt-4">
-                <Comentarios compraId={compraId} userId={user?.id} />
-              </TabsContent>
-              <TabsContent value="historico" className="pt-4">
-                <Historico compraId={compraId} />
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
