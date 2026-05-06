@@ -24,10 +24,12 @@ export function ItemForm({
   initial,
   onSubmit,
   submitting,
+  allowEditCodigo = false,
 }: {
   initial?: any;
   onSubmit: (payload: any) => void;
   submitting?: boolean;
+  allowEditCodigo?: boolean;
 }) {
   const [form, setForm] = useState({
     codigo: initial?.codigo ?? "",
@@ -70,7 +72,14 @@ export function ItemForm({
       className="space-y-4"
     >
       <FormSection>
-        <FormField label="Código (gerado automaticamente)"><Input readOnly value={form.codigo} className="bg-muted/40" /></FormField>
+        <FormField label={allowEditCodigo ? "Código" : "Código (gerado automaticamente)"}>
+          <Input
+            readOnly={!allowEditCodigo}
+            value={form.codigo}
+            onChange={(e) => set("codigo", e.target.value)}
+            className={allowEditCodigo ? "" : "bg-muted/40"}
+          />
+        </FormField>
         <FormField label="Código próprio (fornecedor)">
           <Input
             value={form.codigo_proprio}

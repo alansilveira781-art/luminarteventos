@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, History, Pencil, Upload } from "lucide-react";
+import { Plus, Search, History, Pencil, Upload, Trash2 } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/estoque/")({
 
 function EstoquePage() {
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
   const [creating, setCreating] = useState(false);
@@ -50,6 +52,21 @@ function EstoquePage() {
       toast.success("Item salvo");
       setEditing(null);
       setCreating(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const delMut = useMutation({
+    mutationFn: async (id: string) => {
+      // remove dependent movements first to avoid FK/constraint surprises
+      await supabase.from("movimentacao_itens").delete().eq("item_id", id);
+      await supabase.from("movimentacoes").delete().eq("item_id", id);
+      const { error } = await supabase.from("itens").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Item excluído");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -139,6 +156,19 @@ function EstoquePage() {
                         <Button size="sm" variant="ghost" onClick={() => setEditing(i)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm(`Excluir o item "${i.nome}"? Esta ação não pode ser desfeita.`)) {
+                                delMut.mutate(i.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -156,6 +186,7 @@ function EstoquePage() {
           </DialogHeader>
           <ItemForm
             initial={editing}
+            allowEditCodigo={isAdmin}
             onSubmit={(payload) => mut.mutate(editing ? { ...payload, id: editing.id } : payload)}
             submitting={mut.isPending}
           />
