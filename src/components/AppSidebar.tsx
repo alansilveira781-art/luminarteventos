@@ -61,6 +61,8 @@ function SidebarBody({
   onNavigate?: () => void;
   onToggleCollapse?: () => void;
 }) {
+  const items = useNavItems();
+  const { user, signOut } = useAuth();
   return (
     <div className="flex h-full flex-col">
       <div
