@@ -1,16 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 
 export type ItemOption = {
   id: string;
@@ -34,94 +26,136 @@ export function ItemSearchSelect({
   placeholder?: string;
   showStock?: boolean;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const selected = itens.find((i) => i.id === value);
+  const filteredItens = useMemo(() => {
+    const terms = search.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (!terms.length) return itens;
+
+    return itens.filter((it) => {
+      const haystack = [it.codigo, it.codigo_proprio ?? "", it.nome, it.unidade ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    });
+  }, [itens, search]);
+
+  const selectItem = (id: string) => {
+    onChange(id);
+    setSearch("");
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [open]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between font-normal"
-        >
-          <span className="truncate text-left">
-            {selected ? (
-              <>
-                <span className="font-mono text-xs text-muted-foreground mr-2">{selected.codigo}</span>
-                {selected.nome}
-                {showStock && selected.quantidade_atual != null && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    ({selected.quantidade_atual} {selected.unidade})
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
-            )}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[320px]" align="start">
-        <Command
-          filter={(val, search) => {
-            const s = search.toLowerCase().trim();
-            if (!s) return 1;
-            return val.toLowerCase().includes(s) ? 1 : 0;
-          }}
-        >
+    <div ref={containerRef} className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        role="combobox"
+        aria-expanded={open}
+        className="w-full justify-between font-normal"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="truncate text-left">
+          {selected ? (
+            <>
+              <span className="font-mono text-xs text-muted-foreground mr-2">
+                {selected.codigo}
+              </span>
+              {selected.nome}
+              {showStock && selected.quantidade_atual != null && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({selected.quantidade_atual} {selected.unidade})
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+        </span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[320px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <CommandInput
+            <Input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setOpen(false);
+              }}
               placeholder="Buscar por código, código próprio ou nome…"
-              className="flex h-10 w-full bg-transparent py-3 text-sm outline-none border-0"
+              className="h-10 border-0 bg-transparent px-0 py-3 shadow-none focus-visible:ring-0"
             />
           </div>
-          <CommandList>
-            <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
-            <CommandGroup>
-              {itens.map((it) => {
-                const haystack = [it.codigo, it.codigo_proprio ?? "", it.nome].join(" | ");
-                return (
-                  <CommandItem
-                    key={it.id}
-                    value={`${haystack}__${it.id}`}
-                    onSelect={() => {
-                      onChange(it.id);
-                      setOpen(false);
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onChange(it.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check className={cn("mr-2 h-4 w-4", value === it.id ? "opacity-100" : "opacity-0")} />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm truncate">
-                        <span className="font-mono text-xs text-muted-foreground mr-2">{it.codigo}</span>
-                        {it.nome}
+          <div className="max-h-[300px] overflow-y-auto p-1">
+            {filteredItens.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Nenhum item encontrado.
+              </div>
+            ) : (
+              filteredItens.map((it) => (
+                <button
+                  key={it.id}
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    selectItem(it.id);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      value === it.id ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm">
+                      <span className="font-mono text-xs text-muted-foreground mr-2">
+                        {it.codigo}
                       </span>
-                      {(it.codigo_proprio || (showStock && it.quantidade_atual != null)) && (
-                        <span className="text-[11px] text-muted-foreground">
-                          {it.codigo_proprio && <>cód. próprio: <span className="font-mono">{it.codigo_proprio}</span></>}
-                          {it.codigo_proprio && showStock && it.quantidade_atual != null && " · "}
-                          {showStock && it.quantidade_atual != null && (
-                            <>disponível: {it.quantidade_atual} {it.unidade}</>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                      {it.nome}
+                    </span>
+                    {(it.codigo_proprio || (showStock && it.quantidade_atual != null)) && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {it.codigo_proprio && (
+                          <>
+                            cód. próprio: <span className="font-mono">{it.codigo_proprio}</span>
+                          </>
+                        )}
+                        {it.codigo_proprio && showStock && it.quantidade_atual != null && " · "}
+                        {showStock && it.quantidade_atual != null && (
+                          <>
+                            disponível: {it.quantidade_atual} {it.unidade}
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
