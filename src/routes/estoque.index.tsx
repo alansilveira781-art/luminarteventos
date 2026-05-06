@@ -125,7 +125,8 @@ function EstoquePage() {
                     <td className="px-4 py-3 font-medium">{i.nome}</td>
                     <td className="px-4 py-3 text-muted-foreground">{i.categoria ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{i.localizacao ?? "—"}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{Number(i.quantidade_atual)} {i.unidade}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{Number(i.quantidade_atual)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{i.unidade}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{Number(i.quantidade_minima)}</td>
                     <td className="px-4 py-3"><StatusBadge status={i.status} /></td>
                     <td className="px-4 py-3 text-right">
