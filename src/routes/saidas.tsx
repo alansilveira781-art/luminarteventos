@@ -118,7 +118,8 @@ function SaidasPage() {
                   <td className="px-4 py-3 text-foreground">{m.evento_projeto ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.saida_tipo ? saidaTipoLabels[m.saida_tipo] : "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)} {m.item?.unidade}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
                 </tr>
