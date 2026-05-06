@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, History, Pencil, Upload, Trash2 } from "lucide-react";
+import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
