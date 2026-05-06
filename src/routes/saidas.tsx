@@ -64,7 +64,10 @@ function SaidasPage() {
 
   const { data: itens } = useQuery({
     queryKey: ["itens-select-saida"],
-    queryFn: async () => (await supabase.from("itens").select("id,nome,codigo,codigo_proprio,unidade,quantidade_atual").order("nome")).data ?? [],
+    queryFn: async () =>
+      await fetchAllRows<any>("itens", "id,nome,codigo,codigo_proprio,unidade,quantidade_atual", {
+        orderBy: { column: "nome", ascending: true },
+      }),
   });
   const { data: solicitantes } = useQuery({
     queryKey: ["solicitantes-select"],
