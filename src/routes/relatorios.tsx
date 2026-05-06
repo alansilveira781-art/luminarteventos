@@ -67,6 +67,53 @@ function RelatoriosPage() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header band
+    doc.setFillColor(15, 15, 15);
+    doc.rect(0, 0, pageWidth, 60, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("LUMINART", 40, 30);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Cenografia para eventos", 40, 46);
+    doc.setFontSize(11);
+    doc.text(meta.label, pageWidth - 40, 30, { align: "right" });
+    doc.setFontSize(8);
+    const periodo = meta.needsPeriod
+      ? `${format(new Date(dataIni), "dd/MM/yyyy")} a ${format(new Date(dataFim), "dd/MM/yyyy")}`
+      : `Emitido em ${format(new Date(), "dd/MM/yyyy HH:mm")}`;
+    doc.text(periodo, pageWidth - 40, 46, { align: "right" });
+
+    autoTable(doc, {
+      startY: 80,
+      head: [headers],
+      body: body.map((r) => r.map((c) => String(c ?? ""))),
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { left: 40, right: 40 },
+      didDrawPage: (data) => {
+        const pageCount = doc.getNumberOfPages();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(
+          `Página ${data.pageNumber} de ${pageCount}  ·  ${body.length} registros`,
+          pageWidth / 2,
+          pageHeight - 20,
+          { align: "center" },
+        );
+      },
+    });
+
+    doc.save(`relatorio_${reportId}_${dataIni}_a_${dataFim}.pdf`);
+  };
+
   return (
     <>
       <PageHeader
