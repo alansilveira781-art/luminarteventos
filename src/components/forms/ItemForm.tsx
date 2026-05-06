@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { generateNextSku } from "@/lib/sku";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +45,14 @@ export function ItemForm({
     foto_url: initial?.foto_url ?? "",
   });
 
+  useEffect(() => {
+    if (!initial && !form.codigo) {
+      generateNextSku().then((sku) => setForm((f) => (f.codigo ? f : { ...f, codigo: sku }))).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
@@ -61,7 +70,7 @@ export function ItemForm({
       className="space-y-4"
     >
       <FormSection>
-        <FormField label="Código*"><Input required value={form.codigo} onChange={(e) => set("codigo", e.target.value)} /></FormField>
+        <FormField label="Código (gerado automaticamente)"><Input readOnly value={form.codigo} className="bg-muted/40" /></FormField>
         <FormField label="Código próprio (fornecedor)">
           <Input
             value={form.codigo_proprio}
