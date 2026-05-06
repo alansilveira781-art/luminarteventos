@@ -93,46 +93,6 @@ export function ItemForm({
         <FormField label="Observações" wide><Textarea value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} rows={2} /></FormField>
         <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : "Salvar item"}</Button></FormActions>
       </FormSection>
-
-      <Dialog open={novaUnidadeOpen} onOpenChange={setNovaUnidadeOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nova unidade de medida</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Ex.: Caixa, Pacote..."
-              value={novaUnidade}
-              onChange={(e) => setNovaUnidade(e.target.value)}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setNovaUnidadeOpen(false)}>Cancelar</Button>
-              <Button type="button" onClick={() => criarUnidade.mutate(novaUnidade)} disabled={criarUnidade.isPending}>
-                {criarUnidade.isPending ? "Criando…" : "Criar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={novaCategoriaOpen} onOpenChange={setNovaCategoriaOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nova categoria</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Nome da categoria"
-              value={novaCategoria}
-              onChange={(e) => setNovaCategoria(e.target.value)}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setNovaCategoriaOpen(false)}>Cancelar</Button>
-              <Button type="button" onClick={() => criarCategoria.mutate(novaCategoria)} disabled={criarCategoria.isPending}>
-                {criarCategoria.isPending ? "Criando…" : "Criar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </form>
   );
 }
