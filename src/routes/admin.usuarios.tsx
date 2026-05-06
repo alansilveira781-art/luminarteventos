@@ -147,6 +147,28 @@ function EditAccess({ user, onClose }: { user: any; onClose: () => void }) {
   const qc = useQueryClient();
   const [isAdmin, setIsAdmin] = useState(user.roles.includes("admin"));
   const [modIds, setModIds] = useState<string[]>(user.modulos);
+  const [displayName, setDisplayName] = useState<string>(user.display_name ?? "");
+  const [email, setEmail] = useState<string>(user.email ?? "");
+  const [password, setPassword] = useState<string>("");
+
+  const updateAccount = useMutation({
+    mutationFn: async () => {
+      const payload: any = { user_id: user.id };
+      if (displayName !== (user.display_name ?? "")) payload.display_name = displayName;
+      if (email && email !== user.email) payload.email = email;
+      if (password) payload.password = password;
+      if (Object.keys(payload).length === 1) return;
+      const { data, error } = await supabase.functions.invoke("admin-update-user", { body: payload });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+    },
+    onSuccess: () => {
+      toast.success("Dados atualizados");
+      setPassword("");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao atualizar"),
+  });
 
   const { data: modulos } = useQuery({
     queryKey: ["modulos-all"],
@@ -177,6 +199,15 @@ function EditAccess({ user, onClose }: { user: any; onClose: () => void }) {
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>{user.display_name || user.email}</DialogTitle></DialogHeader>
         <div className="space-y-4">
+          <div className="space-y-3 border-b border-border pb-4">
+            <div className="text-xs uppercase text-muted-foreground">Conta</div>
+            <div><Label>Nome</Label><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
+            <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label>Nova senha</Label><Input type="password" placeholder="Deixe em branco para manter" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <Button size="sm" variant="outline" onClick={() => updateAccount.mutate()} disabled={updateAccount.isPending}>
+              Atualizar conta
+            </Button>
+          </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox checked={isAdmin} onCheckedChange={(v) => setIsAdmin(!!v)} />
             <span className="text-sm font-medium">Administrador (acessa tudo)</span>
