@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { saidaTipoLabels } from "@/lib/labels";
 import { listEventos } from "@/server/sheets.functions";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/saidas")({
   component: SaidasPage,
@@ -24,7 +25,28 @@ export const Route = createFileRoute("/saidas")({
 
 function SaidasPage() {
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+
+  const delMut = useMutation({
+    mutationFn: async (m: any) => {
+      // Reverter estoque (saida tirou, então adicionar de volta)
+      const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", m.item_id).single();
+      if (it) {
+        await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) + Number(m.quantidade) }).eq("id", m.item_id);
+      }
+      // Apagar devoluções vinculadas
+      await supabase.from("movimentacoes").delete().eq("saida_origem_id", m.id);
+      const { error } = await supabase.from("movimentacoes").delete().eq("id", m.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Saída excluída");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: saidas } = useQuery({
     queryKey: ["saidas"],
