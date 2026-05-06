@@ -32,7 +32,7 @@ import {
   Line,
 } from "recharts";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
