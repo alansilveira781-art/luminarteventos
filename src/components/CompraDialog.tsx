@@ -172,8 +172,6 @@ export function CompraDialog({
           <TabsList>
             <TabsTrigger value="dados">Dados</TabsTrigger>
             <TabsTrigger value="itens">Itens</TabsTrigger>
-            {compraId && <TabsTrigger value="comentarios">Comentários</TabsTrigger>}
-            {compraId && <TabsTrigger value="historico">Histórico</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
