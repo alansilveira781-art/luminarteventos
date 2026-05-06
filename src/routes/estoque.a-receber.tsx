@@ -187,6 +187,21 @@ function ReceberDialog({ compraId, onClose }: { compraId: string; onClose: () =>
           <DialogTitle>Validar recebimento</DialogTitle>
         </DialogHeader>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border border-border p-3 bg-muted/20">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fornecedor*</label>
+            <Input value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} placeholder="Fornecedor" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nota Fiscal</label>
+            <Input value={notaFiscal} onChange={(e) => setNotaFiscal(e.target.value)} placeholder="Nº NF" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Responsável*</label>
+            <Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} placeholder="Quem recebeu" />
+          </div>
+        </div>
+
         <div className="space-y-2">
           {itens.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum item cadastrado nesta compra.</p>
