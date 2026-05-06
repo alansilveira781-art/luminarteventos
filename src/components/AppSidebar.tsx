@@ -245,15 +245,17 @@ export function AppSidebar() {
         </div>
       )}
 
-      {/* Topbar */}
-      <TopBar currentTitle={current?.title ?? "Dashboard"} />
     </>
   );
 }
 
-function TopBar({ currentTitle }: { currentTitle: string }) {
+export function AppTopBar() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const current = items.find((i) => isActiveUrl(pathname, i.url));
+  const currentTitle = current?.title ?? "Dashboard";
+
   return (
-    <header className="fixed top-0 right-0 left-16 sm:left-20 lg:left-auto lg:right-0 lg:w-auto z-40 h-14 border-b border-border bg-background/90 backdrop-blur-md lg:relative lg:left-0">
+    <header className="sticky top-0 z-40 h-14 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="h-full px-4 sm:px-6 flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm min-w-0">
           <span className="text-muted-foreground hidden sm:inline">Luminart</span>
