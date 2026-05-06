@@ -228,7 +228,8 @@ export function AppSidebar() {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  const current = items.find((i) => isActiveUrl(pathname, i.url));
+
+
 
   return (
     <>
