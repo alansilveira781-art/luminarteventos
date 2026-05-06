@@ -308,7 +308,7 @@ export function AppSidebar() {
 export function AppTopBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const items = useNavItems(pathname);
-  const current = items.find((i) => isActiveUrl(pathname, i.url));
+  const current = items.find((i) => isActiveUrl(pathname, i.url, items.map((x) => x.url)));
   const currentTitle = current?.title ?? "Dashboard";
 
   return (
