@@ -16,12 +16,15 @@ import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as DevolucoesRouteImport } from './routes/devolucoes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
+import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
+import { Route as ComprasAReceberRouteImport } from './routes/compras.a-receber'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
@@ -61,6 +64,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComprasRoute = ComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -81,6 +89,11 @@ const EstoqueIndexRoute = EstoqueIndexRouteImport.update({
   path: '/estoque/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComprasIndexRoute = ComprasIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ComprasRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -90,6 +103,11 @@ const EstoqueItemIdRoute = EstoqueItemIdRouteImport.update({
   id: '/estoque/$itemId',
   path: '/estoque/$itemId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ComprasAReceberRoute = ComprasAReceberRouteImport.update({
+  id: '/a-receber',
+  path: '/a-receber',
+  getParentRoute: () => ComprasRoute,
 } as any)
 const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
   id: '/usuarios',
@@ -111,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/compras': typeof ComprasRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
@@ -121,8 +140,10 @@ export interface FileRoutesByFullPath {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/compras/a-receber': typeof ComprasAReceberRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
 }
 export interface FileRoutesByTo {
@@ -138,8 +159,10 @@ export interface FileRoutesByTo {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/compras/a-receber': typeof ComprasAReceberRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/admin': typeof AdminIndexRoute
+  '/compras': typeof ComprasIndexRoute
   '/estoque': typeof EstoqueIndexRoute
 }
 export interface FileRoutesById {
@@ -147,6 +170,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/compras': typeof ComprasRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
@@ -157,8 +181,10 @@ export interface FileRoutesById {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/compras/a-receber': typeof ComprasAReceberRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
 }
 export interface FileRouteTypes {
@@ -167,6 +193,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/compras'
     | '/dashboard'
     | '/devolucoes'
     | '/entradas'
@@ -177,8 +204,10 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/compras/a-receber'
     | '/estoque/$itemId'
     | '/admin/'
+    | '/compras/'
     | '/estoque/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -194,14 +223,17 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/compras/a-receber'
     | '/estoque/$itemId'
     | '/admin'
+    | '/compras'
     | '/estoque'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/auth'
+    | '/compras'
     | '/dashboard'
     | '/devolucoes'
     | '/entradas'
@@ -212,8 +244,10 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/compras/a-receber'
     | '/estoque/$itemId'
     | '/admin/'
+    | '/compras/'
     | '/estoque/'
   fileRoutesById: FileRoutesById
 }
@@ -221,6 +255,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ComprasRoute: typeof ComprasRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   DevolucoesRoute: typeof DevolucoesRoute
   EntradasRoute: typeof EntradasRoute
@@ -283,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compras': {
+      id: '/compras'
+      path: '/compras'
+      fullPath: '/compras'
+      preLoaderRoute: typeof ComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -311,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EstoqueIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compras/': {
+      id: '/compras/'
+      path: '/'
+      fullPath: '/compras/'
+      preLoaderRoute: typeof ComprasIndexRouteImport
+      parentRoute: typeof ComprasRoute
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
@@ -324,6 +373,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/estoque/$itemId'
       preLoaderRoute: typeof EstoqueItemIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/compras/a-receber': {
+      id: '/compras/a-receber'
+      path: '/a-receber'
+      fullPath: '/compras/a-receber'
+      preLoaderRoute: typeof ComprasAReceberRouteImport
+      parentRoute: typeof ComprasRoute
     }
     '/admin/usuarios': {
       id: '/admin/usuarios'
@@ -365,10 +421,24 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ComprasRouteChildren {
+  ComprasAReceberRoute: typeof ComprasAReceberRoute
+  ComprasIndexRoute: typeof ComprasIndexRoute
+}
+
+const ComprasRouteChildren: ComprasRouteChildren = {
+  ComprasAReceberRoute: ComprasAReceberRoute,
+  ComprasIndexRoute: ComprasIndexRoute,
+}
+
+const ComprasRouteWithChildren =
+  ComprasRoute._addFileChildren(ComprasRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  ComprasRoute: ComprasRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DevolucoesRoute: DevolucoesRoute,
   EntradasRoute: EntradasRoute,
@@ -382,12 +452,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
