@@ -106,6 +106,7 @@ function EntradasPage() {
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">Fornecedor</th>
                 <th className="px-4 py-3 font-medium text-right">Qtd</th>
+                <th className="px-4 py-3 font-medium">UN</th>
                 <th className="px-4 py-3 font-medium text-right">Valor total</th>
                 <th className="px-4 py-3 font-medium">NF</th>
                 <th className="px-4 py-3 font-medium">Responsável</th>
@@ -118,7 +119,8 @@ function EntradasPage() {
                   <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.entrada_tipo ? entradaTipoLabels[m.entrada_tipo] ?? m.entrada_tipo : "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.fornecedor?.nome ?? "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)} {m.item?.unidade}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                     {m.valor_unitario ? `R$ ${(Number(m.valor_unitario) * Number(m.quantidade)).toFixed(2)}` : "—"}
                   </td>
@@ -126,7 +128,7 @@ function EntradasPage() {
                   <td className="px-4 py-3 text-muted-foreground">{m.responsavel_lancamento ?? "—"}</td>
                 </tr>
               )) : (
-                <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Nenhuma entrada registrada.</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Nenhuma entrada registrada.</td></tr>
               )}
             </tbody>
           </table>

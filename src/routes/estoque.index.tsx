@@ -107,6 +107,7 @@ function EstoquePage() {
                 <th className="px-4 py-3 font-medium">Categoria</th>
                 <th className="px-4 py-3 font-medium">Localização</th>
                 <th className="px-4 py-3 font-medium text-right">Qtd</th>
+                <th className="px-4 py-3 font-medium">UN</th>
                 <th className="px-4 py-3 font-medium text-right">Mín</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">Ações</th>
@@ -114,9 +115,9 @@ function EstoquePage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Carregando…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
               ) : (
                 filtered.map((i) => (
                   <tr key={i.id} className="border-t border-border hover:bg-muted/30">
@@ -124,7 +125,8 @@ function EstoquePage() {
                     <td className="px-4 py-3 font-medium">{i.nome}</td>
                     <td className="px-4 py-3 text-muted-foreground">{i.categoria ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{i.localizacao ?? "—"}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{Number(i.quantidade_atual)} {i.unidade}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{Number(i.quantidade_atual)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{i.unidade}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{Number(i.quantidade_minima)}</td>
                     <td className="px-4 py-3"><StatusBadge status={i.status} /></td>
                     <td className="px-4 py-3 text-right">

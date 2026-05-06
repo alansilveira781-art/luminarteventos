@@ -105,6 +105,7 @@ function DevolucoesPage() {
                 <th className="px-4 py-3 font-medium">Item</th>
                 <th className="px-4 py-3 font-medium">Solicitante</th>
                 <th className="px-4 py-3 font-medium text-right">Qtd</th>
+                <th className="px-4 py-3 font-medium">UN</th>
                 <th className="px-4 py-3 font-medium">Recebido por</th>
                 <th className="px-4 py-3 font-medium">Obs</th>
               </tr>
@@ -115,12 +116,13 @@ function DevolucoesPage() {
                   <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
                   <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)} {m.item?.unidade}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.responsavel_recebimento ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{m.observacoes ?? ""}</td>
                 </tr>
               )) : (
-                <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">Nenhuma devolução registrada.</td></tr>
+                <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">Nenhuma devolução registrada.</td></tr>
               )}
             </tbody>
           </table>
