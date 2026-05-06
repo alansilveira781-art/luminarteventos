@@ -13,7 +13,7 @@ import { SelectCreatable } from "@/components/SelectCreatable";
 import { MentionInput, renderCommentText } from "@/components/MentionInput";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { COMPRA_STATUSES, type CompraStatus } from "@/lib/compras";
+import { COMPRA_STATUSES, TIPO_COMPRA_OPTIONS, type CompraStatus } from "@/lib/compras";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyResponsiblesForStatus, notifyMentions } from "@/lib/notify";
 
