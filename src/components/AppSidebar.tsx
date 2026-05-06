@@ -9,13 +9,14 @@ import {
   ArrowUpFromLine,
   Undo2,
   BarChart3,
-  Sparkles,
   Menu,
   X,
-  Search,
   Bell,
   CircleUser,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import logo from "@/assets/luminart-logo.png";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Visão geral" },
@@ -34,29 +35,72 @@ function isActiveUrl(pathname: string, url: string) {
   return url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
 }
 
-function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function SidebarBody({
+  pathname,
+  collapsed,
+  onNavigate,
+  onToggleCollapse,
+}: {
+  pathname: string;
+  collapsed: boolean;
+  onNavigate?: () => void;
+  onToggleCollapse?: () => void;
+}) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-3 px-5 border-b border-sidebar-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/20">
-          <Sparkles className="h-4 w-4" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-sidebar-foreground leading-tight truncate">
-            Luminart Eventos
-          </div>
-          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            Controle de Estoque
-          </div>
-        </div>
+      <div
+        className={`flex h-20 items-center border-b border-sidebar-border ${
+          collapsed ? "justify-center px-2" : "justify-between px-4"
+        }`}
+      >
+        <Link to="/" onClick={onNavigate} className="flex items-center gap-3 min-w-0">
+          <img
+            src={logo}
+            alt="Luminart"
+            className={collapsed ? "h-8 w-8 object-contain" : "h-12 w-12 object-contain"}
+          />
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-sidebar-foreground leading-tight truncate">
+                LUMINART
+              </div>
+              <div className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+                Cenografia para eventos
+              </div>
+            </div>
+          )}
+        </Link>
+        {onToggleCollapse && !collapsed && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden lg:flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label="Recolher menu"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      {collapsed && onToggleCollapse && (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="hidden lg:flex mx-auto mt-3 h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          aria-label="Expandir menu"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+
+      <nav className={`flex-1 overflow-y-auto py-4 space-y-5 ${collapsed ? "px-2" : "px-3"}`}>
         {groups.map((g) => (
           <div key={g}>
-            <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
-              {g}
-            </div>
+            {!collapsed && (
+              <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
+                {g}
+              </div>
+            )}
             <div className="space-y-0.5">
               {items
                 .filter((i) => i.group === g)
@@ -67,17 +111,20 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
                       key={item.url}
                       to={item.url}
                       onClick={onNavigate}
-                      className={`group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all ${
+                      title={collapsed ? item.title : undefined}
+                      className={`group relative flex items-center gap-3 rounded-md text-sm font-medium transition-all ${
+                        collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
+                      } ${
                         active
                           ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                           : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                       }`}
                     >
-                      {active && (
+                      {active && !collapsed && (
                         <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r bg-primary" />
                       )}
                       <item.icon className={`h-4 w-4 ${active ? "text-primary" : ""}`} />
-                      <span className="flex-1">{item.title}</span>
+                      {!collapsed && <span className="flex-1">{item.title}</span>}
                     </Link>
                   );
                 })}
@@ -87,18 +134,28 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
       </nav>
 
       <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/40 px-3 py-2">
-          <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-            <CircleUser className="h-4 w-4" />
+        {collapsed ? (
+          <div className="flex justify-center">
+            <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+              <CircleUser className="h-4 w-4" />
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-medium text-sidebar-foreground truncate">Operador</div>
-            <div className="text-[10px] text-muted-foreground truncate">operacao@luminart</div>
-          </div>
-        </div>
-        <div className="mt-3 text-[10px] text-muted-foreground/70 text-center">
-          v1.0 · Operação interna
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/40 px-3 py-2">
+              <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                <CircleUser className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium text-sidebar-foreground truncate">Operador</div>
+                <div className="text-[10px] text-muted-foreground truncate">operacao@luminart</div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-muted-foreground/70 text-center">
+              v1.0 · Operação interna
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -142,6 +199,7 @@ function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: ()
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const current = items.find((i) => isActiveUrl(pathname, i.url));
 
@@ -150,8 +208,16 @@ export function AppSidebar() {
       <MobileRail pathname={pathname} onOpenMenu={() => setOpen(true)} />
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-        <SidebarBody pathname={pathname} />
+      <aside
+        className={`hidden lg:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ${
+          collapsed ? "w-16" : "w-64"
+        }`}
+      >
+        <SidebarBody
+          pathname={pathname}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((v) => !v)}
+        />
       </aside>
 
       {/* Mobile drawer */}
@@ -165,35 +231,32 @@ export function AppSidebar() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-4 h-9 w-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="absolute right-3 top-4 h-9 w-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring z-10"
               aria-label="Fechar menu"
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarBody pathname={pathname} onNavigate={() => setOpen(false)} />
+            <SidebarBody
+              pathname={pathname}
+              collapsed={false}
+              onNavigate={() => setOpen(false)}
+            />
           </aside>
         </div>
       )}
 
-      {/* Topbar (sempre visível) */}
-      <TopBar onOpenMenu={() => setOpen(true)} currentTitle={current?.title ?? "Dashboard"} />
     </>
   );
 }
 
-function TopBar({ onOpenMenu, currentTitle }: { onOpenMenu: () => void; currentTitle: string }) {
-  return (
-    <header className="fixed top-0 right-0 left-16 sm:left-20 lg:left-64 z-40 h-14 border-b border-border bg-background/90 backdrop-blur-md">
-      <div className="h-full px-4 sm:px-6 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onOpenMenu}
-          className="lg:hidden h-9 w-9 rounded-md flex items-center justify-center text-foreground hover:bg-muted"
-          aria-label="Abrir menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+export function AppTopBar() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const current = items.find((i) => isActiveUrl(pathname, i.url));
+  const currentTitle = current?.title ?? "Dashboard";
 
+  return (
+    <header className="sticky top-0 z-40 h-14 border-b border-border bg-background/90 backdrop-blur-md">
+      <div className="h-full px-4 sm:px-6 flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm min-w-0">
           <span className="text-muted-foreground hidden sm:inline">Luminart</span>
           <span className="text-muted-foreground hidden sm:inline">/</span>
@@ -201,10 +264,6 @@ function TopBar({ onOpenMenu, currentTitle }: { onOpenMenu: () => void; currentT
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground w-64">
-            <Search className="h-3.5 w-3.5" />
-            <span className="text-xs">Buscar item, fornecedor...</span>
-          </div>
           <button
             className="h-9 w-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground relative"
             aria-label="Notificações"

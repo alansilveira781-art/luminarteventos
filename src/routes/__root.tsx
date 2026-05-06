@@ -1,7 +1,7 @@
 import { Outlet, Link, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
-import { AppSidebar } from "@/components/AppSidebar";
+import { AppSidebar, AppTopBar } from "@/components/AppSidebar";
 
 import appCss from "../styles.css?url";
 
@@ -74,7 +74,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="flex min-h-dvh w-full bg-background text-foreground">
         <AppSidebar />
-        <main className="flex-1 min-w-0 overflow-x-hidden pt-14 pl-16 sm:pl-20 lg:pl-0">
+        <main className="flex-1 min-w-0 overflow-x-hidden pl-16 sm:pl-20 lg:pl-0">
+          <AppTopBar />
           <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto">
             <Outlet />
           </div>
