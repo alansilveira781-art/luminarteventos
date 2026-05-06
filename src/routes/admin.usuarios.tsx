@@ -4,10 +4,12 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Settings2 } from "lucide-react";
+import { Settings2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/usuarios")({
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/admin/usuarios")({
 function UsuariosPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<any>(null);
+  const [creating, setCreating] = useState(false);
 
   const { data: rows } = useQuery({
     queryKey: ["admin-users"],
@@ -35,40 +38,108 @@ function UsuariosPage() {
   });
 
   return (
-    <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 text-left">Nome</th>
-              <th className="px-4 py-3 text-left">E-mail</th>
-              <th className="px-4 py-3 text-left">Papel</th>
-              <th className="px-4 py-3 text-left">Módulos</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {(rows ?? []).map((u) => (
-              <tr key={u.id} className="border-t border-border">
-                <td className="px-4 py-2.5">{u.display_name ?? "—"}</td>
-                <td className="px-4 py-2.5">{u.email}</td>
-                <td className="px-4 py-2.5">
-                  {u.roles.includes("admin") ? <Badge>Admin</Badge> : <Badge variant="secondary">Usuário</Badge>}
-                </td>
-                <td className="px-4 py-2.5">{u.roles.includes("admin") ? "Todos" : u.modulos.length}</td>
-                <td className="px-4 py-2.5 text-right">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
-                    <Settings2 className="h-4 w-4 mr-1" /> Acessos
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {!rows?.length && <tr><td colSpan={5} className="text-center py-10 text-muted-foreground">Nenhum usuário</td></tr>}
-          </tbody>
-        </table>
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button onClick={() => setCreating(true)}>
+          <UserPlus className="h-4 w-4 mr-2" /> Novo usuário
+        </Button>
       </div>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left">Nome</th>
+                <th className="px-4 py-3 text-left">E-mail</th>
+                <th className="px-4 py-3 text-left">Papel</th>
+                <th className="px-4 py-3 text-left">Módulos</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {(rows ?? []).map((u) => (
+                <tr key={u.id} className="border-t border-border">
+                  <td className="px-4 py-2.5">{u.display_name ?? "—"}</td>
+                  <td className="px-4 py-2.5">{u.email}</td>
+                  <td className="px-4 py-2.5">
+                    {u.roles.includes("admin") ? <Badge>Admin</Badge> : <Badge variant="secondary">Usuário</Badge>}
+                  </td>
+                  <td className="px-4 py-2.5">{u.roles.includes("admin") ? "Todos" : u.modulos.length}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
+                      <Settings2 className="h-4 w-4 mr-1" /> Acessos
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {!rows?.length && <tr><td colSpan={5} className="text-center py-10 text-muted-foreground">Nenhum usuário</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </Card>
       {editing && <EditAccess user={editing} onClose={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["admin-users"] }); }} />}
-    </Card>
+      {creating && <CreateUser onClose={() => { setCreating(false); qc.invalidateQueries({ queryKey: ["admin-users"] }); }} />}
+    </div>
+  );
+}
+
+function CreateUser({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [modIds, setModIds] = useState<string[]>([]);
+
+  const { data: modulos } = useQuery({
+    queryKey: ["modulos-all"],
+    queryFn: async () => (await supabase.from("modulos").select("id,nome,slug").eq("ativo", true).order("ordem")).data ?? [],
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: { email, password, display_name: displayName, is_admin: isAdmin, modulo_ids: modIds },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+    },
+    onSuccess: () => { toast.success("Usuário criado"); onClose(); },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao criar usuário"),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Novo usuário</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label>Nome</Label><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
+          <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div><Label>Senha</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox checked={isAdmin} onCheckedChange={(v) => setIsAdmin(!!v)} />
+            <span className="text-sm font-medium">Administrador (acessa tudo)</span>
+          </label>
+          <div className={isAdmin ? "opacity-40 pointer-events-none" : ""}>
+            <div className="text-xs uppercase text-muted-foreground mb-2">Módulos liberados</div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {(modulos ?? []).map((m: any) => (
+                <label key={m.id} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={modIds.includes(m.id)}
+                    onCheckedChange={(v) => setModIds((cur) => (v ? [...cur, m.id] : cur.filter((x) => x !== m.id)))}
+                  />
+                  <span className="text-sm">{m.nome}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button onClick={() => create.mutate()} disabled={create.isPending || !email || !password}>Criar</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
