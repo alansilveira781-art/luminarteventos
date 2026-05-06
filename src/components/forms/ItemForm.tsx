@@ -115,7 +115,9 @@ export function ItemForm({
             <SelectContent>{itemStatuses.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}</SelectContent>
           </Select>
         </FormField>
-        <FormField label="URL da foto"><Input value={form.foto_url} onChange={(e) => set("foto_url", e.target.value)} placeholder="https://..." /></FormField>
+        <FormField label="Foto do item" wide>
+          <FotoUpload value={form.foto_url} onChange={(url) => set("foto_url", url)} />
+        </FormField>
         <FormField label="Descrição" wide><Textarea value={form.descricao} onChange={(e) => set("descricao", e.target.value)} rows={2} /></FormField>
         <FormField label="Observações" wide><Textarea value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} rows={2} /></FormField>
         <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : "Salvar item"}</Button></FormActions>
