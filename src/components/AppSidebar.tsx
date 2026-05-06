@@ -15,24 +15,39 @@ import {
   CircleUser,
   ChevronLeft,
   ChevronRight,
+  Shield,
+  LogOut,
 } from "lucide-react";
 import logo from "@/assets/luminart-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
 
-const items = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Visão geral" },
-  { title: "Estoque", url: "/estoque", icon: Package, group: "Cadastros" },
-  { title: "Solicitantes", url: "/solicitantes", icon: Users, group: "Cadastros" },
-  { title: "Fornecedores", url: "/fornecedores", icon: Truck, group: "Cadastros" },
-  { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Movimentações" },
-  { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Movimentações" },
-  { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Movimentações" },
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Análises" },
+type NavItem = { title: string; url: string; icon: any; group: string; module?: string; adminOnly?: boolean };
+
+const allItems: NavItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Visão geral", module: "estoque" },
+  { title: "Estoque", url: "/estoque", icon: Package, group: "Cadastros", module: "estoque" },
+  { title: "Solicitantes", url: "/solicitantes", icon: Users, group: "Cadastros", module: "estoque" },
+  { title: "Fornecedores", url: "/fornecedores", icon: Truck, group: "Cadastros", module: "estoque" },
+  { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Movimentações", module: "estoque" },
+  { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Movimentações", module: "estoque" },
+  { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Movimentações", module: "estoque" },
+  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Análises", module: "estoque" },
+  { title: "Administração", url: "/admin", icon: Shield, group: "Sistema", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Cadastros", "Movimentações", "Análises"];
+const groups = ["Visão geral", "Cadastros", "Movimentações", "Análises", "Sistema"];
 
 function isActiveUrl(pathname: string, url: string) {
   return url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
+}
+
+function useNavItems() {
+  const { isAdmin, hasModule } = useAuth();
+  return allItems.filter((i) => {
+    if (i.adminOnly) return isAdmin;
+    if (i.module) return isAdmin || hasModule(i.module);
+    return true;
+  });
 }
 
 function SidebarBody({
