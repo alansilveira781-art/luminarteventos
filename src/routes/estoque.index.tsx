@@ -115,9 +115,9 @@ function EstoquePage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Carregando…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
               ) : (
                 filtered.map((i) => (
                   <tr key={i.id} className="border-t border-border hover:bg-muted/30">
