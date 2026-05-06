@@ -65,7 +65,10 @@ function EntradasPage() {
 
   const { data: itens } = useQuery({
     queryKey: ["itens-select"],
-    queryFn: async () => (await supabase.from("itens").select("id,nome,codigo,codigo_proprio,unidade,valor_unitario").order("nome")).data ?? [],
+    queryFn: async () =>
+      await fetchAllRows<any>("itens", "id,nome,codigo,codigo_proprio,unidade,valor_unitario", {
+        orderBy: { column: "nome", ascending: true },
+      }),
   });
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores-select"],
