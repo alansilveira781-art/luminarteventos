@@ -38,7 +38,7 @@ const allItems: NavItem[] = [
   { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Estoque", module: "estoque" },
   { title: "A receber", url: "/estoque/a-receber", icon: PackageCheck, group: "Estoque", module: "estoque" },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Estoque", module: "estoque" },
-  { title: "Kanban", url: "/compras", icon: KanbanSquare, group: "Compras", module: "compras" },
+  { title: "Quadro de Compras", url: "/compras", icon: KanbanSquare, group: "Compras", module: "compras" },
   { title: "Dashboard", url: "/compras/dashboard", icon: BarChart3, group: "Compras", module: "compras" },
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
