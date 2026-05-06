@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FormActions, FormField, FormSection } from "@/components/FormSection";
-import { Plus, Upload, ImagePlus } from "lucide-react";
+import { SelectCreatable } from "@/components/SelectCreatable";
+import { Upload, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { useRef } from "react";
 
@@ -28,57 +28,6 @@ export function ItemForm({
   onSubmit: (payload: any) => void;
   submitting?: boolean;
 }) {
-  const qc = useQueryClient();
-  const [novaCategoriaOpen, setNovaCategoriaOpen] = useState(false);
-  const [novaCategoria, setNovaCategoria] = useState("");
-  const [novaUnidadeOpen, setNovaUnidadeOpen] = useState(false);
-  const [novaUnidade, setNovaUnidade] = useState("");
-
-  const { data: categorias } = useQuery({
-    queryKey: ["categorias"],
-    queryFn: async () => (await supabase.from("categorias").select("nome").order("nome")).data ?? [],
-  });
-  const { data: unidades } = useQuery({
-    queryKey: ["unidades"],
-    queryFn: async () => (await supabase.from("unidades").select("nome").order("nome")).data ?? [],
-  });
-
-  const criarCategoria = useMutation({
-    mutationFn: async (nome: string) => {
-      const n = nome.trim();
-      if (!n) throw new Error("Nome obrigatório");
-      const { error } = await supabase.from("categorias").insert({ nome: n });
-      if (error) throw error;
-      return n;
-    },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["categorias"] });
-      set("categoria", n);
-      setNovaCategoria("");
-      setNovaCategoriaOpen(false);
-      toast.success("Categoria criada");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const criarUnidade = useMutation({
-    mutationFn: async (nome: string) => {
-      const n = nome.trim();
-      if (!n) throw new Error("Nome obrigatório");
-      const { error } = await supabase.from("unidades").insert({ nome: n });
-      if (error) throw error;
-      return n;
-    },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["unidades"] });
-      set("unidade", n);
-      setNovaUnidade("");
-      setNovaUnidadeOpen(false);
-      toast.success("Unidade criada");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
   const [form, setForm] = useState({
     codigo: initial?.codigo ?? "",
     codigo_proprio: initial?.codigo_proprio ?? "",
@@ -122,35 +71,11 @@ export function ItemForm({
         </FormField>
         <FormField label="Nome*"><Input required value={form.nome} onChange={(e) => set("nome", e.target.value)} /></FormField>
         <FormField label="Categoria">
-          <div className="flex gap-2">
-            <Select value={form.categoria || undefined} onValueChange={(v) => set("categoria", v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-              <SelectContent>
-                {(categorias ?? []).map((c: any) => (
-                  <SelectItem key={c.nome} value={c.nome}>{c.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="button" variant="outline" size="icon" onClick={() => setNovaCategoriaOpen(true)} title="Nova categoria">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          <SelectCreatable table="categorias" value={form.categoria || null} onChange={(v) => set("categoria", v ?? "")} />
         </FormField>
         <FormField label="Valor unitário (R$)"><Input type="number" min="0" step="0.01" value={form.valor_unitario} onChange={(e) => set("valor_unitario", e.target.value)} placeholder="0.00" /></FormField>
         <FormField label="Unidade de medida">
-          <div className="flex gap-2">
-            <Select value={form.unidade || undefined} onValueChange={(v) => set("unidade", v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-              <SelectContent>
-                {(unidades ?? []).map((u: any) => (
-                  <SelectItem key={u.nome} value={u.nome}>{u.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="button" variant="outline" size="icon" onClick={() => setNovaUnidadeOpen(true)} title="Nova unidade">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          <SelectCreatable table="unidades" value={form.unidade || null} onChange={(v) => set("unidade", v ?? "")} />
         </FormField>
         <FormField label="Localização física"><Input value={form.localizacao} onChange={(e) => set("localizacao", e.target.value)} /></FormField>
         <FormField label={initial ? "Quantidade atual (ajuste)" : "Quantidade inicial"}><Input type="number" min={0} step="0.01" value={form.quantidade_atual} onChange={(e) => set("quantidade_atual", e.target.value)} /></FormField>
@@ -168,46 +93,6 @@ export function ItemForm({
         <FormField label="Observações" wide><Textarea value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} rows={2} /></FormField>
         <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : "Salvar item"}</Button></FormActions>
       </FormSection>
-
-      <Dialog open={novaUnidadeOpen} onOpenChange={setNovaUnidadeOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nova unidade de medida</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Ex.: Caixa, Pacote..."
-              value={novaUnidade}
-              onChange={(e) => setNovaUnidade(e.target.value)}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setNovaUnidadeOpen(false)}>Cancelar</Button>
-              <Button type="button" onClick={() => criarUnidade.mutate(novaUnidade)} disabled={criarUnidade.isPending}>
-                {criarUnidade.isPending ? "Criando…" : "Criar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={novaCategoriaOpen} onOpenChange={setNovaCategoriaOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nova categoria</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Nome da categoria"
-              value={novaCategoria}
-              onChange={(e) => setNovaCategoria(e.target.value)}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setNovaCategoriaOpen(false)}>Cancelar</Button>
-              <Button type="button" onClick={() => criarCategoria.mutate(novaCategoria)} disabled={criarCategoria.isPending}>
-                {criarCategoria.isPending ? "Criando…" : "Criar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </form>
   );
 }

@@ -190,54 +190,33 @@ export function CompraDialog({
                 </Select>
               </FormField>
               <FormField label="Solicitante">
-                <Select
-                  value={form.solicitante_id ?? "__free"}
-                  onValueChange={(v) => {
-                    if (v === "__free") setForm({ ...form, solicitante_id: null });
-                    else {
-                      const s = solicitantes.find((x) => x.id === v);
-                      setForm({ ...form, solicitante_id: v, solicitante: s?.nome ?? form.solicitante });
-                    }
+                <SelectCreatable
+                  table="solicitantes"
+                  value={form.solicitante}
+                  onChange={(v) => {
+                    const s = solicitantes.find((x) => x.nome === v);
+                    setForm({ ...form, solicitante: v, solicitante_id: s?.id ?? null });
                   }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__free">— Texto livre —</SelectItem>
-                    {solicitantes.map((s) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                />
               </FormField>
-              {!form.solicitante_id && (
-                <FormField label="Solicitante (livre)">
-                  <Input value={form.solicitante ?? ""} onChange={(e) => setForm({ ...form, solicitante: e.target.value })} />
-                </FormField>
-              )}
               <FormField label="Comprador">
                 <Input value={form.comprador ?? ""} onChange={(e) => setForm({ ...form, comprador: e.target.value })} />
               </FormField>
               <FormField label="Fornecedor">
-                <Select
-                  value={form.fornecedor_id ?? "__free"}
-                  onValueChange={(v) => {
-                    if (v === "__free") setForm({ ...form, fornecedor_id: null });
-                    else {
-                      const f = fornecedores.find((x) => x.id === v);
-                      setForm({ ...form, fornecedor_id: v, fornecedor: f?.nome ?? form.fornecedor, documento: f?.documento ?? form.documento });
-                    }
+                <SelectCreatable
+                  table="fornecedores"
+                  value={form.fornecedor}
+                  onChange={(v) => {
+                    const f = fornecedores.find((x) => x.nome === v);
+                    setForm({
+                      ...form,
+                      fornecedor: v,
+                      fornecedor_id: f?.id ?? null,
+                      documento: f?.documento ?? form.documento,
+                    });
                   }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__free">— Texto livre —</SelectItem>
-                    {fornecedores.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                />
               </FormField>
-              {!form.fornecedor_id && (
-                <FormField label="Fornecedor (livre)">
-                  <Input value={form.fornecedor ?? ""} onChange={(e) => setForm({ ...form, fornecedor: e.target.value })} />
-                </FormField>
-              )}
               <FormField label="CNPJ / CPF">
                 <Input value={form.documento ?? ""} onChange={(e) => setForm({ ...form, documento: e.target.value })} />
               </FormField>
@@ -256,7 +235,9 @@ export function CompraDialog({
                   onChange={(v) => setForm({ ...form, condicao_pagamento: v })} />
               </FormField>
               <FormField label="Valor total (calculado)">
-                <Input type="number" step="0.01" value={totalCalc.toFixed(2)} readOnly className="bg-muted/50" />
+                <div className="h-9 px-3 flex items-center rounded-md border border-input bg-muted/50 text-sm font-medium tabular-nums">
+                  {totalCalc.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
               </FormField>
               <FormField label="Observações" wide>
                 <Textarea rows={3} value={form.observacoes ?? ""} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
