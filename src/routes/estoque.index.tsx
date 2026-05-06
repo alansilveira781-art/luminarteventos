@@ -26,13 +26,28 @@ function EstoquePage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [hideZero, setHideZero] = useState(false);
+  const [sort, setSort] = useState<{ key: string; dir: "desc" | "asc" } | null>(null);
 
   const { data: itens, isLoading } = useQuery({
     queryKey: ["itens"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("itens").select("*").order("nome").limit(2000);
-      if (error) throw error;
-      return data;
+      const all: any[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("itens")
+          .select("*")
+          .order("nome")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = data ?? [];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
