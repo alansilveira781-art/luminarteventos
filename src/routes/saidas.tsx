@@ -105,6 +105,7 @@ function SaidasPage() {
                 <th className="px-4 py-3 font-medium">Solicitante</th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium text-right">Qtd</th>
+                <th className="px-4 py-3 font-medium">UN</th>
                 <th className="px-4 py-3 font-medium">Devolver até</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
