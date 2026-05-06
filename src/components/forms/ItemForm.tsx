@@ -28,57 +28,6 @@ export function ItemForm({
   onSubmit: (payload: any) => void;
   submitting?: boolean;
 }) {
-  const qc = useQueryClient();
-  const [novaCategoriaOpen, setNovaCategoriaOpen] = useState(false);
-  const [novaCategoria, setNovaCategoria] = useState("");
-  const [novaUnidadeOpen, setNovaUnidadeOpen] = useState(false);
-  const [novaUnidade, setNovaUnidade] = useState("");
-
-  const { data: categorias } = useQuery({
-    queryKey: ["categorias"],
-    queryFn: async () => (await supabase.from("categorias").select("nome").order("nome")).data ?? [],
-  });
-  const { data: unidades } = useQuery({
-    queryKey: ["unidades"],
-    queryFn: async () => (await supabase.from("unidades").select("nome").order("nome")).data ?? [],
-  });
-
-  const criarCategoria = useMutation({
-    mutationFn: async (nome: string) => {
-      const n = nome.trim();
-      if (!n) throw new Error("Nome obrigatório");
-      const { error } = await supabase.from("categorias").insert({ nome: n });
-      if (error) throw error;
-      return n;
-    },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["categorias"] });
-      set("categoria", n);
-      setNovaCategoria("");
-      setNovaCategoriaOpen(false);
-      toast.success("Categoria criada");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const criarUnidade = useMutation({
-    mutationFn: async (nome: string) => {
-      const n = nome.trim();
-      if (!n) throw new Error("Nome obrigatório");
-      const { error } = await supabase.from("unidades").insert({ nome: n });
-      if (error) throw error;
-      return n;
-    },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["unidades"] });
-      set("unidade", n);
-      setNovaUnidade("");
-      setNovaUnidadeOpen(false);
-      toast.success("Unidade criada");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
   const [form, setForm] = useState({
     codigo: initial?.codigo ?? "",
     codigo_proprio: initial?.codigo_proprio ?? "",
