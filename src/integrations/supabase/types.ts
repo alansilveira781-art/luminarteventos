@@ -134,6 +134,45 @@ export type Database = {
         }
         Relationships: []
       }
+      modulos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number
+          rota: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          rota?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          rota?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       movimentacao_itens: {
         Row: {
           created_at: string
@@ -276,6 +315,30 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       solicitantes: {
         Row: {
           cargo: string | null
@@ -315,14 +378,77 @@ export type Database = {
         }
         Relationships: []
       }
+      user_modulos: {
+        Row: {
+          created_at: string
+          id: string
+          modulo_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modulo_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modulo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_modulos_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_module_access: {
+        Args: { _slug: string; _user_id: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       refresh_item_status: { Args: { p_item_id: string }; Returns: undefined }
     }
     Enums: {
+      app_role: "admin" | "user"
       devolucao_condicao:
         | "perfeito"
         | "danificado"
@@ -487,6 +613,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       devolucao_condicao: [
         "perfeito",
         "danificado",
