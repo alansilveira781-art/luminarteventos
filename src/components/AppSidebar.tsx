@@ -15,24 +15,39 @@ import {
   CircleUser,
   ChevronLeft,
   ChevronRight,
+  Shield,
+  LogOut,
 } from "lucide-react";
 import logo from "@/assets/luminart-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
 
-const items = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Visão geral" },
-  { title: "Estoque", url: "/estoque", icon: Package, group: "Cadastros" },
-  { title: "Solicitantes", url: "/solicitantes", icon: Users, group: "Cadastros" },
-  { title: "Fornecedores", url: "/fornecedores", icon: Truck, group: "Cadastros" },
-  { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Movimentações" },
-  { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Movimentações" },
-  { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Movimentações" },
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Análises" },
+type NavItem = { title: string; url: string; icon: any; group: string; module?: string; adminOnly?: boolean };
+
+const allItems: NavItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Visão geral", module: "estoque" },
+  { title: "Estoque", url: "/estoque", icon: Package, group: "Cadastros", module: "estoque" },
+  { title: "Solicitantes", url: "/solicitantes", icon: Users, group: "Cadastros", module: "estoque" },
+  { title: "Fornecedores", url: "/fornecedores", icon: Truck, group: "Cadastros", module: "estoque" },
+  { title: "Entradas", url: "/entradas", icon: ArrowDownToLine, group: "Movimentações", module: "estoque" },
+  { title: "Saídas", url: "/saidas", icon: ArrowUpFromLine, group: "Movimentações", module: "estoque" },
+  { title: "Devoluções", url: "/devolucoes", icon: Undo2, group: "Movimentações", module: "estoque" },
+  { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Análises", module: "estoque" },
+  { title: "Administração", url: "/admin", icon: Shield, group: "Sistema", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Cadastros", "Movimentações", "Análises"];
+const groups = ["Visão geral", "Cadastros", "Movimentações", "Análises", "Sistema"];
 
 function isActiveUrl(pathname: string, url: string) {
   return url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
+}
+
+function useNavItems() {
+  const { isAdmin, hasModule } = useAuth();
+  return allItems.filter((i) => {
+    if (i.adminOnly) return isAdmin;
+    if (i.module) return isAdmin || hasModule(i.module);
+    return true;
+  });
 }
 
 function SidebarBody({
@@ -46,6 +61,8 @@ function SidebarBody({
   onNavigate?: () => void;
   onToggleCollapse?: () => void;
 }) {
+  const items = useNavItems();
+  const { user, signOut } = useAuth();
   return (
     <div className="flex h-full flex-col">
       <div
@@ -133,13 +150,16 @@ function SidebarBody({
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-4">
+      <div className="border-t border-sidebar-border p-3">
         {collapsed ? (
-          <div className="flex justify-center">
-            <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-              <CircleUser className="h-4 w-4" />
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            title="Sair"
+            className="mx-auto h-9 w-9 rounded-md flex items-center justify-center text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         ) : (
           <>
             <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/40 px-3 py-2">
@@ -147,13 +167,19 @@ function SidebarBody({
                 <CircleUser className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-sidebar-foreground truncate">Operador</div>
-                <div className="text-[10px] text-muted-foreground truncate">operacao@luminart</div>
+                <div className="text-xs font-medium text-sidebar-foreground truncate">
+                  {user?.user_metadata?.full_name ?? user?.email ?? "Usuário"}
+                </div>
+                <div className="text-[10px] text-muted-foreground truncate">{user?.email}</div>
               </div>
             </div>
-            <div className="mt-3 text-[10px] text-muted-foreground/70 text-center">
-              v1.0 · Operação interna
-            </div>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Sair
+            </button>
           </>
         )}
       </div>
@@ -162,6 +188,7 @@ function SidebarBody({
 }
 
 function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: () => void }) {
+  const items = useNavItems();
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-sidebar-border bg-sidebar lg:hidden sm:w-20">
       <button
@@ -201,7 +228,8 @@ export function AppSidebar() {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  const current = items.find((i) => isActiveUrl(pathname, i.url));
+
+
 
   return (
     <>
@@ -251,6 +279,7 @@ export function AppSidebar() {
 
 export function AppTopBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const items = useNavItems();
   const current = items.find((i) => isActiveUrl(pathname, i.url));
   const currentTitle = current?.title ?? "Dashboard";
 

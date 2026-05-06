@@ -15,9 +15,15 @@ import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as DevolucoesRouteImport } from './routes/devolucoes'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
+import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
+import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
+import { Route as AdminDadosRouteImport } from './routes/admin.dados'
 
 const SolicitantesRoute = SolicitantesRouteImport.update({
   id: '/solicitantes',
@@ -49,6 +55,16 @@ const DevolucoesRoute = DevolucoesRouteImport.update({
   path: '/devolucoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -59,84 +75,140 @@ const EstoqueIndexRoute = EstoqueIndexRouteImport.update({
   path: '/estoque/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const EstoqueItemIdRoute = EstoqueItemIdRouteImport.update({
   id: '/estoque/$itemId',
   path: '/estoque/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminModulosRoute = AdminModulosRouteImport.update({
+  id: '/modulos',
+  path: '/modulos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDadosRoute = AdminDadosRouteImport.update({
+  id: '/dados',
+  path: '/dados',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/fornecedores': typeof FornecedoresRoute
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
+  '/admin/dados': typeof AdminDadosRoute
+  '/admin/modulos': typeof AdminModulosRoute
+  '/admin/usuarios': typeof AdminUsuariosRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/fornecedores': typeof FornecedoresRoute
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
+  '/admin/dados': typeof AdminDadosRoute
+  '/admin/modulos': typeof AdminModulosRoute
+  '/admin/usuarios': typeof AdminUsuariosRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
+  '/admin': typeof AdminIndexRoute
   '/estoque': typeof EstoqueIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/fornecedores': typeof FornecedoresRoute
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
+  '/admin/dados': typeof AdminDadosRoute
+  '/admin/modulos': typeof AdminModulosRoute
+  '/admin/usuarios': typeof AdminUsuariosRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/auth'
     | '/devolucoes'
     | '/entradas'
     | '/fornecedores'
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
+    | '/admin/dados'
+    | '/admin/modulos'
+    | '/admin/usuarios'
     | '/estoque/$itemId'
+    | '/admin/'
     | '/estoque/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/devolucoes'
     | '/entradas'
     | '/fornecedores'
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
+    | '/admin/dados'
+    | '/admin/modulos'
+    | '/admin/usuarios'
     | '/estoque/$itemId'
+    | '/admin'
     | '/estoque'
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/auth'
     | '/devolucoes'
     | '/entradas'
     | '/fornecedores'
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
+    | '/admin/dados'
+    | '/admin/modulos'
+    | '/admin/usuarios'
     | '/estoque/$itemId'
+    | '/admin/'
     | '/estoque/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  AuthRoute: typeof AuthRoute
   DevolucoesRoute: typeof DevolucoesRoute
   EntradasRoute: typeof EntradasRoute
   FornecedoresRoute: typeof FornecedoresRoute
@@ -191,6 +263,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevolucoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -205,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EstoqueIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/estoque/$itemId': {
       id: '/estoque/$itemId'
       path: '/estoque/$itemId'
@@ -212,11 +305,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EstoqueItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/usuarios': {
+      id: '/admin/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AdminUsuariosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/modulos': {
+      id: '/admin/modulos'
+      path: '/modulos'
+      fullPath: '/admin/modulos'
+      preLoaderRoute: typeof AdminModulosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dados': {
+      id: '/admin/dados'
+      path: '/dados'
+      fullPath: '/admin/dados'
+      preLoaderRoute: typeof AdminDadosRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminDadosRoute: typeof AdminDadosRoute
+  AdminModulosRoute: typeof AdminModulosRoute
+  AdminUsuariosRoute: typeof AdminUsuariosRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminDadosRoute: AdminDadosRoute,
+  AdminModulosRoute: AdminModulosRoute,
+  AdminUsuariosRoute: AdminUsuariosRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  AuthRoute: AuthRoute,
   DevolucoesRoute: DevolucoesRoute,
   EntradasRoute: EntradasRoute,
   FornecedoresRoute: FornecedoresRoute,

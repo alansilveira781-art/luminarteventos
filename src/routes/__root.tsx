@@ -1,7 +1,8 @@
-import { Outlet, Link, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, HeadContent, Scripts, useRouterState, Navigate } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar, AppTopBar } from "@/components/AppSidebar";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 import appCss from "../styles.css?url";
 
@@ -72,16 +73,40 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-dvh w-full bg-background text-foreground">
-        <AppSidebar />
-        <main className="flex-1 min-w-0 overflow-x-hidden pl-16 sm:pl-20 lg:pl-0">
-          <AppTopBar />
-          <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  const { session, loading } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background text-muted-foreground text-sm">
+        Carregando…
+      </div>
+    );
+  }
+
+  // Public auth route
+  if (pathname === "/auth") return <Outlet />;
+
+  if (!session) return <Navigate to="/auth" />;
+
+  return (
+    <div className="flex min-h-dvh w-full bg-background text-foreground">
+      <AppSidebar />
+      <main className="flex-1 min-w-0 overflow-x-hidden pl-16 sm:pl-20 lg:pl-0">
+        <AppTopBar />
+        <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto">
+          <Outlet />
+        </div>
+      </main>
+    </div>
   );
 }
