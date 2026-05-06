@@ -48,8 +48,15 @@ const groups = ["Visão geral", "Estoque", "Compras", "Administração"];
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 const COMPRAS_ROUTES = ["/compras"];
 
-function isActiveUrl(pathname: string, url: string) {
-  return url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
+function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
+  if (url === "/") return pathname === "/";
+  if (pathname === url) return true;
+  // Se houver outra URL mais específica que casa, este item NÃO está ativo
+  const moreSpecific = allUrls.some(
+    (u) => u !== url && u.startsWith(url + "/") && (pathname === u || pathname.startsWith(u + "/")),
+  );
+  if (moreSpecific) return false;
+  return pathname.startsWith(url + "/");
 }
 
 function getContext(pathname: string): "home" | "estoque" | "compras" | "admin" {
