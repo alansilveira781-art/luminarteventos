@@ -17,6 +17,9 @@ import {
   ChevronRight,
   Shield,
   LogOut,
+  ShoppingCart,
+  KanbanSquare,
+  PackageCheck,
 } from "lucide-react";
 import logo from "@/assets/luminart-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
