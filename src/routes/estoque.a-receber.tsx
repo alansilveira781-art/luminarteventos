@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PackageCheck, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { generateNextSku } from "@/lib/sku";
 
 const sb = supabase as any;
 
