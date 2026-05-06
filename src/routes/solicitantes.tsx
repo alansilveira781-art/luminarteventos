@@ -50,6 +50,15 @@ function SolicitantesPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("solicitantes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); toast.success("Removido"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <>
       <PageHeader
