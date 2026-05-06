@@ -98,6 +98,20 @@ function AReceberPage() {
 
 function ReceberDialog({ compraId, onClose }: { compraId: string; onClose: () => void }) {
   const qc = useQueryClient();
+
+  const { data: compra } = useQuery({
+    queryKey: ["compra-receber-info", compraId],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("compras")
+        .select("id,fornecedor,fornecedor_id,documento,comprador")
+        .eq("id", compraId)
+        .single();
+      if (error) throw error;
+      return data as { id: string; fornecedor: string | null; fornecedor_id: string | null; documento: string | null; comprador: string | null };
+    },
+  });
+
   const { data: itens = [], refetch } = useQuery({
     queryKey: ["compra-itens", compraId],
     queryFn: async () => {
@@ -109,9 +123,23 @@ function ReceberDialog({ compraId, onClose }: { compraId: string; onClose: () =>
 
   const [recebimentos, setRecebimentos] = useState<Record<string, number>>({});
   const [itemMap, setItemMap] = useState<Record<string, string>>({});
+  const [fornecedor, setFornecedor] = useState("");
+  const [notaFiscal, setNotaFiscal] = useState("");
+  const [responsavel, setResponsavel] = useState("");
+  const [prefilled, setPrefilled] = useState(false);
+
+  if (compra && !prefilled) {
+    setPrefilled(true);
+    if (compra.fornecedor) setFornecedor(compra.fornecedor);
+    if (compra.documento) setNotaFiscal(compra.documento);
+    if (compra.comprador) setResponsavel(compra.comprador);
+  }
 
   const finalizar = useMutation({
     mutationFn: async () => {
+      if (!fornecedor.trim()) throw new Error("Informe o fornecedor");
+      if (!responsavel.trim()) throw new Error("Informe o responsável pelo recebimento");
+
       for (const it of itens) {
         const qtd = recebimentos[it.id] ?? Number(it.quantidade);
         if (!qtd || qtd <= 0) continue;
@@ -123,7 +151,10 @@ function ReceberDialog({ compraId, onClose }: { compraId: string; onClose: () =>
             item_id: itemId,
             quantidade: qtd,
             valor_unitario: it.valor_unitario,
-            observacoes: `Recebimento da compra ${compraId}`,
+            fornecedor_id: compra?.fornecedor_id ?? null,
+            nota_fiscal: notaFiscal || null,
+            responsavel_recebimento: responsavel,
+            observacoes: `Recebimento da compra ${compraId}${fornecedor ? ` - Fornecedor: ${fornecedor}` : ""}`,
           });
           if (error) throw error;
         }
@@ -134,7 +165,9 @@ function ReceberDialog({ compraId, onClose }: { compraId: string; onClose: () =>
           item_id: itemId,
         }).eq("id", it.id);
       }
-      const { error } = await sb.from("compras").update({ status: "finalizado" }).eq("id", compraId);
+      const { error } = await sb.from("compras")
+        .update({ status: "finalizado", fornecedor, documento: notaFiscal || null })
+        .eq("id", compraId);
       if (error) throw error;
     },
     onSuccess: () => {
