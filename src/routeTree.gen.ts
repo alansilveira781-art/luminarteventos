@@ -23,8 +23,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
 import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
-import { Route as ComprasAReceberRouteImport } from './routes/compras.a-receber'
+import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
@@ -99,14 +100,19 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const EstoqueAReceberRoute = EstoqueAReceberRouteImport.update({
+  id: '/estoque/a-receber',
+  path: '/estoque/a-receber',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EstoqueItemIdRoute = EstoqueItemIdRouteImport.update({
   id: '/estoque/$itemId',
   path: '/estoque/$itemId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ComprasAReceberRoute = ComprasAReceberRouteImport.update({
-  id: '/a-receber',
-  path: '/a-receber',
+const ComprasDashboardRoute = ComprasDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => ComprasRoute,
 } as any)
 const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
@@ -140,8 +146,9 @@ export interface FileRoutesByFullPath {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
-  '/compras/a-receber': typeof ComprasAReceberRoute
+  '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
+  '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/admin/': typeof AdminIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
@@ -159,8 +166,9 @@ export interface FileRoutesByTo {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
-  '/compras/a-receber': typeof ComprasAReceberRoute
+  '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
+  '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/admin': typeof AdminIndexRoute
   '/compras': typeof ComprasIndexRoute
   '/estoque': typeof EstoqueIndexRoute
@@ -181,8 +189,9 @@ export interface FileRoutesById {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
-  '/compras/a-receber': typeof ComprasAReceberRoute
+  '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
+  '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/admin/': typeof AdminIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
@@ -204,8 +213,9 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
-    | '/compras/a-receber'
+    | '/compras/dashboard'
     | '/estoque/$itemId'
+    | '/estoque/a-receber'
     | '/admin/'
     | '/compras/'
     | '/estoque/'
@@ -223,8 +233,9 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
-    | '/compras/a-receber'
+    | '/compras/dashboard'
     | '/estoque/$itemId'
+    | '/estoque/a-receber'
     | '/admin'
     | '/compras'
     | '/estoque'
@@ -244,8 +255,9 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
-    | '/compras/a-receber'
+    | '/compras/dashboard'
     | '/estoque/$itemId'
+    | '/estoque/a-receber'
     | '/admin/'
     | '/compras/'
     | '/estoque/'
@@ -264,6 +276,7 @@ export interface RootRouteChildren {
   SaidasRoute: typeof SaidasRoute
   SolicitantesRoute: typeof SolicitantesRoute
   EstoqueItemIdRoute: typeof EstoqueItemIdRoute
+  EstoqueAReceberRoute: typeof EstoqueAReceberRoute
   EstoqueIndexRoute: typeof EstoqueIndexRoute
 }
 
@@ -367,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/estoque/a-receber': {
+      id: '/estoque/a-receber'
+      path: '/estoque/a-receber'
+      fullPath: '/estoque/a-receber'
+      preLoaderRoute: typeof EstoqueAReceberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/estoque/$itemId': {
       id: '/estoque/$itemId'
       path: '/estoque/$itemId'
@@ -374,11 +394,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EstoqueItemIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/compras/a-receber': {
-      id: '/compras/a-receber'
-      path: '/a-receber'
-      fullPath: '/compras/a-receber'
-      preLoaderRoute: typeof ComprasAReceberRouteImport
+    '/compras/dashboard': {
+      id: '/compras/dashboard'
+      path: '/dashboard'
+      fullPath: '/compras/dashboard'
+      preLoaderRoute: typeof ComprasDashboardRouteImport
       parentRoute: typeof ComprasRoute
     }
     '/admin/usuarios': {
@@ -422,12 +442,12 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ComprasRouteChildren {
-  ComprasAReceberRoute: typeof ComprasAReceberRoute
+  ComprasDashboardRoute: typeof ComprasDashboardRoute
   ComprasIndexRoute: typeof ComprasIndexRoute
 }
 
 const ComprasRouteChildren: ComprasRouteChildren = {
-  ComprasAReceberRoute: ComprasAReceberRoute,
+  ComprasDashboardRoute: ComprasDashboardRoute,
   ComprasIndexRoute: ComprasIndexRoute,
 }
 
@@ -447,6 +467,7 @@ const rootRouteChildren: RootRouteChildren = {
   SaidasRoute: SaidasRoute,
   SolicitantesRoute: SolicitantesRoute,
   EstoqueItemIdRoute: EstoqueItemIdRoute,
+  EstoqueAReceberRoute: EstoqueAReceberRoute,
   EstoqueIndexRoute: EstoqueIndexRoute,
 }
 export const routeTree = rootRouteImport
