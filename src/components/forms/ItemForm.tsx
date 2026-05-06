@@ -45,6 +45,14 @@ export function ItemForm({
     foto_url: initial?.foto_url ?? "",
   });
 
+  useEffect(() => {
+    if (!initial && !form.codigo) {
+      generateNextSku().then((sku) => setForm((f) => (f.codigo ? f : { ...f, codigo: sku }))).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
