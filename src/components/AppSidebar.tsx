@@ -188,6 +188,7 @@ function SidebarBody({
 }
 
 function MobileRail({ pathname, onOpenMenu }: { pathname: string; onOpenMenu: () => void }) {
+  const items = useNavItems();
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-sidebar-border bg-sidebar lg:hidden sm:w-20">
       <button
