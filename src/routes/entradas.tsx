@@ -119,7 +119,8 @@ function EntradasPage() {
                   <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.entrada_tipo ? entradaTipoLabels[m.entrada_tipo] ?? m.entrada_tipo : "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{m.fornecedor?.nome ?? "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)} {m.item?.unidade}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                     {m.valor_unitario ? `R$ ${(Number(m.valor_unitario) * Number(m.quantidade)).toFixed(2)}` : "—"}
                   </td>
