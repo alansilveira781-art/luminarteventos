@@ -1,0 +1,230 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, CartesianGrid,
+} from "recharts";
+import { COMPRA_STATUSES } from "@/lib/compras";
+
+const sb = supabase as any;
+const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
+
+export const Route = createFileRoute("/compras/dashboard")({
+  component: ComprasDashboard,
+});
+
+function startOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); }
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function ComprasDashboard() {
+  const [from, setFrom] = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() - 5);
+    return startOfMonth(d);
+  });
+  const [to, setTo] = useState(() => today());
+
+  const { data: compras = [] } = useQuery({
+    queryKey: ["compras-dash", from, to],
+    queryFn: async () => {
+      const { data } = await sb
+        .from("compras")
+        .select("id,status,fornecedor,condicao_pagamento,valor_total,data_compra,data_solicitacao,created_at");
+      return ((data ?? []) as any[]).filter((c) => {
+        const ref = (c.data_compra || c.data_solicitacao || c.created_at)?.slice(0, 10);
+        return ref >= from && ref <= to;
+      });
+    },
+  });
+
+  const { data: itens = [] } = useQuery({
+    queryKey: ["compra-itens-dash"],
+    queryFn: async () => {
+      const { data } = await sb.from("compra_itens").select("compra_id,item_id,quantidade,valor_unitario,descricao");
+      return (data ?? []) as any[];
+    },
+  });
+
+  const { data: estoque = [] } = useQuery({
+    queryKey: ["itens-cat"],
+    queryFn: async () => {
+      const { data } = await supabase.from("itens").select("id,categoria");
+      return (data ?? []) as any[];
+    },
+  });
+
+  const stats = useMemo(() => {
+    const total = compras.reduce((s, c) => s + Number(c.valor_total || 0), 0);
+    const finalizadas = compras.filter((c) => c.status === "finalizado").length;
+    const emAndamento = compras.filter((c) => !["finalizado", "negada"].includes(c.status)).length;
+    return { total, count: compras.length, finalizadas, emAndamento };
+  }, [compras]);
+
+  // Por mês
+  const porMes = useMemo(() => {
+    const map = new Map<string, number>();
+    compras.forEach((c) => {
+      const ref = (c.data_compra || c.data_solicitacao || c.created_at) as string;
+      if (!ref) return;
+      const key = ref.slice(0, 7);
+      map.set(key, (map.get(key) ?? 0) + Number(c.valor_total || 0));
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mes, valor]) => ({ mes, valor: Math.round(valor * 100) / 100 }));
+  }, [compras]);
+
+  // Por fornecedor
+  const porFornecedor = useMemo(() => {
+    const map = new Map<string, number>();
+    compras.forEach((c) => {
+      const k = c.fornecedor || "Sem fornecedor";
+      map.set(k, (map.get(k) ?? 0) + Number(c.valor_total || 0));
+    });
+    return Array.from(map.entries())
+      .map(([nome, valor]) => ({ nome, valor: Math.round(valor * 100) / 100 }))
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 8);
+  }, [compras]);
+
+  // Por condição
+  const porCondicao = useMemo(() => {
+    const map = new Map<string, number>();
+    compras.forEach((c) => {
+      const k = c.condicao_pagamento || "Não informado";
+      map.set(k, (map.get(k) ?? 0) + Number(c.valor_total || 0));
+    });
+    return Array.from(map.entries()).map(([nome, valor]) => ({ nome, valor: Math.round(valor * 100) / 100 }));
+  }, [compras]);
+
+  // Por categoria (via itens vinculados)
+  const porCategoria = useMemo(() => {
+    const compraIds = new Set(compras.map((c) => c.id));
+    const catMap = new Map<string, string>(estoque.map((i: any) => [i.id, i.categoria || "Sem categoria"]));
+    const map = new Map<string, number>();
+    itens.filter((it) => compraIds.has(it.compra_id)).forEach((it) => {
+      const cat = it.item_id ? (catMap.get(it.item_id) ?? "Sem categoria") : "Item livre";
+      const v = Number(it.quantidade || 0) * Number(it.valor_unitario || 0);
+      map.set(cat, (map.get(cat) ?? 0) + v);
+    });
+    return Array.from(map.entries()).map(([nome, valor]) => ({ nome, valor: Math.round(valor * 100) / 100 }));
+  }, [compras, itens, estoque]);
+
+  // Por status
+  const porStatus = useMemo(() => {
+    const labels = Object.fromEntries(COMPRA_STATUSES.map((s) => [s.key, s.label]));
+    const map = new Map<string, number>();
+    compras.forEach((c) => map.set(c.status, (map.get(c.status) ?? 0) + 1));
+    return Array.from(map.entries()).map(([k, v]) => ({ nome: labels[k] ?? k, valor: v }));
+  }, [compras]);
+
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  return (
+    <>
+      <PageHeader title="Dashboard de Compras" description="Indicadores e gráficos do período selecionado" />
+
+      <div className="flex flex-wrap gap-3 mb-4 items-end">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1">De</label>
+          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-44" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1">Até</label>
+          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-44" />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+        <Stat label="Total compras" value={String(stats.count)} />
+        <Stat label="Valor total" value={fmt(stats.total)} />
+        <Stat label="Finalizadas" value={String(stats.finalizadas)} />
+        <Stat label="Em andamento" value={String(stats.emAndamento)} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Compras por mês (R$)">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={porMes}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="mes" fontSize={11} />
+              <YAxis fontSize={11} />
+              <Tooltip formatter={(v: any) => fmt(Number(v))} />
+              <Bar dataKey="valor" fill="#6366f1" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Compras por fornecedor (R$)">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={porFornecedor} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis type="number" fontSize={11} />
+              <YAxis type="category" dataKey="nome" width={120} fontSize={11} />
+              <Tooltip formatter={(v: any) => fmt(Number(v))} />
+              <Bar dataKey="valor" fill="#10b981" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Compras por categoria (R$)">
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={porCategoria} dataKey="valor" nameKey="nome" outerRadius={90} label>
+                {porCategoria.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <Tooltip formatter={(v: any) => fmt(Number(v))} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Compras por condição de pagamento (R$)">
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={porCondicao} dataKey="valor" nameKey="nome" outerRadius={90} label>
+                {porCondicao.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <Tooltip formatter={(v: any) => fmt(Number(v))} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Compras por status (qtd)" className="lg:col-span-2">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={porStatus}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="nome" fontSize={10} angle={-15} textAnchor="end" height={60} />
+              <YAxis fontSize={11} />
+              <Tooltip />
+              <Bar dataKey="valor" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+    </>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <Card className="p-4">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-2xl font-semibold mt-1">{value}</div>
+    </Card>
+  );
+}
+
+function ChartCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <Card className={`p-4 ${className}`}>
+      <div className="text-sm font-semibold mb-3">{title}</div>
+      {children}
+    </Card>
+  );
+}
