@@ -13,7 +13,7 @@ import { SelectCreatable } from "@/components/SelectCreatable";
 import { MentionInput, renderCommentText } from "@/components/MentionInput";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { COMPRA_STATUSES, type CompraStatus } from "@/lib/compras";
+import { COMPRA_STATUSES, TIPO_COMPRA_OPTIONS, type CompraStatus } from "@/lib/compras";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyResponsiblesForStatus, notifyMentions } from "@/lib/notify";
 
@@ -46,6 +46,7 @@ export type Compra = {
   valor_total?: number | null;
   observacoes?: string | null;
   motivo_negacao?: string | null;
+  tipo_compra?: string | null;
 };
 
 export function CompraDialog({
@@ -184,6 +185,14 @@ export function CompraDialog({
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COMPRA_STATUSES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label="Tipo de compra">
+                <Select value={form.tipo_compra ?? ""} onValueChange={(v) => setForm({ ...form, tipo_compra: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                  <SelectContent>
+                    {TIPO_COMPRA_OPTIONS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FormField>
