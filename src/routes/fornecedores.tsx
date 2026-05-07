@@ -136,7 +136,7 @@ function FornecedoresPage() {
   );
 }
 
-function FornecedorForm({ initial, onSubmit, submitting }: any) {
+export function FornecedorForm({ initial, onSubmit, submitting }: any) {
   const [f, setF] = useState({
     nome: initial?.nome ?? "", documento: initial?.documento ?? "",
     contato_nome: initial?.contato_nome ?? "", telefone: initial?.telefone ?? "",
