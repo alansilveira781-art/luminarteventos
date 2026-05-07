@@ -28,7 +28,7 @@ export const Route = createFileRoute("/saidas")({
 
 function SaidasPage() {
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
 
