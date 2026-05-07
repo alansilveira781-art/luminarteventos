@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus, Upload, FileCode2, Trash2, Pencil } from "lucide-react";
+import { Plus, Upload, FileCode2, Trash2, Pencil, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ function EntradasPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
+  const [q, setQ] = useState("");
 
   const editMut = useMutation({
     mutationFn: async (p: { original: any; patch: any }) => {
@@ -174,59 +175,89 @@ function EntradasPage() {
         }
       />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-auto max-h-[calc(100vh-160px)]">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Data</th>
-                <th className="px-4 py-3 font-medium">Item</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Fornecedor</th>
-                <th className="px-4 py-3 font-medium text-right">Qtd</th>
-                <th className="px-4 py-3 font-medium">UN</th>
-                <th className="px-4 py-3 font-medium text-right">Valor total</th>
-                <th className="px-4 py-3 font-medium">NF</th>
-                <th className="px-4 py-3 font-medium">Responsável</th>
-                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {entradas?.length ? entradas.map((m: any) => (
-                <tr key={m.id} className="border-t border-border hover:bg-muted/30">
-                  <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
-                  <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.entrada_tipo ? entradaTipoLabels[m.entrada_tipo] ?? m.entrada_tipo : "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.fornecedor?.nome ?? "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                    {m.valor_unitario ? `R$ ${(Number(m.valor_unitario) * Number(m.quantidade)).toFixed(2)}` : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{m.nota_fiscal ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.responsavel_lancamento ?? "—"}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 justify-end">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => {
-                          if (confirm("Excluir esta entrada? O estoque será revertido.")) delMut.mutate(m);
-                        }} title="Excluir">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              )) : (
-                <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma entrada registrada.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {(() => {
+        const s = q.toLowerCase().trim();
+        const filtered = (entradas ?? []).filter((m: any) => {
+          if (!s) return true;
+          return [
+            m.item?.nome, m.item?.codigo, m.fornecedor?.nome,
+            m.entrada_tipo, m.nota_fiscal, m.responsavel_lancamento, m.observacoes,
+          ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(s);
+        });
+        return (
+          <>
+            <Card className="p-4 mb-4">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por item, código, fornecedor, NF, responsável…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                {filtered.length} {filtered.length === 1 ? "entrada" : "entradas"}
+                {entradas && filtered.length !== entradas.length ? ` (de ${entradas.length})` : ""}
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden">
+              <div className="overflow-auto max-h-[calc(100vh-180px)]">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left text-xs uppercase text-muted-foreground">
+                      <th className="px-4 py-3 font-medium">Data</th>
+                      <th className="px-4 py-3 font-medium">Item</th>
+                      <th className="px-4 py-3 font-medium">Tipo</th>
+                      <th className="px-4 py-3 font-medium">Fornecedor</th>
+                      <th className="px-4 py-3 font-medium text-right">Qtd</th>
+                      <th className="px-4 py-3 font-medium">UN</th>
+                      <th className="px-4 py-3 font-medium text-right">Valor total</th>
+                      <th className="px-4 py-3 font-medium">NF</th>
+                      <th className="px-4 py-3 font-medium">Responsável</th>
+                      {isAdmin && <th className="px-4 py-3 font-medium"></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length ? filtered.map((m: any) => (
+                      <tr key={m.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                        <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.entrada_tipo ? entradaTipoLabels[m.entrada_tipo] ?? m.entrada_tipo : "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.fornecedor?.nome ?? "—"}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                          {m.valor_unitario ? `R$ ${(Number(m.valor_unitario) * Number(m.quantidade)).toFixed(2)}` : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{m.nota_fiscal ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.responsavel_lancamento ?? "—"}</td>
+                        {isAdmin && (
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1 justify-end">
+                              <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                if (confirm("Excluir esta entrada? O estoque será revertido.")) delMut.mutate(m);
+                              }} title="Excluir">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    )) : (
+                      <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma entrada encontrada.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        );
+      })()}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl">

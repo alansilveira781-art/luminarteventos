@@ -274,6 +274,7 @@ export type Database = {
           endereco: string | null
           id: string
           nome: string
+          nome_fantasia: string | null
           observacoes: string | null
           status: Database["public"]["Enums"]["entity_status"]
           telefone: string | null
@@ -288,6 +289,7 @@ export type Database = {
           endereco?: string | null
           id?: string
           nome: string
+          nome_fantasia?: string | null
           observacoes?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
           telefone?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           endereco?: string | null
           id?: string
           nome?: string
+          nome_fantasia?: string | null
           observacoes?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
           telefone?: string | null

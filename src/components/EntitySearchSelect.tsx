@@ -35,7 +35,12 @@ export function EntitySearchSelect({
     const terms = search.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (!terms.length) return options;
     return options.filter((o) => {
-      const haystack = [o.nome, o.apelido ?? ""].join(" ").toLowerCase();
+      const haystack = [
+        o.nome, o.apelido ?? "", (o as any).nome_fantasia ?? "",
+        (o as any).documento ?? "", (o as any).email ?? "",
+        (o as any).telefone ?? "", (o as any).contato_nome ?? "",
+        (o as any).setor ?? "", (o as any).cargo ?? "",
+      ].join(" ").toLowerCase();
       return terms.every((t) => haystack.includes(t));
     });
   }, [options, search]);
@@ -104,6 +109,9 @@ export function EntitySearchSelect({
                 <Check className={cn("h-4 w-4 shrink-0", value === o.id ? "opacity-100" : "opacity-0")} />
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm">{o.nome}</span>
+                  {(o as any).nome_fantasia && (
+                    <span className="text-[11px] text-muted-foreground">fantasia: {(o as any).nome_fantasia}</span>
+                  )}
                   {o.apelido && (
                     <span className="text-[11px] text-muted-foreground">apelido: {o.apelido}</span>
                   )}

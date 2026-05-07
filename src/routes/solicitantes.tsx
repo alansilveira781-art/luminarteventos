@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Pencil, Upload, Trash2 } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -26,6 +26,7 @@ function SolicitantesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [importing, setImporting] = useState(false);
+  const [q, setQ] = useState("");
 
   const { data } = useQuery({
     queryKey: ["solicitantes"],
@@ -73,41 +74,69 @@ function SolicitantesPage() {
         }
       />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">Setor</th>
-                <th className="px-4 py-3 font-medium">Cargo</th>
-                <th className="px-4 py-3 font-medium">Telefone</th>
-                <th className="px-4 py-3 font-medium">E-mail</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {data?.length ? data.map((s) => (
-                <tr key={s.id} className="border-t border-border hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{s.nome}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.setor ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.cargo ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.telefone ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.email ?? "—"}</td>
-                  <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditing(s); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (confirm(`Remover "${s.nome}"?`)) del.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
-                  </td>
-                </tr>
-              )) : (
-                <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum solicitante cadastrado.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {(() => {
+        const s = q.toLowerCase().trim();
+        const filtered = (data ?? []).filter((it: any) => {
+          if (!s) return true;
+          return [it.nome, it.apelido, it.setor, it.cargo, it.telefone, it.email]
+            .map((x) => String(x ?? "").toLowerCase()).join(" ").includes(s);
+        });
+        return (
+          <>
+            <Card className="p-4 mb-4">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, apelido, setor, cargo, telefone, e-mail…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                {filtered.length} {filtered.length === 1 ? "solicitante" : "solicitantes"}
+                {data && filtered.length !== data.length ? ` (de ${data.length})` : ""}
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left text-xs uppercase text-muted-foreground">
+                      <th className="px-4 py-3 font-medium">Nome</th>
+                      <th className="px-4 py-3 font-medium">Setor</th>
+                      <th className="px-4 py-3 font-medium">Cargo</th>
+                      <th className="px-4 py-3 font-medium">Telefone</th>
+                      <th className="px-4 py-3 font-medium">E-mail</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length ? filtered.map((s: any) => (
+                      <tr key={s.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-4 py-3 font-medium">{s.nome}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.setor ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.cargo ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.telefone ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.email ?? "—"}</td>
+                        <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
+                        <td className="px-4 py-3 text-right">
+                          <Button size="sm" variant="ghost" onClick={() => { setEditing(s); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (confirm(`Remover "${s.nome}"?`)) del.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum solicitante encontrado.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        );
+      })()}
 
       <Dialog open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) setEditing(null); }}>
         <DialogContent className="max-w-3xl">
