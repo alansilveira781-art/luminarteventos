@@ -19,6 +19,7 @@ import { ImportDialog } from "@/components/ImportDialog";
 import { ENTRADA_TEMPLATE } from "@/lib/import-utils";
 import { parseNfeXml } from "@/lib/nfe-parser";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
+import { EntitySearchSelect } from "@/components/EntitySearchSelect";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/entradas")({
