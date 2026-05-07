@@ -389,20 +389,22 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
         </FormField>
 
         {isEvento && (
-          <FormField label="Evento / Projeto* (Google Sheets)" wide>
+          <FormField label="Evento / Projeto*" wide>
             <div className="flex gap-2">
-              <Select value={meta.evento_projeto} onValueChange={(v) => setM("evento_projeto", v)}>
-                <SelectTrigger><SelectValue placeholder={eventos.length ? "Selecione…" : "Carregando ou nenhum encontrado"} /></SelectTrigger>
-                <SelectContent>
-                  {eventos.map((ev: string) => <SelectItem key={ev} value={ev}>{ev}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Input
+                list="eventos-list"
+                value={meta.evento_projeto}
+                onChange={(e) => setM("evento_projeto", e.target.value)}
+                placeholder="Digite para buscar ou criar…"
+              />
+              <datalist id="eventos-list">
+                {eventos.map((ev: string) => <option key={ev} value={ev} />)}
+              </datalist>
               <Button type="button" variant="outline" size="icon" onClick={onReloadEventos} disabled={reloadingEventos} title="Recarregar lista">
                 <RefreshCw className={`h-4 w-4 ${reloadingEventos ? "animate-spin" : ""}`} />
               </Button>
             </div>
             {eventosError && <p className="text-xs text-destructive mt-1">Erro: {eventosError}</p>}
-            {!eventosError && eventos.length === 0 && <p className="text-xs text-muted-foreground mt-1">Lista vazia. Verifique a planilha conectada.</p>}
           </FormField>
         )}
 
