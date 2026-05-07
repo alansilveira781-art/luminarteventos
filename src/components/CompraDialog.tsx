@@ -203,7 +203,7 @@ export function CompraDialog({
               </FormField>
               <FormField label="Solicitante">
                 <SelectCreatable
-                  table="solicitantes"
+                  table="compras_solicitantes"
                   value={form.solicitante}
                   onChange={(v) => {
                     const s = solicitantes.find((x) => x.nome === v);
@@ -217,7 +217,7 @@ export function CompraDialog({
               </FormField>
               <FormField label="Fornecedor">
                 <SelectCreatable
-                  table="fornecedores"
+                  table="compras_fornecedores"
                   value={form.fornecedor}
                   onChange={(v) => {
                     const f = fornecedores.find((x) => x.nome === v);
