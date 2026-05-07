@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportDialog } from "@/components/ImportDialog";
 import { SOLICITANTE_TEMPLATE } from "@/lib/import-utils";
+import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/solicitantes")({
