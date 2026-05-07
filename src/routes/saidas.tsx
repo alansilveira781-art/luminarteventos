@@ -219,6 +219,22 @@ function SaidasPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Editar saída</DialogTitle></DialogHeader>
+          {editing && (
+            <SaidaEditForm
+              original={editing}
+              itens={itens ?? []}
+              solicitantes={solicitantes ?? []}
+              eventos={eventosQuery.data?.eventos ?? []}
+              onSubmit={(patch: any) => editMut.mutate({ original: editing, patch })}
+              submitting={editMut.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
