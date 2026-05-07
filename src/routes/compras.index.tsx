@@ -26,6 +26,7 @@ export const Route = createFileRoute("/compras/")({
 
 type Compra = {
   id: string;
+  numero: number | null;
   status: CompraStatus;
   titulo: string | null;
   solicitante: string | null;
@@ -47,7 +48,7 @@ function ComprasKanban() {
     queryFn: async () => {
       const { data, error } = await sb
         .from("compras")
-        .select("id,status,titulo,solicitante,fornecedor,comprador,data_solicitacao,data_compra,valor_total")
+        .select("id,numero,status,titulo,solicitante,fornecedor,comprador,data_solicitacao,data_compra,valor_total")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Compra[];
@@ -172,8 +173,15 @@ function Card({ compra, onOpen }: { compra: Compra; onOpen: () => void }) {
           aria-label="Mover"
         >⋮⋮</button>
         <button type="button" onClick={onOpen} className="flex-1 text-left min-w-0">
-          <div className="font-medium text-sm truncate text-foreground">
-            {compra.titulo || compra.fornecedor || "Compra sem título"}
+          <div className="flex items-start justify-between gap-2">
+            <div className="font-medium text-sm truncate text-foreground flex-1 min-w-0">
+              {compra.titulo || compra.fornecedor || "Compra sem título"}
+            </div>
+            {compra.numero != null && (
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5">
+                COMPRA-{compra.numero}
+              </span>
+            )}
           </div>
           {compra.fornecedor && compra.titulo && (
             <div className="text-[11px] text-muted-foreground truncate">{compra.fornecedor}</div>
