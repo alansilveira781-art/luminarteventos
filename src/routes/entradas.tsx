@@ -537,6 +537,10 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
           valor_unitario: l.valor_unitario === "" ? null : Number(l.valor_unitario),
         })),
       );
+    }} onKeyDown={(e) => {
+      if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+        e.preventDefault();
+      }
     }} className="space-y-4">
       <FormSection>
         <FormField label="Data*"><Input required type="datetime-local" value={meta.data_movimento} onChange={(e) => setM("data_movimento", e.target.value)} /></FormField>
@@ -572,7 +576,7 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
             <div key={i} className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-6">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
-                <ItemSearchSelect itens={itens} value={l.item_id} onChange={(v) => setL(i, "item_id", v)} />
+                <ItemSearchSelect itens={itens} value={l.item_id} onChange={(v) => setL(i, "item_id", v)} autoOpen={!l.item_id && i === linhas.length - 1 && i > 0} />
               </div>
               <div className="col-span-2">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Qtd</label>
