@@ -537,6 +537,10 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
           valor_unitario: l.valor_unitario === "" ? null : Number(l.valor_unitario),
         })),
       );
+    }} onKeyDown={(e) => {
+      if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+        e.preventDefault();
+      }
     }} className="space-y-4">
       <FormSection>
         <FormField label="Data*"><Input required type="datetime-local" value={meta.data_movimento} onChange={(e) => setM("data_movimento", e.target.value)} /></FormField>
