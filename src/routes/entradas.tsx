@@ -108,7 +108,23 @@ function EntradasPage() {
   });
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores-select"],
-    queryFn: async () => (await supabase.from("fornecedores").select("id,nome").eq("status", "ativo").order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("fornecedores").select("*").eq("status", "ativo").order("nome")).data ?? [],
+  });
+
+  const [editingFornecedor, setEditingFornecedor] = useState<any | null>(null);
+  const fornMut = useMutation({
+    mutationFn: async (p: any) => {
+      const { id, ...rest } = p;
+      const { error } = await supabase.from("fornecedores").update(rest).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["fornecedores-select"] });
+      qc.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Fornecedor atualizado");
+      setEditingFornecedor(null);
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   // Múltiplos itens em uma única entrada: criamos N movimentações compartilhando metadados
