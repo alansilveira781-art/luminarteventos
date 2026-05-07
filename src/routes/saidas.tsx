@@ -343,16 +343,28 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
 
   const isEvento = meta.saida_tipo === "evento";
 
+  const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const [autoOpenIdx, setAutoOpenIdx] = useState<number | null>(null);
+
   const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
   const setL = (i: number, k: keyof Linha, v: string) => setLinhas((arr) => {
     const novo = [...arr];
     novo[i] = { ...novo[i], [k]: v };
-    // Auto-adicionar nova linha quando seleciona item na última
-    if (k === "item_id" && v && i === arr.length - 1) {
-      novo.push({ item_id: "", quantidade: "1" });
-    }
     return novo;
   });
+  const focusQty = (i: number) => {
+    setTimeout(() => {
+      const el = qtyRefs.current[i];
+      if (el) { el.focus(); el.select(); }
+    }, 30);
+  };
+  const goNextItem = (i: number) => {
+    setLinhas((arr) => {
+      if (i === arr.length - 1) return [...arr, { item_id: "", quantidade: "1" }];
+      return arr;
+    });
+    setAutoOpenIdx(i + 1);
+  };
   const addLinha = () => setLinhas((a) => [...a, { item_id: "", quantidade: "1" }]);
   const remLinha = (i: number) => setLinhas((a) => (a.length === 1 ? a : a.filter((_, idx) => idx !== i)));
 
