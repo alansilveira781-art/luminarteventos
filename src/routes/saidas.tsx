@@ -102,7 +102,9 @@ function SaidasPage() {
     queryFn: async () =>
       await fetchAllRows<any>("itens", "id,nome,codigo,codigo_proprio,unidade,quantidade_atual", {
         orderBy: { column: "nome", ascending: true },
+        pageSize: 2000,
       }),
+    staleTime: 5 * 60 * 1000,
   });
   const { data: solicitantes } = useQuery({
     queryKey: ["solicitantes-select"],
