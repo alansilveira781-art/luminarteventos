@@ -231,6 +231,7 @@ function EntradasPage() {
           <EntradaForm
             itens={itens ?? []}
             fornecedores={fornecedores ?? []}
+            onEditFornecedor={(f: any) => setEditingFornecedor(f)}
             onSubmit={(meta: any, linhas: any) => mut.mutate({ meta, linhas })}
             submitting={mut.isPending}
           />
@@ -245,8 +246,22 @@ function EntradasPage() {
               original={editing}
               itens={itens ?? []}
               fornecedores={fornecedores ?? []}
+              onEditFornecedor={(f: any) => setEditingFornecedor(f)}
               onSubmit={(patch: any) => editMut.mutate({ original: editing, patch })}
               submitting={editMut.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingFornecedor} onOpenChange={(v) => !v && setEditingFornecedor(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Editar fornecedor</DialogTitle></DialogHeader>
+          {editingFornecedor && (
+            <FornecedorForm
+              initial={editingFornecedor}
+              onSubmit={(p: any) => fornMut.mutate({ ...p, id: editingFornecedor.id })}
+              submitting={fornMut.isPending}
             />
           )}
         </DialogContent>
