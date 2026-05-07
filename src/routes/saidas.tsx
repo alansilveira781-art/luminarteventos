@@ -106,7 +106,23 @@ function SaidasPage() {
   });
   const { data: solicitantes } = useQuery({
     queryKey: ["solicitantes-select"],
-    queryFn: async () => (await supabase.from("solicitantes").select("id,nome").eq("status", "ativo").order("nome")).data ?? [],
+    queryFn: async () => (await supabase.from("solicitantes").select("*").eq("status", "ativo").order("nome")).data ?? [],
+  });
+
+  const [editingSolicitante, setEditingSolicitante] = useState<any | null>(null);
+  const solMut = useMutation({
+    mutationFn: async (p: any) => {
+      const { id, ...rest } = p;
+      const { error } = await supabase.from("solicitantes").update(rest).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["solicitantes-select"] });
+      qc.invalidateQueries({ queryKey: ["solicitantes"] });
+      toast.success("Solicitante atualizado");
+      setEditingSolicitante(null);
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const eventosQuery = useQuery({
