@@ -41,8 +41,8 @@ export const SOLICITANTE_TEMPLATE = {
 };
 
 export const FORNECEDOR_TEMPLATE = {
-  headers: ["nome", "documento", "tipo_fornecimento", "contato_nome", "telefone", "email", "endereco", "observacoes"],
-  example: { nome: "Distribuidora ABC", documento: "12.345.678/0001-99", tipo_fornecimento: "Iluminação", contato_nome: "Carlos", telefone: "(11) 3333-4444", email: "vendas@abc.com", endereco: "Rua X, 100", observacoes: "" },
+  headers: ["nome", "nome_fantasia", "documento", "tipo_fornecimento", "contato_nome", "telefone", "email", "endereco", "observacoes"],
+  example: { nome: "Distribuidora ABC Ltda", nome_fantasia: "ABC Distribuidora", documento: "12.345.678/0001-99", tipo_fornecimento: "Iluminação", contato_nome: "Carlos", telefone: "(11) 3333-4444", email: "vendas@abc.com", endereco: "Rua X, 100", observacoes: "" },
 };
 
 export const ENTRADA_TEMPLATE = {
