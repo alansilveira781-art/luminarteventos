@@ -29,7 +29,7 @@ export const Route = createFileRoute("/entradas")({
 
 function EntradasPage() {
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [importingExcel, setImportingExcel] = useState(false);
