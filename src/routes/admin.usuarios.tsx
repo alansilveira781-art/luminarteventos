@@ -16,6 +16,8 @@ export const Route = createFileRoute("/admin/usuarios")({
   component: UsuariosPage,
 });
 
+type ModAccess = { modulo_id: string; is_admin: boolean };
+
 function UsuariosPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<any>(null);
@@ -27,12 +29,14 @@ function UsuariosPage() {
       const [{ data: profiles }, { data: roles }, { data: ums }] = await Promise.all([
         supabase.from("profiles").select("id,email,display_name,created_at").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id,role"),
-        supabase.from("user_modulos").select("user_id,modulo_id"),
+        supabase.from("user_modulos").select("user_id,modulo_id,is_admin"),
       ]);
       return (profiles ?? []).map((p: any) => ({
         ...p,
         roles: (roles ?? []).filter((r: any) => r.user_id === p.id).map((r: any) => r.role),
-        modulos: (ums ?? []).filter((u: any) => u.user_id === p.id).map((u: any) => u.modulo_id),
+        modulos: (ums ?? [])
+          .filter((u: any) => u.user_id === p.id)
+          .map((u: any) => ({ modulo_id: u.modulo_id, is_admin: !!u.is_admin })) as ModAccess[],
       }));
     },
   });
@@ -64,7 +68,11 @@ function UsuariosPage() {
                   <td className="px-4 py-2.5">
                     {u.roles.includes("admin") ? <Badge>Admin</Badge> : <Badge variant="secondary">Usuário</Badge>}
                   </td>
-                  <td className="px-4 py-2.5">{u.roles.includes("admin") ? "Todos" : u.modulos.length}</td>
+                  <td className="px-4 py-2.5">
+                    {u.roles.includes("admin")
+                      ? "Todos"
+                      : `${u.modulos.length}${u.modulos.some((m) => m.is_admin) ? " · admin" : ""}`}
+                  </td>
                   <td className="px-4 py-2.5 text-right">
                     <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
                       <Settings2 className="h-4 w-4 mr-1" /> Acessos
@@ -83,12 +91,58 @@ function UsuariosPage() {
   );
 }
 
+function ModuleAccessList({
+  modulos,
+  value,
+  onChange,
+}: {
+  modulos: { id: string; nome: string }[];
+  value: ModAccess[];
+  onChange: (next: ModAccess[]) => void;
+}) {
+  const get = (id: string) => value.find((v) => v.modulo_id === id);
+  return (
+    <div className="space-y-2 max-h-60 overflow-y-auto">
+      {modulos.map((m) => {
+        const cur = get(m.id);
+        const checked = !!cur;
+        return (
+          <div key={m.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
+            <label className="flex items-center gap-2 cursor-pointer flex-1">
+              <Checkbox
+                checked={checked}
+                onCheckedChange={(v) =>
+                  onChange(
+                    v
+                      ? [...value, { modulo_id: m.id, is_admin: false }]
+                      : value.filter((x) => x.modulo_id !== m.id),
+                  )
+                }
+              />
+              <span className="text-sm">{m.nome}</span>
+            </label>
+            <label className={`flex items-center gap-1.5 text-xs cursor-pointer ${checked ? "" : "opacity-30 pointer-events-none"}`}>
+              <Checkbox
+                checked={!!cur?.is_admin}
+                onCheckedChange={(v) =>
+                  onChange(value.map((x) => (x.modulo_id === m.id ? { ...x, is_admin: !!v } : x)))
+                }
+              />
+              <span>Admin do módulo</span>
+            </label>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CreateUser({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [modIds, setModIds] = useState<string[]>([]);
+  const [mods, setMods] = useState<ModAccess[]>([]);
 
   const { data: modulos } = useQuery({
     queryKey: ["modulos-all"],
@@ -98,7 +152,14 @@ function CreateUser({ onClose }: { onClose: () => void }) {
   const create = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: { email, password, display_name: displayName, is_admin: isAdmin, modulo_ids: modIds },
+        body: {
+          email,
+          password,
+          display_name: displayName,
+          is_admin: isAdmin,
+          modulo_ids: mods.map((m) => m.modulo_id),
+          modulo_admin_ids: mods.filter((m) => m.is_admin).map((m) => m.modulo_id),
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -121,17 +182,7 @@ function CreateUser({ onClose }: { onClose: () => void }) {
           </label>
           <div className={isAdmin ? "opacity-40 pointer-events-none" : ""}>
             <div className="text-xs uppercase text-muted-foreground mb-2">Módulos liberados</div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {(modulos ?? []).map((m: any) => (
-                <label key={m.id} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={modIds.includes(m.id)}
-                    onCheckedChange={(v) => setModIds((cur) => (v ? [...cur, m.id] : cur.filter((x) => x !== m.id)))}
-                  />
-                  <span className="text-sm">{m.nome}</span>
-                </label>
-              ))}
-            </div>
+            <ModuleAccessList modulos={(modulos ?? []) as any} value={mods} onChange={setMods} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={onClose}>Cancelar</Button>
@@ -146,7 +197,7 @@ function CreateUser({ onClose }: { onClose: () => void }) {
 function EditAccess({ user, onClose }: { user: any; onClose: () => void }) {
   const qc = useQueryClient();
   const [isAdmin, setIsAdmin] = useState(user.roles.includes("admin"));
-  const [modIds, setModIds] = useState<string[]>(user.modulos);
+  const [mods, setMods] = useState<ModAccess[]>(user.modulos as ModAccess[]);
   const [displayName, setDisplayName] = useState<string>(user.display_name ?? "");
   const [email, setEmail] = useState<string>(user.email ?? "");
   const [password, setPassword] = useState<string>("");
@@ -177,13 +228,13 @@ function EditAccess({ user, onClose }: { user: any; onClose: () => void }) {
 
   const save = useMutation({
     mutationFn: async () => {
-      // role
       await supabase.from("user_roles").delete().eq("user_id", user.id);
       await supabase.from("user_roles").insert({ user_id: user.id, role: isAdmin ? "admin" : "user" });
-      // modules
       await supabase.from("user_modulos").delete().eq("user_id", user.id);
-      if (!isAdmin && modIds.length) {
-        await supabase.from("user_modulos").insert(modIds.map((modulo_id) => ({ user_id: user.id, modulo_id })));
+      if (!isAdmin && mods.length) {
+        await supabase.from("user_modulos").insert(
+          mods.map((m) => ({ user_id: user.id, modulo_id: m.modulo_id, is_admin: m.is_admin })),
+        );
       }
     },
     onSuccess: () => {
@@ -214,19 +265,7 @@ function EditAccess({ user, onClose }: { user: any; onClose: () => void }) {
           </label>
           <div className={isAdmin ? "opacity-40 pointer-events-none" : ""}>
             <div className="text-xs uppercase text-muted-foreground mb-2">Módulos liberados</div>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {(modulos ?? []).map((m: any) => (
-                <label key={m.id} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={modIds.includes(m.id)}
-                    onCheckedChange={(v) =>
-                      setModIds((cur) => (v ? [...cur, m.id] : cur.filter((x) => x !== m.id)))
-                    }
-                  />
-                  <span className="text-sm">{m.nome}</span>
-                </label>
-              ))}
-            </div>
+            <ModuleAccessList modulos={(modulos ?? []) as any} value={mods} onChange={setMods} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={onClose}>Cancelar</Button>
