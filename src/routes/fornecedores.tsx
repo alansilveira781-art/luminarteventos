@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportDialog } from "@/components/ImportDialog";
 import { FORNECEDOR_TEMPLATE } from "@/lib/import-utils";
+import { FornecedorForm } from "@/components/forms/FornecedorForm";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/fornecedores")({
