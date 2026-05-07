@@ -75,17 +75,17 @@ export function CompraDialog({
   });
 
   const { data: fornecedores = [] } = useQuery({
-    queryKey: ["fornecedores-min"],
+    queryKey: ["compras-fornecedores-min"],
     queryFn: async () => {
-      const { data } = await sb.from("fornecedores").select("id,nome,documento").eq("status", "ativo").order("nome");
+      const { data } = await sb.from("compras_fornecedores").select("id,nome,documento").eq("status", "ativo").order("nome");
       return (data ?? []) as { id: string; nome: string; documento: string | null }[];
     },
   });
 
   const { data: solicitantes = [] } = useQuery({
-    queryKey: ["solicitantes-min"],
+    queryKey: ["compras-solicitantes-min"],
     queryFn: async () => {
-      const { data } = await sb.from("solicitantes").select("id,nome").eq("status", "ativo").order("nome");
+      const { data } = await sb.from("compras_solicitantes").select("id,nome").eq("status", "ativo").order("nome");
       return (data ?? []) as { id: string; nome: string }[];
     },
   });
@@ -203,7 +203,7 @@ export function CompraDialog({
               </FormField>
               <FormField label="Solicitante">
                 <SelectCreatable
-                  table="solicitantes"
+                  table="compras_solicitantes"
                   value={form.solicitante}
                   onChange={(v) => {
                     const s = solicitantes.find((x) => x.nome === v);
@@ -217,7 +217,7 @@ export function CompraDialog({
               </FormField>
               <FormField label="Fornecedor">
                 <SelectCreatable
-                  table="fornecedores"
+                  table="compras_fornecedores"
                   value={form.fornecedor}
                   onChange={(v) => {
                     const f = fornecedores.find((x) => x.nome === v);

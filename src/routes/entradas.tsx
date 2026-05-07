@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus, Upload, FileCode2, Trash2, Pencil, Search } from "lucide-react";
+import { Plus, Upload, FileCode2, Trash2, Pencil, Search, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ function EntradasPage() {
   const qc = useQueryClient();
   const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [open, setOpen] = useState(false);
+  const [prefill, setPrefill] = useState<any | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
@@ -247,6 +248,9 @@ function EntradasPage() {
                         {isAdmin && (
                           <td className="px-4 py-3">
                             <div className="flex gap-1 justify-end">
+                              <Button type="button" variant="ghost" size="icon" onClick={() => { setPrefill(m); setOpen(true); }} title="Duplicar">
+                                <Copy className="h-4 w-4" />
+                              </Button>
                               <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -270,10 +274,12 @@ function EntradasPage() {
         );
       })()}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setPrefill(null); }}>
         <DialogContent className="max-w-4xl">
-          <DialogHeader><DialogTitle>Nova entrada</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{prefill ? "Duplicar entrada" : "Nova entrada"}</DialogTitle></DialogHeader>
           <EntradaForm
+            key={prefill?.id ?? "new"}
+            prefill={prefill}
             itens={itens ?? []}
             fornecedores={fornecedores ?? []}
             onEditFornecedor={(f: any) => setEditingFornecedor(f)}
@@ -476,26 +482,32 @@ function NfeImportDialog({ open, onOpenChange, onDone }: { open: boolean; onOpen
 
 type Linha = { item_id: string; quantidade: string; valor_unitario: string };
 
-function EntradaForm({ itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
+function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: new Date().toISOString().slice(0, 16),
-    entrada_tipo: "compra",
-    fornecedor_id: "",
-    nota_fiscal: "",
-    observacoes: "",
+    entrada_tipo: prefill?.entrada_tipo ?? "compra",
+    fornecedor_id: prefill?.fornecedor_id ?? "",
+    nota_fiscal: prefill?.nota_fiscal ?? "",
+    observacoes: prefill?.observacoes ?? "",
   });
-  const [linhas, setLinhas] = useState<Linha[]>([{ item_id: "", quantidade: "1", valor_unitario: "" }]);
+  const [linhas, setLinhas] = useState<Linha[]>(
+    prefill ? [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade), valor_unitario: prefill.valor_unitario != null ? String(prefill.valor_unitario) : "" }, { item_id: "", quantidade: "1", valor_unitario: "" }]
+            : [{ item_id: "", quantidade: "1", valor_unitario: "" }],
+  );
 
   const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
   const setL = (i: number, k: keyof Linha, v: string) => {
     setLinhas((arr) => {
       const novo = [...arr];
       novo[i] = { ...novo[i], [k]: v };
-      // auto-preencher valor unit ao escolher item
       if (k === "item_id") {
         const it = itens.find((x: any) => x.id === v);
         if (it?.valor_unitario != null && !novo[i].valor_unitario) {
           novo[i].valor_unitario = String(it.valor_unitario);
+        }
+        // Auto-adicionar nova linha quando seleciona item na última
+        if (v && i === arr.length - 1) {
+          novo.push({ item_id: "", quantidade: "1", valor_unitario: "" });
         }
       }
       return novo;

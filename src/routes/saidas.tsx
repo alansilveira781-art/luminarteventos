@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, RefreshCw, Trash2, Pencil, Search } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Pencil, Search, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -31,6 +31,7 @@ function SaidasPage() {
   const qc = useQueryClient();
   const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [open, setOpen] = useState(false);
+  const [prefill, setPrefill] = useState<any | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
   const [q, setQ] = useState("");
   const { sort, toggleSort, applySort } = useSort();
@@ -244,6 +245,9 @@ function SaidasPage() {
                         {isAdmin && (
                           <td className="px-4 py-3">
                             <div className="flex gap-1 justify-end">
+                              <Button type="button" variant="ghost" size="icon" onClick={() => { setPrefill(m); setOpen(true); }} title="Duplicar">
+                                <Copy className="h-4 w-4" />
+                              </Button>
                               <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -267,10 +271,12 @@ function SaidasPage() {
         );
       })()}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setPrefill(null); }}>
         <DialogContent className="max-w-4xl">
-          <DialogHeader><DialogTitle>Nova saída</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{prefill ? "Duplicar saída" : "Nova saída"}</DialogTitle></DialogHeader>
           <SaidaForm
+            key={prefill?.id ?? "new"}
+            prefill={prefill}
             itens={itens ?? []}
             solicitantes={solicitantes ?? []}
             onEditSolicitante={(s: any) => setEditingSolicitante(s)}
@@ -319,18 +325,21 @@ function SaidasPage() {
 
 type Linha = { item_id: string; quantidade: string };
 
-function SaidaForm({ itens, solicitantes, onEditSolicitante, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
+function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: new Date().toISOString().slice(0, 16),
-    saida_tipo: "evento",
-    solicitante_id: "",
-    evento_projeto: "",
-    finalidade: "",
-    sera_devolvido: "sim",
+    saida_tipo: prefill?.saida_tipo ?? "evento",
+    solicitante_id: prefill?.solicitante_id ?? "",
+    evento_projeto: prefill?.evento_projeto ?? "",
+    finalidade: prefill?.finalidade ?? "",
+    sera_devolvido: prefill?.data_prevista_devolucao ? "sim" : "sim",
     data_prevista_devolucao: "",
-    observacoes: "",
+    observacoes: prefill?.observacoes ?? "",
   });
-  const [linhas, setLinhas] = useState<Linha[]>([{ item_id: "", quantidade: "1" }]);
+  const [linhas, setLinhas] = useState<Linha[]>(
+    prefill ? [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade) }, { item_id: "", quantidade: "1" }]
+            : [{ item_id: "", quantidade: "1" }],
+  );
 
   const isEvento = meta.saida_tipo === "evento";
 
@@ -338,6 +347,10 @@ function SaidaForm({ itens, solicitantes, onEditSolicitante, eventos, eventosErr
   const setL = (i: number, k: keyof Linha, v: string) => setLinhas((arr) => {
     const novo = [...arr];
     novo[i] = { ...novo[i], [k]: v };
+    // Auto-adicionar nova linha quando seleciona item na última
+    if (k === "item_id" && v && i === arr.length - 1) {
+      novo.push({ item_id: "", quantidade: "1" });
+    }
     return novo;
   });
   const addLinha = () => setLinhas((a) => [...a, { item_id: "", quantidade: "1" }]);
@@ -376,20 +389,22 @@ function SaidaForm({ itens, solicitantes, onEditSolicitante, eventos, eventosErr
         </FormField>
 
         {isEvento && (
-          <FormField label="Evento / Projeto* (Google Sheets)" wide>
+          <FormField label="Evento / Projeto*" wide>
             <div className="flex gap-2">
-              <Select value={meta.evento_projeto} onValueChange={(v) => setM("evento_projeto", v)}>
-                <SelectTrigger><SelectValue placeholder={eventos.length ? "Selecione…" : "Carregando ou nenhum encontrado"} /></SelectTrigger>
-                <SelectContent>
-                  {eventos.map((ev: string) => <SelectItem key={ev} value={ev}>{ev}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Input
+                list="eventos-list"
+                value={meta.evento_projeto}
+                onChange={(e) => setM("evento_projeto", e.target.value)}
+                placeholder="Digite para buscar ou criar…"
+              />
+              <datalist id="eventos-list">
+                {eventos.map((ev: string) => <option key={ev} value={ev} />)}
+              </datalist>
               <Button type="button" variant="outline" size="icon" onClick={onReloadEventos} disabled={reloadingEventos} title="Recarregar lista">
                 <RefreshCw className={`h-4 w-4 ${reloadingEventos ? "animate-spin" : ""}`} />
               </Button>
             </div>
             {eventosError && <p className="text-xs text-destructive mt-1">Erro: {eventosError}</p>}
-            {!eventosError && eventos.length === 0 && <p className="text-xs text-muted-foreground mt-1">Lista vazia. Verifique a planilha conectada.</p>}
           </FormField>
         )}
 
@@ -508,15 +523,15 @@ function SaidaEditForm({ original, itens, solicitantes, onEditSolicitante, event
         <FormField label="Quantidade*"><Input required type="number" min="0.01" step="0.01" value={form.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
         {isEvento && (
           <FormField label="Evento / Projeto*" wide>
-            <Select value={form.evento_projeto} onValueChange={(v) => set("evento_projeto", v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-              <SelectContent>
-                {eventos.map((ev: string) => <SelectItem key={ev} value={ev}>{ev}</SelectItem>)}
-                {form.evento_projeto && !eventos.includes(form.evento_projeto) && (
-                  <SelectItem value={form.evento_projeto}>{form.evento_projeto}</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <Input
+              list="eventos-edit-list"
+              value={form.evento_projeto}
+              onChange={(e) => set("evento_projeto", e.target.value)}
+              placeholder="Digite para buscar ou criar…"
+            />
+            <datalist id="eventos-edit-list">
+              {eventos.map((ev: string) => <option key={ev} value={ev} />)}
+            </datalist>
           </FormField>
         )}
         <FormField label="Solicitante">
