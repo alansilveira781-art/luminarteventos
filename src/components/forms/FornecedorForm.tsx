@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function FornecedorForm({ initial, onSubmit, submitting }: any) {
   const [f, setF] = useState({
@@ -14,13 +16,46 @@ export function FornecedorForm({ initial, onSubmit, submitting }: any) {
     tipo_fornecimento: initial?.tipo_fornecimento ?? "",
     status: initial?.status ?? "ativo", observacoes: initial?.observacoes ?? "",
   });
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
+
+  const buscarCnpj = async () => {
+    const cnpj = String(f.documento ?? "").replace(/\D/g, "");
+    if (cnpj.length !== 14) { toast.error("Informe um CNPJ válido (14 dígitos)"); return; }
+    setLoadingCnpj(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) throw new Error("CNPJ não encontrado na Receita");
+      const d = await res.json();
+      const endereco = [d.logradouro, d.numero, d.complemento, d.bairro, d.municipio, d.uf, d.cep]
+        .filter(Boolean).join(", ");
+      setF((p) => ({
+        ...p,
+        nome: d.razao_social || p.nome,
+        nome_fantasia: d.nome_fantasia || p.nome_fantasia,
+        email: d.email || p.email,
+        telefone: d.ddd_telefone_1 || p.telefone,
+        endereco: endereco || p.endereco,
+      }));
+      toast.success("Dados preenchidos pela Receita Federal");
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha ao consultar CNPJ");
+    } finally { setLoadingCnpj(false); }
+  };
+
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(f); }} className="space-y-4">
       <FormSection>
         <FormField label="Nome*" wide><Input required value={f.nome} onChange={(e) => set("nome", e.target.value)} /></FormField>
         <FormField label="Nome fantasia"><Input value={f.nome_fantasia} onChange={(e) => set("nome_fantasia", e.target.value)} /></FormField>
-        <FormField label="CNPJ/CPF"><Input value={f.documento} onChange={(e) => set("documento", e.target.value)} /></FormField>
+        <FormField label="CNPJ/CPF">
+          <div className="flex gap-1">
+            <Input value={f.documento} onChange={(e) => set("documento", e.target.value)} placeholder="Apenas números para consulta CNPJ" />
+            <Button type="button" variant="outline" size="icon" onClick={buscarCnpj} disabled={loadingCnpj} title="Consultar Receita Federal">
+              {loadingCnpj ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </Button>
+          </div>
+        </FormField>
         <FormField label="Tipo de fornecimento"><Input value={f.tipo_fornecimento} onChange={(e) => set("tipo_fornecimento", e.target.value)} /></FormField>
         <FormField label="Contato"><Input value={f.contato_nome} onChange={(e) => set("contato_nome", e.target.value)} /></FormField>
         <FormField label="Telefone"><Input value={f.telefone} onChange={(e) => set("telefone", e.target.value)} /></FormField>
