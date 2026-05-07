@@ -147,7 +147,7 @@ function SolicitantesPage() {
   );
 }
 
-function SolicitanteForm({ initial, onSubmit, submitting }: any) {
+export function SolicitanteForm({ initial, onSubmit, submitting }: any) {
   const [f, setF] = useState({
     nome: initial?.nome ?? "", setor: initial?.setor ?? "", cargo: initial?.cargo ?? "",
     telefone: initial?.telefone ?? "", email: initial?.email ?? "",
