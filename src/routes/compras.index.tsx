@@ -173,8 +173,15 @@ function Card({ compra, onOpen }: { compra: Compra; onOpen: () => void }) {
           aria-label="Mover"
         >⋮⋮</button>
         <button type="button" onClick={onOpen} className="flex-1 text-left min-w-0">
-          <div className="font-medium text-sm truncate text-foreground">
-            {compra.titulo || compra.fornecedor || "Compra sem título"}
+          <div className="flex items-start justify-between gap-2">
+            <div className="font-medium text-sm truncate text-foreground flex-1 min-w-0">
+              {compra.titulo || compra.fornecedor || "Compra sem título"}
+            </div>
+            {compra.numero != null && (
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5">
+                COMPRA-{compra.numero}
+              </span>
+            )}
           </div>
           {compra.fornecedor && compra.titulo && (
             <div className="text-[11px] text-muted-foreground truncate">{compra.fornecedor}</div>
