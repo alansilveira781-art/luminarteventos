@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Search } from "lucide-react";
 import { CompraDialog } from "@/components/CompraDialog";
 import { COMPRA_STATUSES, type CompraStatus } from "@/lib/compras";
 import {
@@ -42,6 +43,7 @@ function ComprasKanban() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<CompraStatus>("solicitacao");
+  const [q, setQ] = useState("");
 
   const { data: compras = [] } = useQuery({
     queryKey: ["compras"],
@@ -55,14 +57,24 @@ function ComprasKanban() {
     },
   });
 
+  const filteredCompras = useMemo(() => {
+    const s = q.toLowerCase().trim();
+    if (!s) return compras;
+    return compras.filter((c) => {
+      const num = c.numero != null ? `compra-${c.numero}` : "";
+      return [num, String(c.numero ?? ""), c.titulo, c.solicitante, c.fornecedor, c.comprador]
+        .some((v) => String(v ?? "").toLowerCase().includes(s));
+    });
+  }, [compras, q]);
+
   const byStatus = useMemo(() => {
     const m: Record<CompraStatus, Compra[]> = {} as any;
     COMPRA_STATUSES.forEach((s) => (m[s.key] = []));
-    (compras ?? []).forEach((c) => {
+    filteredCompras.forEach((c) => {
       (m[c.status] ??= []).push(c);
     });
     return m;
-  }, [compras]);
+  }, [filteredCompras]);
 
   const moveStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: CompraStatus }) => {
@@ -109,6 +121,16 @@ function ComprasKanban() {
           </Button>
         }
       />
+
+      <div className="mb-3 relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por código (ex: 12), título, fornecedor, solicitante…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="pl-9"
+        />
+      </div>
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex gap-3 overflow-auto pb-4 max-h-[calc(100vh-140px)] items-start">
