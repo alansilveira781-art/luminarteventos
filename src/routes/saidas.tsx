@@ -466,12 +466,32 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
               <div key={i} className="grid grid-cols-12 gap-2 items-end">
                 <div className="col-span-8">
                   <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
-                  <ItemSearchSelect itens={itens} value={l.item_id} onChange={(v) => setL(i, "item_id", v)} showStock autoOpen={!l.item_id && i === linhas.length - 1 && i > 0} />
+                  <ItemSearchSelect
+                    itens={itens}
+                    value={l.item_id}
+                    onChange={(v) => setL(i, "item_id", v)}
+                    showStock
+                    autoOpen={(!l.item_id && i === linhas.length - 1 && i > 0) || autoOpenIdx === i}
+                    onAfterSelect={() => focusQty(i)}
+                  />
                   {it && <p className="text-[10px] text-muted-foreground mt-1">Disponível: {Number(it.quantidade_atual)} {it.unidade}</p>}
                 </div>
                 <div className="col-span-3">
                   <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Quantidade</label>
-                  <Input type="number" min="0.01" step="0.01" value={l.quantidade} onChange={(e) => setL(i, "quantidade", e.target.value)} />
+                  <Input
+                    ref={(el) => { qtyRefs.current[i] = el; }}
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={l.quantidade}
+                    onChange={(e) => setL(i, "quantidade", e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (l.item_id && Number(l.quantidade) > 0) goNextItem(i);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="col-span-1 flex justify-end">
                   <Button type="button" variant="ghost" size="icon" onClick={() => remLinha(i)} disabled={linhas.length === 1} title="Remover">
