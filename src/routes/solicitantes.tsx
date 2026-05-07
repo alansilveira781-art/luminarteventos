@@ -134,7 +134,7 @@ function SolicitantesPage() {
             const key = `${nome.toLowerCase()}|${String(r.email ?? "").toLowerCase()}`;
             if (setKey.has(key)) { skipped++; continue; }
             const { error } = await supabase.from("solicitantes").insert({
-              nome, setor: r.setor || null, cargo: r.cargo || null,
+              nome, apelido: r.apelido || null, setor: r.setor || null, cargo: r.cargo || null,
               telefone: r.telefone || null, email: r.email || null, observacoes: r.observacoes || null,
             });
             if (error) { skipped++; errors.push(`Linha ${idx + 2}: ${error.message}`); }
