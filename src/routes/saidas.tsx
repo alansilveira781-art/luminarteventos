@@ -175,57 +175,87 @@ function SaidasPage() {
         actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
       />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-auto max-h-[calc(100vh-160px)]">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Data</th>
-                <th className="px-4 py-3 font-medium">Item</th>
-                <th className="px-4 py-3 font-medium">Evento/Projeto</th>
-                <th className="px-4 py-3 font-medium">Solicitante</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium text-right">Qtd</th>
-                <th className="px-4 py-3 font-medium">UN</th>
-                <th className="px-4 py-3 font-medium">Devolver até</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {saidas?.length ? saidas.map((m: any) => (
-                <tr key={m.id} className="border-t border-border hover:bg-muted/30">
-                  <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
-                  <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
-                  <td className="px-4 py-3 text-foreground">{m.evento_projeto ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.saida_tipo ? saidaTipoLabels[m.saida_tipo] : "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
-                  <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 justify-end">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => {
-                          if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
-                        }} title="Excluir">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              )) : (
-                <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma saída registrada.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {(() => {
+        const s = q.toLowerCase().trim();
+        const filtered = (saidas ?? []).filter((m: any) => {
+          if (!s) return true;
+          return [
+            m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
+            m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
+          ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(s);
+        });
+        return (
+          <>
+            <Card className="p-4 mb-4">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                {filtered.length} {filtered.length === 1 ? "saída" : "saídas"}
+                {saidas && filtered.length !== saidas.length ? ` (de ${saidas.length})` : ""}
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden">
+              <div className="overflow-auto max-h-[calc(100vh-180px)]">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left text-xs uppercase text-muted-foreground">
+                      <th className="px-4 py-3 font-medium">Data</th>
+                      <th className="px-4 py-3 font-medium">Item</th>
+                      <th className="px-4 py-3 font-medium">Evento/Projeto</th>
+                      <th className="px-4 py-3 font-medium">Solicitante</th>
+                      <th className="px-4 py-3 font-medium">Tipo</th>
+                      <th className="px-4 py-3 font-medium text-right">Qtd</th>
+                      <th className="px-4 py-3 font-medium">UN</th>
+                      <th className="px-4 py-3 font-medium">Devolver até</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      {isAdmin && <th className="px-4 py-3 font-medium"></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length ? filtered.map((m: any) => (
+                      <tr key={m.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                        <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
+                        <td className="px-4 py-3 text-foreground">{m.evento_projeto ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.saida_tipo ? saidaTipoLabels[m.saida_tipo] : "—"}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
+                        <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
+                        {isAdmin && (
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1 justify-end">
+                              <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
+                              }} title="Excluir">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    )) : (
+                      <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma saída encontrada.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        );
+      })()}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl">
