@@ -26,6 +26,7 @@ export const Route = createFileRoute("/compras/")({
 
 type Compra = {
   id: string;
+  numero: number | null;
   status: CompraStatus;
   titulo: string | null;
   solicitante: string | null;
