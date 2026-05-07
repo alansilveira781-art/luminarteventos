@@ -545,7 +545,7 @@ function EntradaForm({ itens, fornecedores, onEditFornecedor, onSubmit, submitti
   );
 }
 
-function EntradaEditForm({ original, itens, fornecedores, onSubmit, submitting }: any) {
+function EntradaEditForm({ original, itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
   const [form, setForm] = useState({
     data_movimento: new Date(original.data_movimento).toISOString().slice(0, 16),
     entrada_tipo: original.entrada_tipo ?? "compra",
@@ -554,7 +554,6 @@ function EntradaEditForm({ original, itens, fornecedores, onSubmit, submitting }
     quantidade: String(original.quantidade),
     valor_unitario: original.valor_unitario != null ? String(original.valor_unitario) : "",
     nota_fiscal: original.nota_fiscal ?? "",
-    responsavel_lancamento: original.responsavel_lancamento ?? "",
     observacoes: original.observacoes ?? "",
   });
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
@@ -571,7 +570,6 @@ function EntradaEditForm({ original, itens, fornecedores, onSubmit, submitting }
         quantidade: Number(form.quantidade),
         valor_unitario: form.valor_unitario === "" ? null : Number(form.valor_unitario),
         nota_fiscal: form.nota_fiscal || null,
-        responsavel_lancamento: form.responsavel_lancamento || null,
         observacoes: form.observacoes || null,
       });
     }} className="space-y-4">
@@ -589,13 +587,16 @@ function EntradaEditForm({ original, itens, fornecedores, onSubmit, submitting }
         <FormField label="Quantidade*"><Input required type="number" min="0.01" step="0.01" value={form.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
         <FormField label="Valor unit. (R$)"><Input type="number" min="0" step="0.01" value={form.valor_unitario} onChange={(e) => set("valor_unitario", e.target.value)} /></FormField>
         <FormField label="Fornecedor">
-          <Select value={form.fornecedor_id} onValueChange={(v) => set("fornecedor_id", v)}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>{fornecedores.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
-          </Select>
+          <EntitySearchSelect
+            options={fornecedores}
+            value={form.fornecedor_id}
+            onChange={(v) => set("fornecedor_id", v)}
+            onEdit={onEditFornecedor}
+            placeholder="—"
+            searchPlaceholder="Buscar fornecedor…"
+          />
         </FormField>
         <FormField label="Nota fiscal"><Input value={form.nota_fiscal} onChange={(e) => set("nota_fiscal", e.target.value)} /></FormField>
-        <FormField label="Responsável"><Input value={form.responsavel_lancamento} onChange={(e) => set("responsavel_lancamento", e.target.value)} /></FormField>
         <FormField label="Observações" wide><Textarea rows={2} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></FormField>
       </FormSection>
       <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : "Salvar alterações"}</Button></FormActions>
