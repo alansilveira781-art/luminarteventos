@@ -576,7 +576,7 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
             <div key={i} className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-6">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
-                <ItemSearchSelect itens={itens} value={l.item_id} onChange={(v) => setL(i, "item_id", v)} />
+                <ItemSearchSelect itens={itens} value={l.item_id} onChange={(v) => setL(i, "item_id", v)} autoOpen={!l.item_id && i === linhas.length - 1 && i > 0} />
               </div>
               <div className="col-span-2">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Qtd</label>
