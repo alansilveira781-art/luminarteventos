@@ -26,6 +26,7 @@ function FornecedoresPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [importing, setImporting] = useState(false);
+  const [q, setQ] = useState("");
 
   const { data } = useQuery({
     queryKey: ["fornecedores"],
