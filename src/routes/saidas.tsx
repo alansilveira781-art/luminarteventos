@@ -413,7 +413,7 @@ function SaidaForm({ itens, solicitantes, onEditSolicitante, eventos, eventosErr
   );
 }
 
-function SaidaEditForm({ original, itens, solicitantes, eventos, onSubmit, submitting }: any) {
+function SaidaEditForm({ original, itens, solicitantes, onEditSolicitante, eventos, onSubmit, submitting }: any) {
   const [form, setForm] = useState({
     data_movimento: new Date(original.data_movimento).toISOString().slice(0, 16),
     saida_tipo: original.saida_tipo ?? "evento",
