@@ -132,6 +132,43 @@ function ComprasKanban() {
         />
       </div>
 
+      {q.trim() ? (
+        <div className="rounded-lg border border-border bg-card divide-y divide-border max-h-[calc(100vh-180px)] overflow-auto">
+          {filteredCompras.length === 0 && (
+            <div className="p-4 text-sm text-muted-foreground text-center">Nenhum card encontrado.</div>
+          )}
+          {filteredCompras.map((c) => {
+            const statusInfo = COMPRA_STATUSES.find((s) => s.key === c.status);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { setEditId(c.id); setOpen(true); }}
+                className="w-full text-left p-3 hover:bg-muted/50 flex items-center gap-3 text-sm"
+              >
+                <span className="text-[11px] font-mono text-muted-foreground w-24 shrink-0">
+                  {c.numero != null ? `COMPRA-${c.numero}` : "—"}
+                </span>
+                <span className="flex-1 min-w-0 truncate font-medium">
+                  {c.titulo || c.fornecedor || "Compra sem título"}
+                </span>
+                <span className="hidden sm:block text-xs text-muted-foreground truncate w-32">
+                  {c.fornecedor || "—"}
+                </span>
+                <span className="hidden md:block text-xs text-muted-foreground truncate w-32">
+                  {c.solicitante || "—"}
+                </span>
+                {statusInfo && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                    <span className={`h-2 w-2 rounded-full ${statusInfo.color}`} />
+                    <span className="hidden sm:inline">{statusInfo.label}</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex gap-3 overflow-auto pb-4 max-h-[calc(100vh-140px)] items-start">
           {COMPRA_STATUSES.map((s) => (
@@ -150,6 +187,7 @@ function ComprasKanban() {
           ))}
         </div>
       </DndContext>
+      )}
 
       <CompraDialog open={open} onOpenChange={setOpen} compraId={editId} defaultStatus={defaultStatus} />
     </>
