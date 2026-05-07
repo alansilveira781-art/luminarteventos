@@ -34,6 +34,7 @@ function EntradasPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
+  const [q, setQ] = useState("");
 
   const editMut = useMutation({
     mutationFn: async (p: { original: any; patch: any }) => {
