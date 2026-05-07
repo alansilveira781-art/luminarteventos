@@ -17,12 +17,13 @@ export function downloadTemplate(filename: string, headers: string[], example: R
 }
 
 export const ITEM_TEMPLATE = {
-  headers: ["codigo", "codigo_proprio", "nome", "categoria", "unidade", "valor_unitario", "quantidade_atual", "quantidade_minima", "localizacao", "descricao", "observacoes", "foto_url"],
+  headers: ["codigo", "codigo_proprio", "nome", "categoria", "subcategoria", "unidade", "valor_unitario", "quantidade_atual", "quantidade_minima", "localizacao", "descricao", "observacoes", "foto_url"],
   example: {
     codigo: "ITM-001",
     codigo_proprio: "4825/1010",
     nome: "Refletor LED 100W",
     categoria: "Iluminação",
+    subcategoria: "",
     unidade: "Unidade",
     valor_unitario: 89.9,
     quantidade_atual: 10,
@@ -35,8 +36,8 @@ export const ITEM_TEMPLATE = {
 };
 
 export const SOLICITANTE_TEMPLATE = {
-  headers: ["nome", "setor", "cargo", "telefone", "email", "observacoes"],
-  example: { nome: "João Silva", setor: "Operações", cargo: "Técnico", telefone: "(11) 99999-9999", email: "joao@empresa.com", observacoes: "" },
+  headers: ["nome", "apelido", "setor", "cargo", "telefone", "email", "observacoes"],
+  example: { nome: "João Silva", apelido: "Joãozinho", setor: "Operações", cargo: "Técnico", telefone: "(11) 99999-9999", email: "joao@empresa.com", observacoes: "" },
 };
 
 export const FORNECEDOR_TEMPLATE = {
@@ -45,8 +46,8 @@ export const FORNECEDOR_TEMPLATE = {
 };
 
 export const ENTRADA_TEMPLATE = {
-  headers: ["codigo_item", "quantidade", "valor_unitario", "fornecedor_nome", "nota_fiscal", "data_movimento", "responsavel_lancamento", "observacoes"],
-  example: { codigo_item: "ITM-001", quantidade: 5, valor_unitario: 89.9, fornecedor_nome: "Distribuidora ABC", nota_fiscal: "NF 12345", data_movimento: "2026-05-06", responsavel_lancamento: "Operador", observacoes: "" },
+  headers: ["codigo_item", "quantidade", "valor_unitario", "fornecedor_nome", "nota_fiscal", "data_movimento", "observacoes"],
+  example: { codigo_item: "ITM-001", quantidade: 5, valor_unitario: 89.9, fornecedor_nome: "Distribuidora ABC", nota_fiscal: "NF 12345", data_movimento: "2026-05-06", observacoes: "" },
 };
 
 export function normalizeKey(s: string) {
