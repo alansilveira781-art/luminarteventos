@@ -26,8 +26,9 @@ Deno.serve(async (req) => {
     if (!isAdminData) return json({ error: "Apenas administradores" }, 403);
 
     const body = await req.json();
-    const { email, password, display_name, is_admin, modulo_ids } = body as {
-      email: string; password: string; display_name?: string; is_admin?: boolean; modulo_ids?: string[];
+    const { email, password, display_name, is_admin, modulo_ids, modulo_admin_ids } = body as {
+      email: string; password: string; display_name?: string; is_admin?: boolean;
+      modulo_ids?: string[]; modulo_admin_ids?: string[];
     };
     if (!email || !password) return json({ error: "E-mail e senha obrigatórios" }, 400);
 
@@ -40,11 +41,14 @@ Deno.serve(async (req) => {
     if (createErr) return json({ error: createErr.message }, 400);
 
     const newId = created.user!.id;
+    const adminSet = new Set(modulo_admin_ids ?? []);
 
     await admin.from("profiles").upsert({ id: newId, email, display_name: display_name ?? null });
     await admin.from("user_roles").insert({ user_id: newId, role: is_admin ? "admin" : "user" });
     if (!is_admin && modulo_ids?.length) {
-      await admin.from("user_modulos").insert(modulo_ids.map((modulo_id) => ({ user_id: newId, modulo_id })));
+      await admin.from("user_modulos").insert(
+        modulo_ids.map((modulo_id) => ({ user_id: newId, modulo_id, is_admin: adminSet.has(modulo_id) })),
+      );
     }
 
     return json({ ok: true, user_id: newId });
