@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -28,6 +28,38 @@ function SaidasPage() {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
+
+  const editMut = useMutation({
+    mutationFn: async (p: { original: any; patch: any }) => {
+      const { original, patch } = p;
+      const newItemId = patch.item_id ?? original.item_id;
+      const newQtd = Number(patch.quantidade ?? original.quantidade);
+      const oldQtd = Number(original.quantidade);
+      // Saída: estoque diminuiu. Reverter antiga e aplicar nova.
+      if (newItemId === original.item_id) {
+        const delta = oldQtd - newQtd; // se nova menor, devolve estoque
+        if (delta !== 0) {
+          const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", original.item_id).single();
+          if (it) await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) + delta }).eq("id", original.item_id);
+        }
+      } else {
+        const { data: itOld } = await supabase.from("itens").select("quantidade_atual").eq("id", original.item_id).single();
+        if (itOld) await supabase.from("itens").update({ quantidade_atual: Number(itOld.quantidade_atual) + oldQtd }).eq("id", original.item_id);
+        const { data: itNew } = await supabase.from("itens").select("quantidade_atual").eq("id", newItemId).single();
+        if (itNew) await supabase.from("itens").update({ quantidade_atual: Number(itNew.quantidade_atual) - newQtd }).eq("id", newItemId);
+      }
+      const { error } = await supabase.from("movimentacoes").update(patch).eq("id", original.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Saída atualizada");
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const delMut = useMutation({
     mutationFn: async (m: any) => {
@@ -151,11 +183,16 @@ function SaidasPage() {
                   <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
                   {isAdmin && (
                     <td className="px-4 py-3">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => {
-                        if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
-                      }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => {
+                          if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
+                        }} title="Excluir">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -180,6 +217,22 @@ function SaidasPage() {
             onSubmit={(meta: any, linhas: any) => mut.mutate({ meta, linhas })}
             submitting={mut.isPending}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Editar saída</DialogTitle></DialogHeader>
+          {editing && (
+            <SaidaEditForm
+              original={editing}
+              itens={itens ?? []}
+              solicitantes={solicitantes ?? []}
+              eventos={eventosQuery.data?.eventos ?? []}
+              onSubmit={(patch: any) => editMut.mutate({ original: editing, patch })}
+              submitting={editMut.isPending}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>
@@ -319,6 +372,95 @@ function SaidaForm({ itens, solicitantes, eventos, eventosError, onReloadEventos
       </div>
 
       <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Registrando…" : "Registrar saída"}</Button></FormActions>
+    </form>
+  );
+}
+
+function SaidaEditForm({ original, itens, solicitantes, eventos, onSubmit, submitting }: any) {
+  const [form, setForm] = useState({
+    data_movimento: new Date(original.data_movimento).toISOString().slice(0, 16),
+    saida_tipo: original.saida_tipo ?? "evento",
+    item_id: original.item_id,
+    quantidade: String(original.quantidade),
+    solicitante_id: original.solicitante_id ?? "",
+    evento_projeto: original.evento_projeto ?? "",
+    finalidade: original.finalidade ?? "",
+    sera_devolvido: original.data_prevista_devolucao ? "sim" : (original.saida_status === "finalizada" ? "nao" : "sim"),
+    data_prevista_devolucao: original.data_prevista_devolucao ?? "",
+    saida_status: original.saida_status ?? "aberta",
+    observacoes: original.observacoes ?? "",
+  });
+  const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+  const isEvento = form.saida_tipo === "evento";
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      if (!form.item_id || Number(form.quantidade) <= 0) return toast.error("Item e quantidade obrigatórios");
+      if (isEvento && !form.evento_projeto) return toast.error("Evento/Projeto é obrigatório");
+      if (form.sera_devolvido === "sim" && !form.data_prevista_devolucao) return toast.error("Informe a data prevista de devolução");
+      onSubmit({
+        data_movimento: new Date(form.data_movimento).toISOString(),
+        saida_tipo: form.saida_tipo,
+        item_id: form.item_id,
+        quantidade: Number(form.quantidade),
+        solicitante_id: form.solicitante_id || null,
+        evento_projeto: isEvento ? form.evento_projeto : null,
+        finalidade: form.finalidade || null,
+        data_prevista_devolucao: form.sera_devolvido === "sim" ? (form.data_prevista_devolucao || null) : null,
+        saida_status: form.sera_devolvido === "sim" ? (form.saida_status === "finalizada" ? "aberta" : form.saida_status) : "finalizada",
+        observacoes: form.observacoes || null,
+      });
+    }} className="space-y-4">
+      <FormSection>
+        <FormField label="Data*"><Input required type="datetime-local" value={form.data_movimento} onChange={(e) => set("data_movimento", e.target.value)} /></FormField>
+        <FormField label="Tipo*">
+          <Select value={form.saida_tipo} onValueChange={(v) => set("saida_tipo", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{Object.entries(saidaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Item*" wide>
+          <ItemSearchSelect itens={itens} value={form.item_id} onChange={(v) => set("item_id", v)} showStock />
+        </FormField>
+        <FormField label="Quantidade*"><Input required type="number" min="0.01" step="0.01" value={form.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
+        {isEvento && (
+          <FormField label="Evento / Projeto*" wide>
+            <Select value={form.evento_projeto} onValueChange={(v) => set("evento_projeto", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+              <SelectContent>
+                {eventos.map((ev: string) => <SelectItem key={ev} value={ev}>{ev}</SelectItem>)}
+                {form.evento_projeto && !eventos.includes(form.evento_projeto) && (
+                  <SelectItem value={form.evento_projeto}>{form.evento_projeto}</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
+        <FormField label="Solicitante">
+          <Select value={form.solicitante_id} onValueChange={(v) => set("solicitante_id", v)}>
+            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>{solicitantes.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Será devolvido?*">
+          <Select value={form.sera_devolvido} onValueChange={(v) => { set("sera_devolvido", v); if (v === "nao") set("data_prevista_devolucao", ""); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sim">Sim</SelectItem>
+              <SelectItem value="nao">Não</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormField>
+        {form.sera_devolvido === "sim" && (
+          <FormField label="Data prevista de devolução*">
+            <Input required type="date" value={form.data_prevista_devolucao} onChange={(e) => set("data_prevista_devolucao", e.target.value)} />
+          </FormField>
+        )}
+        <FormField label="Finalidade" wide><Input value={form.finalidade} onChange={(e) => set("finalidade", e.target.value)} /></FormField>
+        <FormField label="Observações" wide><Textarea rows={2} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></FormField>
+      </FormSection>
+      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : "Salvar alterações"}</Button></FormActions>
     </form>
   );
 }

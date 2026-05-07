@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus, Upload, FileCode2, Trash2 } from "lucide-react";
+import { Plus, Upload, FileCode2, Trash2, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -29,8 +29,42 @@ function EntradasPage() {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
+
+  const editMut = useMutation({
+    mutationFn: async (p: { original: any; patch: any }) => {
+      const { original, patch } = p;
+      const newItemId = patch.item_id ?? original.item_id;
+      const newQtd = Number(patch.quantidade ?? original.quantidade);
+      const oldQtd = Number(original.quantidade);
+      // Ajustar estoque: reverter antiga e aplicar nova
+      if (newItemId === original.item_id) {
+        const delta = newQtd - oldQtd;
+        if (delta !== 0) {
+          const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", original.item_id).single();
+          if (it) await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) + delta }).eq("id", original.item_id);
+        }
+      } else {
+        // reverter no antigo
+        const { data: itOld } = await supabase.from("itens").select("quantidade_atual").eq("id", original.item_id).single();
+        if (itOld) await supabase.from("itens").update({ quantidade_atual: Number(itOld.quantidade_atual) - oldQtd }).eq("id", original.item_id);
+        // aplicar no novo
+        const { data: itNew } = await supabase.from("itens").select("quantidade_atual").eq("id", newItemId).single();
+        if (itNew) await supabase.from("itens").update({ quantidade_atual: Number(itNew.quantidade_atual) + newQtd }).eq("id", newItemId);
+      }
+      const { error } = await supabase.from("movimentacoes").update(patch).eq("id", original.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["entradas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Entrada atualizada");
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const delMut = useMutation({
     mutationFn: async (m: any) => {
@@ -153,11 +187,16 @@ function EntradasPage() {
                   <td className="px-4 py-3 text-muted-foreground">{m.responsavel_lancamento ?? "—"}</td>
                   {isAdmin && (
                     <td className="px-4 py-3">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => {
-                        if (confirm("Excluir esta entrada? O estoque será revertido.")) delMut.mutate(m);
-                      }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => {
+                          if (confirm("Excluir esta entrada? O estoque será revertido.")) delMut.mutate(m);
+                        }} title="Excluir">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -178,6 +217,21 @@ function EntradasPage() {
             onSubmit={(meta: any, linhas: any) => mut.mutate({ meta, linhas })}
             submitting={mut.isPending}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Editar entrada</DialogTitle></DialogHeader>
+          {editing && (
+            <EntradaEditForm
+              original={editing}
+              itens={itens ?? []}
+              fornecedores={fornecedores ?? []}
+              onSubmit={(patch: any) => editMut.mutate({ original: editing, patch })}
+              submitting={editMut.isPending}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -453,6 +507,64 @@ function EntradaForm({ itens, fornecedores, onSubmit, submitting }: any) {
       </div>
 
       <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Registrando…" : "Registrar entrada"}</Button></FormActions>
+    </form>
+  );
+}
+
+function EntradaEditForm({ original, itens, fornecedores, onSubmit, submitting }: any) {
+  const [form, setForm] = useState({
+    data_movimento: new Date(original.data_movimento).toISOString().slice(0, 16),
+    entrada_tipo: original.entrada_tipo ?? "compra",
+    item_id: original.item_id,
+    fornecedor_id: original.fornecedor_id ?? "",
+    quantidade: String(original.quantidade),
+    valor_unitario: original.valor_unitario != null ? String(original.valor_unitario) : "",
+    nota_fiscal: original.nota_fiscal ?? "",
+    responsavel_lancamento: original.responsavel_lancamento ?? "",
+    observacoes: original.observacoes ?? "",
+  });
+  const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      if (!form.item_id || Number(form.quantidade) <= 0) return toast.error("Item e quantidade obrigatórios");
+      onSubmit({
+        data_movimento: new Date(form.data_movimento).toISOString(),
+        entrada_tipo: form.entrada_tipo,
+        item_id: form.item_id,
+        fornecedor_id: form.fornecedor_id || null,
+        quantidade: Number(form.quantidade),
+        valor_unitario: form.valor_unitario === "" ? null : Number(form.valor_unitario),
+        nota_fiscal: form.nota_fiscal || null,
+        responsavel_lancamento: form.responsavel_lancamento || null,
+        observacoes: form.observacoes || null,
+      });
+    }} className="space-y-4">
+      <FormSection>
+        <FormField label="Data*"><Input required type="datetime-local" value={form.data_movimento} onChange={(e) => set("data_movimento", e.target.value)} /></FormField>
+        <FormField label="Tipo*">
+          <Select value={form.entrada_tipo} onValueChange={(v) => set("entrada_tipo", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{Object.entries(entradaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Item*" wide>
+          <ItemSearchSelect itens={itens} value={form.item_id} onChange={(v) => set("item_id", v)} />
+        </FormField>
+        <FormField label="Quantidade*"><Input required type="number" min="0.01" step="0.01" value={form.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
+        <FormField label="Valor unit. (R$)"><Input type="number" min="0" step="0.01" value={form.valor_unitario} onChange={(e) => set("valor_unitario", e.target.value)} /></FormField>
+        <FormField label="Fornecedor">
+          <Select value={form.fornecedor_id} onValueChange={(v) => set("fornecedor_id", v)}>
+            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>{fornecedores.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Nota fiscal"><Input value={form.nota_fiscal} onChange={(e) => set("nota_fiscal", e.target.value)} /></FormField>
+        <FormField label="Responsável"><Input value={form.responsavel_lancamento} onChange={(e) => set("responsavel_lancamento", e.target.value)} /></FormField>
+        <FormField label="Observações" wide><Textarea rows={2} value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></FormField>
+      </FormSection>
+      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : "Salvar alterações"}</Button></FormActions>
     </form>
   );
 }
