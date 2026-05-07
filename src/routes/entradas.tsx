@@ -495,6 +495,10 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
             : [{ item_id: "", quantidade: "1", valor_unitario: "" }],
   );
 
+  const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const valorRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const [autoOpenIdx, setAutoOpenIdx] = useState<number | null>(null);
+
   const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
   const setL = (i: number, k: keyof Linha, v: string) => {
     setLinhas((arr) => {
@@ -505,13 +509,28 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
         if (it?.valor_unitario != null && !novo[i].valor_unitario) {
           novo[i].valor_unitario = String(it.valor_unitario);
         }
-        // Auto-adicionar nova linha quando seleciona item na última
-        if (v && i === arr.length - 1) {
-          novo.push({ item_id: "", quantidade: "1", valor_unitario: "" });
-        }
       }
       return novo;
     });
+  };
+  const focusQty = (i: number) => {
+    setTimeout(() => {
+      const el = qtyRefs.current[i];
+      if (el) { el.focus(); el.select(); }
+    }, 30);
+  };
+  const focusValor = (i: number) => {
+    setTimeout(() => {
+      const el = valorRefs.current[i];
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  };
+  const goNextItem = (i: number) => {
+    setLinhas((arr) => {
+      if (i === arr.length - 1) return [...arr, { item_id: "", quantidade: "1", valor_unitario: "" }];
+      return arr;
+    });
+    setAutoOpenIdx(i + 1);
   };
   const addLinha = () => setLinhas((a) => [...a, { item_id: "", quantidade: "1", valor_unitario: "" }]);
   const remLinha = (i: number) => setLinhas((a) => (a.length === 1 ? a : a.filter((_, idx) => idx !== i)));
