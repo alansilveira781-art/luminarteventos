@@ -166,7 +166,12 @@ export function CompraDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{compraId ? "Editar compra" : "Nova compra"}</DialogTitle>
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <span>{compraId ? "Editar compra" : "Nova compra"}</span>
+            {(form as any).numero != null && (
+              <span className="text-xs font-mono text-muted-foreground">COMPRA-{(form as any).numero}</span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="dados" className="w-full">
