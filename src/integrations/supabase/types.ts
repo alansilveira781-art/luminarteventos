@@ -247,6 +247,96 @@ export type Database = {
         }
         Relationships: []
       }
+      compras_fornecedores: {
+        Row: {
+          contato_nome: string | null
+          created_at: string
+          documento: string | null
+          email: string | null
+          endereco: string | null
+          id: string
+          nome: string
+          nome_fantasia: string | null
+          observacoes: string | null
+          status: Database["public"]["Enums"]["entity_status"]
+          telefone: string | null
+          tipo_fornecimento: string | null
+          updated_at: string
+        }
+        Insert: {
+          contato_nome?: string | null
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          nome: string
+          nome_fantasia?: string | null
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          tipo_fornecimento?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contato_nome?: string | null
+          created_at?: string
+          documento?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          nome?: string
+          nome_fantasia?: string | null
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          tipo_fornecimento?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compras_solicitantes: {
+        Row: {
+          apelido: string | null
+          cargo: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          setor: string | null
+          status: Database["public"]["Enums"]["entity_status"]
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          apelido?: string | null
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          setor?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          apelido?: string | null
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          setor?: string | null
+          status?: Database["public"]["Enums"]["entity_status"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       condicoes_pagamento: {
         Row: {
           created_at: string
