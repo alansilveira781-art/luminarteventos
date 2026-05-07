@@ -29,8 +29,42 @@ function EntradasPage() {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
+
+  const editMut = useMutation({
+    mutationFn: async (p: { original: any; patch: any }) => {
+      const { original, patch } = p;
+      const newItemId = patch.item_id ?? original.item_id;
+      const newQtd = Number(patch.quantidade ?? original.quantidade);
+      const oldQtd = Number(original.quantidade);
+      // Ajustar estoque: reverter antiga e aplicar nova
+      if (newItemId === original.item_id) {
+        const delta = newQtd - oldQtd;
+        if (delta !== 0) {
+          const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", original.item_id).single();
+          if (it) await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) + delta }).eq("id", original.item_id);
+        }
+      } else {
+        // reverter no antigo
+        const { data: itOld } = await supabase.from("itens").select("quantidade_atual").eq("id", original.item_id).single();
+        if (itOld) await supabase.from("itens").update({ quantidade_atual: Number(itOld.quantidade_atual) - oldQtd }).eq("id", original.item_id);
+        // aplicar no novo
+        const { data: itNew } = await supabase.from("itens").select("quantidade_atual").eq("id", newItemId).single();
+        if (itNew) await supabase.from("itens").update({ quantidade_atual: Number(itNew.quantidade_atual) + newQtd }).eq("id", newItemId);
+      }
+      const { error } = await supabase.from("movimentacoes").update(patch).eq("id", original.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["entradas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Entrada atualizada");
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const delMut = useMutation({
     mutationFn: async (m: any) => {
