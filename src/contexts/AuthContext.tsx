@@ -10,8 +10,9 @@ interface AuthCtx {
   loading: boolean;
   isAdmin: boolean;
   roles: Role[];
-  modulos: { slug: string; nome: string; rota: string | null }[];
+  modulos: { slug: string; nome: string; rota: string | null; is_admin: boolean }[];
   hasModule: (slug: string) => boolean;
+  isModuleAdmin: (slug: string) => boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 }
