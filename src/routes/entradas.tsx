@@ -432,13 +432,12 @@ function NfeImportDialog({ open, onOpenChange, onDone }: { open: boolean; onOpen
 
 type Linha = { item_id: string; quantidade: string; valor_unitario: string };
 
-function EntradaForm({ itens, fornecedores, onSubmit, submitting }: any) {
+function EntradaForm({ itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: new Date().toISOString().slice(0, 16),
     entrada_tipo: "compra",
     fornecedor_id: "",
     nota_fiscal: "",
-    responsavel_lancamento: "",
     observacoes: "",
   });
   const [linhas, setLinhas] = useState<Linha[]>([{ item_id: "", quantidade: "1", valor_unitario: "" }]);
@@ -474,7 +473,6 @@ function EntradaForm({ itens, fornecedores, onSubmit, submitting }: any) {
           entrada_tipo: meta.entrada_tipo,
           fornecedor_id: meta.fornecedor_id || null,
           nota_fiscal: meta.nota_fiscal || null,
-          responsavel_lancamento: meta.responsavel_lancamento || null,
           observacoes: meta.observacoes || null,
         },
         validas.map((l) => ({
@@ -493,13 +491,16 @@ function EntradaForm({ itens, fornecedores, onSubmit, submitting }: any) {
           </Select>
         </FormField>
         <FormField label="Fornecedor">
-          <Select value={meta.fornecedor_id} onValueChange={(v) => setM("fornecedor_id", v)}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>{fornecedores.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
-          </Select>
+          <EntitySearchSelect
+            options={fornecedores}
+            value={meta.fornecedor_id}
+            onChange={(v) => setM("fornecedor_id", v)}
+            onEdit={onEditFornecedor}
+            placeholder="—"
+            searchPlaceholder="Buscar fornecedor…"
+          />
         </FormField>
         <FormField label="Nota fiscal / documento"><Input value={meta.nota_fiscal} onChange={(e) => setM("nota_fiscal", e.target.value)} /></FormField>
-        <FormField label="Responsável pelo lançamento"><Input value={meta.responsavel_lancamento} onChange={(e) => setM("responsavel_lancamento", e.target.value)} /></FormField>
         <FormField label="Observações" wide><Textarea rows={2} value={meta.observacoes} onChange={(e) => setM("observacoes", e.target.value)} /></FormField>
       </FormSection>
 
