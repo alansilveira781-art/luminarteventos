@@ -35,7 +35,12 @@ export function EntitySearchSelect({
     const terms = search.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (!terms.length) return options;
     return options.filter((o) => {
-      const haystack = [o.nome, o.apelido ?? ""].join(" ").toLowerCase();
+      const haystack = [
+        o.nome, o.apelido ?? "", (o as any).nome_fantasia ?? "",
+        (o as any).documento ?? "", (o as any).email ?? "",
+        (o as any).telefone ?? "", (o as any).contato_nome ?? "",
+        (o as any).setor ?? "", (o as any).cargo ?? "",
+      ].join(" ").toLowerCase();
       return terms.every((t) => haystack.includes(t));
     });
   }, [options, search]);
