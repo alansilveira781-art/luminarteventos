@@ -187,6 +187,7 @@ function ComprasKanban() {
           ))}
         </div>
       </DndContext>
+      )}
 
       <CompraDialog open={open} onOpenChange={setOpen} compraId={editId} defaultStatus={defaultStatus} />
     </>
