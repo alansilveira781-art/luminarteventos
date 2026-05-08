@@ -663,9 +663,11 @@ function NfeImportDialog({ open, onOpenChange, onDone }: { open: boolean; onOpen
 
 type Linha = { item_id: string; quantidade: string; valor_unitario: string };
 
-function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
+function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
-    data_movimento: new Date().toISOString().slice(0, 16),
+    data_movimento: isEditing && prefill?.data_movimento
+      ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16),
     entrada_tipo: prefill?.entrada_tipo ?? "compra",
     fornecedor_id: prefill?.fornecedor_id ?? "",
     nota_fiscal: prefill?.nota_fiscal ?? "",
@@ -673,17 +675,30 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
   });
   const [linhas, setLinhas] = useState<Linha[]>(() => {
     if (prefill?.linhas?.length) {
-      return prefill.linhas.map((l: any) => ({
+      const base = prefill.linhas.map((l: any) => ({
         item_id: l.item_id,
         quantidade: String(l.quantidade),
         valor_unitario: l.valor_unitario != null ? String(l.valor_unitario) : "",
       }));
+      return isEditing ? base : base;
     }
     if (prefill) {
       return [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade), valor_unitario: prefill.valor_unitario != null ? String(prefill.valor_unitario) : "" }, { item_id: "", quantidade: "1", valor_unitario: "" }];
     }
     return [{ item_id: "", quantidade: "1", valor_unitario: "" }];
   });
+
+  // Em edição, garantir que itens da requisição apareçam mesmo se não estiverem no select
+  const itensList = useMemo(() => {
+    if (!isEditing || !prefill?.linhas?.length) return itens;
+    const map = new Map<string, any>(itens.map((i: any) => [i.id, i]));
+    for (const l of prefill.linhas) {
+      if (!map.has(l.item_id) && l.item) {
+        map.set(l.item_id, { id: l.item_id, nome: l.item.nome, codigo: l.item.codigo, unidade: l.item.unidade, valor_unitario: l.valor_unitario ?? null });
+      }
+    }
+    return Array.from(map.values());
+  }, [itens, isEditing, prefill]);
 
   const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const valorRefs = useRef<Record<number, HTMLInputElement | null>>({});
