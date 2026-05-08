@@ -249,7 +249,7 @@ function Card({ compra, onOpen }: { compra: Compra; onOpen: () => void }) {
           <div className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
             {compra.solicitante && <div>Solic.: {compra.solicitante}</div>}
             {compra.comprador && <div>Comprador: {compra.comprador}</div>}
-            {compra.data_solicitacao && <div>Solicitada: {formatDate(compra.data_solicitacao)}</div>}
+            <div>{compra.data_compra ? `Comprada: ${formatDate(compra.data_compra)}` : "Não comprado"}</div>
             {compra.valor_total != null && (
               <div className="font-medium text-foreground">
                 {Number(compra.valor_total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
