@@ -72,6 +72,57 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const editGroupMut = useMutation({
+    mutationFn: async (p: { grupo: any; meta: any; linhas: Array<{ item_id: string; quantidade: number }> }) => {
+      const old: any[] = p.grupo.linhas ?? [];
+      // Bloquear se houver devoluções vinculadas a qualquer linha
+      for (const m of old) {
+        const { data: dev } = await supabase.from("movimentacoes").select("id").eq("saida_origem_id", m.id).limit(1);
+        if (dev && dev.length) throw new Error("Esta requisição já tem devoluções vinculadas. Exclua as devoluções antes de editar.");
+      }
+      // Validar estoque considerando reversão das antigas
+      const itemIds = Array.from(new Set([...old.map((o) => o.item_id), ...p.linhas.map((l) => l.item_id)]));
+      const { data: itensCur } = await supabase.from("itens").select("id,nome,unidade,quantidade_atual").in("id", itemIds);
+      const stockMap = new Map<string, { nome: string; unidade: string; qtd: number; original: number }>();
+      for (const i of itensCur ?? []) stockMap.set(i.id, { nome: i.nome, unidade: i.unidade, qtd: Number(i.quantidade_atual), original: Number(i.quantidade_atual) });
+      for (const m of old) { const s = stockMap.get(m.item_id); if (s) s.qtd += Number(m.quantidade); }
+      for (const l of p.linhas) {
+        const s = stockMap.get(l.item_id);
+        if (!s) throw new Error("Item inválido");
+        if (l.quantidade > s.qtd) throw new Error(`Estoque insuficiente para ${s.nome}. Disponível: ${s.qtd} ${s.unidade}`);
+        s.qtd -= l.quantidade;
+      }
+      // Aplicar reversão de estoque das antigas
+      for (const m of old) {
+        const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", m.item_id).single();
+        if (it) await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) + Number(m.quantidade) }).eq("id", m.item_id);
+      }
+      // Apagar antigas
+      const oldIds = old.map((o) => o.id);
+      const { error: delErr } = await supabase.from("movimentacoes").delete().in("id", oldIds);
+      if (delErr) throw delErr;
+      // Inserir novas mantendo o mesmo requisicao_numero
+      const requisicao_numero = p.grupo.numero ?? null;
+      const inserts = p.linhas.map((l) => ({
+        ...p.meta,
+        tipo: "saida" as const,
+        item_id: l.item_id,
+        quantidade: l.quantidade,
+        requisicao_numero,
+      }));
+      const { error } = await supabase.from("movimentacoes").insert(inserts);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["itens-select-saida"] });
+      toast.success("Saída atualizada");
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const delMut = useMutation({
     mutationFn: async (grupo: any) => {
       const linhas: any[] = grupo.linhas ?? [grupo];
@@ -349,11 +400,9 @@ function SaidasPage() {
                             <Button type="button" variant="ghost" size="icon" onClick={() => { setPrefill(g); setOpen(true); }} title="Duplicar">
                               <Copy className="h-4 w-4" />
                             </Button>
-                            {g.linhas.length === 1 && (
-                              <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(g.linhas[0])} title="Editar">
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(g)} title="Editar">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button type="button" variant="ghost" size="icon" onClick={() => {
                               const msg = g.linhas.length > 1
                                 ? `Excluir esta requisição com ${g.linhas.length} itens? O estoque será revertido e devoluções vinculadas serão apagadas.`
@@ -432,17 +481,26 @@ function SaidasPage() {
       </Dialog>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Editar saída</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              Editar saída{editing?.numero != null ? ` REQ-${String(editing.numero).padStart(4, "0")}` : ""}
+            </DialogTitle>
+          </DialogHeader>
           {editing && (
-            <SaidaEditForm
-              original={editing}
+            <SaidaForm
+              key={`edit-${editing.id}`}
+              prefill={editing}
+              isEditing
               itens={itens ?? []}
               solicitantes={solicitantes ?? []}
               onEditSolicitante={(s: any) => setEditingSolicitante(s)}
               eventos={eventosQuery.data?.eventos ?? []}
-              onSubmit={(patch: any) => editMut.mutate({ original: editing, patch })}
-              submitting={editMut.isPending}
+              eventosError={eventosQuery.data?.error}
+              onReloadEventos={() => eventosQuery.refetch()}
+              reloadingEventos={eventosQuery.isFetching}
+              onSubmit={(meta: any, linhas: any) => editGroupMut.mutate({ grupo: editing, meta, linhas })}
+              submitting={editGroupMut.isPending}
             />
           )}
         </DialogContent>
@@ -466,20 +524,25 @@ function SaidasPage() {
 
 type Linha = { item_id: string; quantidade: string };
 
-function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
+function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
-    data_movimento: new Date().toISOString().slice(0, 16),
+    data_movimento: isEditing && prefill?.data_movimento
+      ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16),
     saida_tipo: prefill?.saida_tipo ?? "evento",
     solicitante_id: prefill?.solicitante_id ?? "",
     evento_projeto: prefill?.evento_projeto ?? "",
     finalidade: prefill?.finalidade ?? "",
-    sera_devolvido: prefill?.data_prevista_devolucao ? "sim" : "sim",
-    data_prevista_devolucao: "",
+    sera_devolvido: isEditing
+      ? ((prefill?.data_prevista_devolucao || prefill?.saida_status !== "finalizada") ? "sim" : "nao")
+      : "sim",
+    data_prevista_devolucao: isEditing ? (prefill?.data_prevista_devolucao ?? "") : "",
     observacoes: prefill?.observacoes ?? "",
   });
   const [linhas, setLinhas] = useState<Linha[]>(() => {
     if (prefill?.linhas?.length) {
-      return prefill.linhas.map((l: any) => ({ item_id: l.item_id, quantidade: String(l.quantidade) }));
+      const base = prefill.linhas.map((l: any) => ({ item_id: l.item_id, quantidade: String(l.quantidade) }));
+      return isEditing ? base : [...base, { item_id: "", quantidade: "1" }];
     }
     if (prefill) {
       return [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade) }, { item_id: "", quantidade: "1" }];
@@ -488,6 +551,19 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
   });
 
   const isEvento = meta.saida_tipo === "evento";
+
+  // Em edição, garantir que itens da requisição (talvez com estoque 0 agora) apareçam na lista
+  const itensList = useMemo(() => {
+    if (!isEditing || !prefill?.linhas?.length) return itens;
+    const map = new Map<string, any>(itens.map((i: any) => [i.id, i]));
+    for (const l of prefill.linhas) {
+      if (!map.has(l.item_id) && l.item) {
+        map.set(l.item_id, { id: l.item_id, nome: l.item.nome, codigo: l.item.codigo, unidade: l.item.unidade, quantidade_atual: l.item.quantidade_atual ?? 0 });
+      }
+    }
+    return Array.from(map.values());
+  }, [itens, isEditing, prefill]);
+
 
   const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const [autoOpenIdx, setAutoOpenIdx] = useState<number | null>(null);
@@ -607,13 +683,13 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
         </div>
         <Card className="p-3 space-y-2">
           {linhas.map((l, i) => {
-            const it = itens.find((x: any) => x.id === l.item_id);
+            const it = itensList.find((x: any) => x.id === l.item_id);
             return (
               <div key={i} className="grid grid-cols-12 gap-2 items-end">
                 <div className="col-span-8">
                   <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
                   <ItemSearchSelect
-                    itens={itens}
+                    itens={itensList}
                     value={l.item_id}
                     onChange={(v) => setL(i, "item_id", v)}
                     showStock
@@ -650,7 +726,7 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
         </Card>
       </div>
 
-      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Registrando…" : "Registrar saída"}</Button></FormActions>
+      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : (isEditing ? "Salvar alterações" : "Registrar saída")}</Button></FormActions>
     </form>
   );
 }
