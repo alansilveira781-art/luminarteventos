@@ -29,6 +29,7 @@ export type CompraItem = {
   quantidade: number;
   unidade?: string | null;
   cotacao?: string | null;
+  desconto_percentual?: number | null;
   valor_unitario?: number | null;
   evento_projeto?: string | null;
 };
