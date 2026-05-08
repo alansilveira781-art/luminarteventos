@@ -30,6 +30,7 @@ export type CompraItem = {
   unidade?: string | null;
   cotacao?: string | null;
   valor_unitario?: number | null;
+  evento_projeto?: string | null;
 };
 
 export type Compra = {
