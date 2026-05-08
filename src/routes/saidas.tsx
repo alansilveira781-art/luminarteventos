@@ -477,10 +477,15 @@ function SaidaForm({ prefill, itens, solicitantes, onEditSolicitante, eventos, e
     data_prevista_devolucao: "",
     observacoes: prefill?.observacoes ?? "",
   });
-  const [linhas, setLinhas] = useState<Linha[]>(
-    prefill ? [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade) }, { item_id: "", quantidade: "1" }]
-            : [{ item_id: "", quantidade: "1" }],
-  );
+  const [linhas, setLinhas] = useState<Linha[]>(() => {
+    if (prefill?.linhas?.length) {
+      return prefill.linhas.map((l: any) => ({ item_id: l.item_id, quantidade: String(l.quantidade) }));
+    }
+    if (prefill) {
+      return [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade) }, { item_id: "", quantidade: "1" }];
+    }
+    return [{ item_id: "", quantidade: "1" }];
+  });
 
   const isEvento = meta.saida_tipo === "evento";
 
