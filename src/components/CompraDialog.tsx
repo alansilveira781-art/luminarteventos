@@ -151,6 +151,7 @@ export function CompraDialog({
           quantidade: it.quantidade || 0,
           unidade: it.unidade || null,
           cotacao: it.cotacao || null,
+          desconto_percentual: it.desconto_percentual ?? null,
           valor_unitario: it.valor_unitario ?? null,
           evento_projeto: it.evento_projeto || null,
         }));
