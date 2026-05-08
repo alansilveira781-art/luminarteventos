@@ -140,6 +140,24 @@ function EstoquePage() {
     return arr;
   }, [itens, q, hideZero, sort]);
 
+  const sel = useBulkSelection(filtered);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const bulkMut = useMutation({
+    mutationFn: async (patch: Record<string, any>) => {
+      const ids = Array.from(sel.selected);
+      if (!ids.length) return;
+      const { error } = await supabase.from("itens").update(patch as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Itens atualizados");
+      setBulkOpen(false);
+      sel.clear();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function toggleSort(key: string) {
     setSort((cur) => {
       if (!cur || cur.key !== key) return { key, dir: "desc" };
