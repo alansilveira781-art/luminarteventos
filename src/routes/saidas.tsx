@@ -686,9 +686,9 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
           {linhas.map((l, i) => {
             const it = itensList.find((x: any) => x.id === l.item_id);
             return (
-              <div key={i} className="grid grid-cols-12 gap-2 items-end">
+              <div key={i} className="grid grid-cols-12 gap-2 items-start">
                 <div className="col-span-8">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 h-4">
                     <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
                     {l.item_id && <ItemInfoHover itemId={l.item_id} />}
                   </div>
@@ -700,10 +700,10 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
                     autoOpen={(!l.item_id && i === linhas.length - 1 && i > 0) || autoOpenIdx === i}
                     onAfterSelect={() => focusQty(i)}
                   />
-                  {it && <p className="text-[10px] text-muted-foreground mt-1">Disponível: {Number(it.quantidade_atual)} {it.unidade}</p>}
+                  <p className="text-[10px] text-muted-foreground mt-1 min-h-[14px]">{it ? `Disponível: ${Number(it.quantidade_atual)} ${it.unidade}` : ""}</p>
                 </div>
                 <div className="col-span-3">
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Quantidade</label>
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Quantidade</label>
                   <Input
                     ref={(el) => { qtyRefs.current[i] = el; }}
                     type="number"
