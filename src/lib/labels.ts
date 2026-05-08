@@ -13,6 +13,7 @@ export const saidaTipoLabels: Record<string, string> = {
   quebra: "Quebra",
   manutencao: "Manutenção",
   transferencia: "Transferência",
+  epi_fardamento: "EPI / Fardamento",
   outros: "Outros",
 };
 
