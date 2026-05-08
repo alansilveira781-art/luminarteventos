@@ -536,3 +536,125 @@ function Historico({ compraId }: { compraId: string }) {
     </div>
   );
 }
+
+function Anexos({ compraId, userId }: { compraId: string; userId?: string }) {
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  const { data: anexos = [] } = useQuery({
+    queryKey: ["compra-anexos", compraId],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("compra_anexos")
+        .select("*")
+        .eq("compra_id", compraId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  async function handleUpload(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${compraId}/${Date.now()}_${safeName}`;
+        const { error: upErr } = await sb.storage.from("compra-anexos").upload(path, file, {
+          contentType: file.type || undefined,
+        });
+        if (upErr) throw upErr;
+        const { error: insErr } = await sb.from("compra_anexos").insert({
+          compra_id: compraId,
+          nome: file.name,
+          path,
+          mime_type: file.type || null,
+          tamanho: file.size,
+          uploaded_by: userId ?? null,
+        });
+        if (insErr) throw insErr;
+      }
+      toast.success("Anexos enviados");
+      qc.invalidateQueries({ queryKey: ["compra-anexos", compraId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro no upload");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDownload(a: any) {
+    const { data, error } = await sb.storage.from("compra-anexos").createSignedUrl(a.path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error("Não foi possível baixar");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  }
+
+  async function handleDelete(a: any) {
+    if (!confirm(`Remover anexo "${a.nome}"?`)) return;
+    try {
+      await sb.storage.from("compra-anexos").remove([a.path]);
+      const { error } = await sb.from("compra_anexos").delete().eq("id", a.id);
+      if (error) throw error;
+      toast.success("Anexo removido");
+      qc.invalidateQueries({ queryKey: ["compra-anexos", compraId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao remover");
+    }
+  }
+
+  function fmtSize(n?: number | null) {
+    if (!n) return "—";
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-md py-6 cursor-pointer hover:bg-muted/40 transition">
+        <Upload className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">
+          {uploading ? "Enviando…" : "Clique para anexar arquivos (PDF, Excel, imagens, etc.)"}
+        </span>
+        <input
+          type="file"
+          multiple
+          className="hidden"
+          disabled={uploading}
+          onChange={(e) => {
+            handleUpload(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </label>
+
+      {anexos.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">Nenhum anexo.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {anexos.map((a: any) => (
+            <div key={a.id} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+              <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="truncate font-medium">{a.nome}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {fmtSize(a.tamanho)} · {new Date(a.created_at).toLocaleString("pt-BR")}
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={() => handleDownload(a)}>
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => handleDelete(a)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
