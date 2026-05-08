@@ -195,11 +195,18 @@ function EstoquePage() {
         </div>
       </Card>
 
+      <BulkActionsBar count={sel.count} onEdit={() => setBulkOpen(true)} onClear={sel.clear} />
+
       <Card className="overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-180px)]">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="text-left text-xs uppercase text-muted-foreground">
+                {isAdmin && (
+                  <th className="px-3 py-3 w-8">
+                    <Checkbox checked={sel.allSelected} onCheckedChange={() => sel.toggleAll()} />
+                  </th>
+                )}
                 <Th k="codigo" label="Código" />
                 <Th k="nome" label="Item" />
                 <Th k="categoria" label="Categoria" />
