@@ -104,6 +104,7 @@ export type Database = {
           cotacao: string | null
           created_at: string
           descricao: string
+          evento_projeto: string | null
           id: string
           item_id: string | null
           quantidade: number
@@ -119,6 +120,7 @@ export type Database = {
           cotacao?: string | null
           created_at?: string
           descricao: string
+          evento_projeto?: string | null
           id?: string
           item_id?: string | null
           quantidade?: number
@@ -134,6 +136,7 @@ export type Database = {
           cotacao?: string | null
           created_at?: string
           descricao?: string
+          evento_projeto?: string | null
           id?: string
           item_id?: string | null
           quantidade?: number

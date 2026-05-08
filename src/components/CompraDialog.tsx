@@ -16,6 +16,9 @@ import { toast } from "sonner";
 import { COMPRA_STATUSES, TIPO_COMPRA_OPTIONS, type CompraStatus } from "@/lib/compras";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyResponsiblesForStatus, notifyMentions } from "@/lib/notify";
+import { listEventos } from "@/server/sheets.functions";
+
+const EVENTOS_FIXOS = ["Manutenção do Galpão", "Reposição de Estoque", "Showroom", "Placas do Zé"];
 
 const sb = supabase as any;
 
@@ -27,6 +30,7 @@ export type CompraItem = {
   unidade?: string | null;
   cotacao?: string | null;
   valor_unitario?: number | null;
+  evento_projeto?: string | null;
 };
 
 export type Compra = {
@@ -90,6 +94,16 @@ export function CompraDialog({
     },
   });
 
+  const { data: eventosData } = useQuery({
+    queryKey: ["sheets-eventos"],
+    queryFn: async () => await listEventos(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const eventosOptions = useMemo(() => {
+    const fromSheet = (eventosData?.eventos ?? []) as string[];
+    return Array.from(new Set([...fromSheet, ...EVENTOS_FIXOS])).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [eventosData]);
+
   useEffect(() => {
     if (!open) return;
     if (!compraId) {
@@ -137,6 +151,7 @@ export function CompraDialog({
           unidade: it.unidade || null,
           cotacao: it.cotacao || null,
           valor_unitario: it.valor_unitario ?? null,
+          evento_projeto: it.evento_projeto || null,
         }));
         const { error } = await sb.from("compra_itens").insert(rows);
         if (error) throw error;
@@ -165,13 +180,13 @@ export function CompraDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        {(form as any).numero != null && (
+          <div className="-mt-2 -mx-6 px-6 pb-2 pr-12 text-xs font-mono text-muted-foreground border-b border-border">
+            COMPRA-{(form as any).numero}
+          </div>
+        )}
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-2">
-            <span>{compraId ? "Editar compra" : "Nova compra"}</span>
-            {(form as any).numero != null && (
-              <span className="text-xs font-mono text-muted-foreground">COMPRA-{(form as any).numero}</span>
-            )}
-          </DialogTitle>
+          <DialogTitle>{compraId ? "Editar compra" : "Nova compra"}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="dados" className="w-full">
@@ -328,6 +343,21 @@ export function CompraDialog({
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Subtotal</label>
                     <Input value={(Number(it.quantidade || 0) * Number(it.valor_unitario || 0)).toFixed(2)} readOnly className="bg-muted/50" />
                   </div>
+                </div>
+                <div>
+                  <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Evento / Projeto</label>
+                  <Select
+                    value={it.evento_projeto ?? "__none__"}
+                    onValueChange={(v) => updateItem(idx, { evento_projeto: v === "__none__" ? null : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Nenhum —</SelectItem>
+                      {eventosOptions.map((ev) => (
+                        <SelectItem key={ev} value={ev}>{ev}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex justify-end">
                   <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(idx)}>
