@@ -174,10 +174,53 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  return (
-    <>
-      <PageHeader
-        title="Saídas"
+  // Filtros + bulk
+  const sBusca = q.toLowerCase().trim();
+  const filteredBaseList = (saidas ?? []).filter((m: any) => {
+    if (!sBusca) return true;
+    return [
+      m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
+      m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
+    ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
+  });
+  const filteredList = applySort(filteredBaseList, (m: any, k: string) => {
+    if (k === "data_movimento") return m.data_movimento;
+    if (k === "item") return m.item?.nome;
+    if (k === "solicitante") return m.solicitante?.nome;
+    if (k === "unidade") return m.item?.unidade;
+    if (k === "quantidade") return Number(m.quantidade);
+    return m[k];
+  });
+  const sel = useBulkSelection(filteredList);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const SAIDA_BULK_FIELDS: BulkField[] = [
+    { key: "solicitante_id", label: "Solicitante", type: "select", allowClear: true,
+      options: (solicitantes ?? []).map((s: any) => ({ value: s.id, label: s.nome })) },
+    { key: "saida_tipo", label: "Tipo de saída", type: "select",
+      options: Object.entries(saidaTipoLabels).map(([v, l]) => ({ value: v, label: l as string })) },
+    { key: "evento_projeto", label: "Evento/Projeto", type: "text" },
+    { key: "finalidade", label: "Finalidade", type: "text" },
+    { key: "responsavel_retirada", label: "Responsável retirada", type: "text" },
+    { key: "responsavel_recebimento", label: "Responsável recebimento", type: "text" },
+    { key: "data_prevista_devolucao", label: "Data prevista devolução", type: "date" },
+    { key: "observacoes", label: "Observações", type: "textarea" },
+  ];
+  const bulkMut = useMutation({
+    mutationFn: async (patch: Record<string, any>) => {
+      const ids = Array.from(sel.selected);
+      if (!ids.length) return;
+      const { error } = await supabase.from("movimentacoes").update(patch as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      toast.success("Saídas atualizadas");
+      setBulkOpen(false);
+      sel.clear();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
         description="Retiradas de itens do estoque"
         actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
       />
