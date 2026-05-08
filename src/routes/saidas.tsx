@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { saidaTipoLabels } from "@/lib/labels";
 import { listEventos } from "@/server/sheets.functions";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
+import { ItemInfoHover } from "@/components/ItemInfoHover";
 import { EntitySearchSelect } from "@/components/EntitySearchSelect";
 import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
 import { SortableTh, useSort } from "@/components/SortableTh";
