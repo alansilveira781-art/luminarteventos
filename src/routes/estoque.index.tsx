@@ -7,13 +7,34 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
 import { ITEM_TEMPLATE } from "@/lib/import-utils";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
 import { toast } from "sonner";
+
+const ITEM_BULK_FIELDS: BulkField[] = [
+  { key: "categoria", label: "Categoria", type: "text" },
+  { key: "subcategoria", label: "Subcategoria", type: "text" },
+  { key: "unidade", label: "Unidade", type: "text" },
+  { key: "localizacao", label: "Localização", type: "text" },
+  { key: "status", label: "Status", type: "select", options: [
+    { value: "disponivel", label: "Disponível" },
+    { value: "baixo_estoque", label: "Baixo estoque" },
+    { value: "sem_estoque", label: "Sem estoque" },
+    { value: "em_manutencao", label: "Em manutenção" },
+    { value: "inativo", label: "Inativo" },
+  ]},
+  { key: "quantidade_minima", label: "Quantidade mínima", type: "number" },
+  { key: "valor_unitario", label: "Valor unitário (R$)", type: "number" },
+  { key: "observacoes", label: "Observações", type: "textarea" },
+];
 
 export const Route = createFileRoute("/estoque/")({
   component: EstoquePage,
@@ -119,6 +140,24 @@ function EstoquePage() {
     return arr;
   }, [itens, q, hideZero, sort]);
 
+  const sel = useBulkSelection(filtered);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const bulkMut = useMutation({
+    mutationFn: async (patch: Record<string, any>) => {
+      const ids = Array.from(sel.selected);
+      if (!ids.length) return;
+      const { error } = await supabase.from("itens").update(patch as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Itens atualizados");
+      setBulkOpen(false);
+      sel.clear();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function toggleSort(key: string) {
     setSort((cur) => {
       if (!cur || cur.key !== key) return { key, dir: "desc" };
@@ -174,11 +213,18 @@ function EstoquePage() {
         </div>
       </Card>
 
+      <BulkActionsBar count={sel.count} onEdit={() => setBulkOpen(true)} onClear={sel.clear} />
+
       <Card className="overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-180px)]">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="text-left text-xs uppercase text-muted-foreground">
+                {isAdmin && (
+                  <th className="px-3 py-3 w-8">
+                    <Checkbox checked={sel.allSelected} onCheckedChange={() => sel.toggleAll()} />
+                  </th>
+                )}
                 <Th k="codigo" label="Código" />
                 <Th k="nome" label="Item" />
                 <Th k="categoria" label="Categoria" />
@@ -192,12 +238,17 @@ function EstoquePage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Carregando…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
+                <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
               ) : (
                 filtered.map((i) => (
                   <tr key={i.id} className="border-t border-border hover:bg-muted/30">
+                    {isAdmin && (
+                      <td className="px-3 py-3">
+                        <Checkbox checked={sel.selected.has(i.id)} onCheckedChange={() => sel.toggle(i.id)} />
+                      </td>
+                    )}
                     <td className="px-4 py-3 font-mono text-xs">{i.codigo}</td>
                     <td className="px-4 py-3 font-medium">{i.nome}</td>
                     <td className="px-4 py-3 text-muted-foreground">{i.categoria ?? "—"}</td>
@@ -294,6 +345,16 @@ function EstoquePage() {
           qc.invalidateQueries({ queryKey: ["itens"] });
           return { inserted, skipped, errors };
         }}
+      />
+
+      <BulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        count={sel.count}
+        fields={ITEM_BULK_FIELDS}
+        submitting={bulkMut.isPending}
+        onSubmit={(p) => bulkMut.mutate(normalizeBulkPatch(p))}
+        title="Editar itens em massa"
       />
     </>
   );

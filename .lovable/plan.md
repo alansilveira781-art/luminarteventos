@@ -1,86 +1,85 @@
-
 ## Objetivo
 
-No módulo Estoque:
-1. Cada **lançamento** de entrada ou saída aparece como **uma única linha** na tabela, mesmo quando registra vários itens. Ao clicar para visualizar, mostra todos os itens daquele lançamento.
-2. Botão **Duplicar** que abre o formulário pré-preenchido para criar um novo lançamento a partir de um existente.
-3. Novo tipo de saída **"EPI / Fardamento"**.
-4. **Edição em massa** com checkbox por linha nas abas Entradas, Saídas, Estoque, Fornecedores e Solicitantes.
+1. Adicionar botão de **excluir fornecedor** na aba Fornecedores.
+2. Aplicar a UI de **seleção múltipla + edição em massa** (componentes `BulkActionsBar` / `BulkEditDialog` / `useBulkSelection` já criados) nas abas: **Fornecedores, Solicitantes, Estoque, Entradas, Saídas**.
+
+Sem mudanças de banco — só frontend usando o que já existe.
 
 ---
 
-## 1. Mudanças no banco de dados
+## 1. Excluir fornecedor (`src/routes/fornecedores.tsx`)
 
-### 1.1 Reformular a base para lançamento agrupado
-- **`movimentacoes`** vira a tabela de **cabeçalho/lançamento** (data, tipo, fornecedor/solicitante, NF, evento, observações, responsável, etc.).
-  - Tornar `item_id` e `quantidade` **nullable** (continuam existindo só para compatibilidade com devoluções e dados históricos).
-- **`movimentacao_itens`** (já existe) vira a fonte da verdade dos itens de cada lançamento. Adicionar colunas que hoje só existem no cabeçalho e são por-item: nenhuma necessária além das existentes (`item_id`, `quantidade`, `valor_unitario`).
-- Migrar o trigger `apply_movement`:
-  - Remover do `movimentacoes`.
-  - Criar novo trigger em `movimentacao_itens` que aplica entrada/saída/devolução no estoque do item correspondente, lendo `tipo` e `condicao` do cabeçalho.
-- **Migração de dados (1‑para‑1)**: para cada `movimentacoes` existente com `item_id`, inserir uma linha em `movimentacao_itens` (sem disparar trigger — usa `session_replication_role` ou flag) preservando o estoque atual.
-
-### 1.2 Novo tipo de saída
-- Adicionar valor `epi_fardamento` ao enum `saida_tipo` e ao mapa `saidaTipoLabels` em `src/lib/labels.ts`.
+- Adicionar `useMutation` `del` que faz `supabase.from("fornecedores").delete().eq("id", id)`, com `onSuccess` invalidando `["fornecedores"]` e toast.
+- Acrescentar botão `Trash2` (variant ghost, vermelho) ao lado do botão de editar em cada linha, com `confirm("Remover fornecedor X?")`.
+- Tratar erro de FK (fornecedor referenciado em movimentações) mostrando mensagem amigável: "Não foi possível excluir: este fornecedor possui movimentações vinculadas. Inative-o em vez de excluir."
 
 ---
 
-## 2. Frontend — Entradas e Saídas
+## 2. Edição em massa por aba
 
-### 2.1 Listagem agrupada
-- `src/routes/entradas.tsx` e `src/routes/saidas.tsx`:
-  - Query passa a buscar `movimentacoes` (cabeçalho) com `movimentacao_itens(*, item:itens(...))` aninhado.
-  - Tabela mostra **uma linha por lançamento**:
-    - Coluna **Itens**: "3 itens" (ou nome do item se for só um).
-    - **Qtd total** somada dos itens.
-    - **Valor total** (soma de qtd × valor_unitario).
-    - Demais colunas vêm do cabeçalho (data, fornecedor/solicitante, tipo, NF, evento, status…).
-  - Linha expansível (clique abre modal "Detalhes do lançamento" com a lista completa de itens).
+Padrão para todas as abas:
+- Importar `useBulkSelection`, `BulkActionsBar`, `BulkEditDialog` (+ tipo `BulkField`, `normalizeBulkPatch`).
+- `const sel = useBulkSelection(filtered);`
+- Adicionar coluna de checkbox no `<thead>` (com checkbox "selecionar todos") e em cada `<tr>` (parar `onClick` propagation onde existir).
+- Renderizar `<BulkActionsBar count={sel.count} onEdit={() => setBulkOpen(true)} onClear={sel.clear} />` acima da tabela.
+- `useMutation` `bulkMut`: faz `supabase.from(<tabela>).update(patch).in("id", Array.from(sel.selected))`, invalida queries, toast, fecha diálogo e limpa seleção.
+- `<BulkEditDialog open={bulkOpen} count={sel.count} fields={CAMPOS} onSubmit={(p) => bulkMut.mutate(normalizeBulkPatch(p))} />`.
 
-### 2.2 Formulário de criação (já é multi-itens) — apenas grava no novo schema
-- Insere 1 cabeçalho em `movimentacoes` + N linhas em `movimentacao_itens` (numa transação via RPC ou sequencial).
+### Campos por aba (apenas campos seguros — não afetam estoque)
 
-### 2.3 Edição
-- Editar **só metadados do cabeçalho** (data, fornecedor/solicitante, NF, evento, observações, responsável, devolver-até, etc.). Itens permanecem fixos — para alterar itens, o usuário exclui e cria novo (ou duplica e ajusta).
-- Mensagem clara no diálogo de edição informando isso.
+**Fornecedores** (`src/routes/fornecedores.tsx`)
+- `status` (select: ativo / inativo)
+- `tipo_fornecimento` (text)
+- `endereco` (text)
+- `observacoes` (textarea)
 
-### 2.4 Duplicar
-- Já existe botão `Copy`. Ajustar para carregar o cabeçalho **e todos os itens** do lançamento original como prefill do formulário, permitindo edição antes de salvar como novo lançamento.
+**Solicitantes** (`src/routes/solicitantes.tsx`)
+- `status` (select: ativo / inativo)
+- `setor` (text)
+- `cargo` (text)
+- `observacoes` (textarea)
 
-### 2.5 Excluir
-- Excluir cabeçalho remove em cascata as linhas de `movimentacao_itens` (FK ON DELETE CASCADE) e o trigger reverte o estoque por item.
+**Estoque** (`src/routes/estoque.index.tsx`) — tabela `itens`
+- `categoria` (text)
+- `subcategoria` (text)
+- `unidade` (text)
+- `localizacao` (text)
+- `status` (select: disponivel / baixo_estoque / sem_estoque / em_manutencao / inativo)
+- `quantidade_minima` (number)
+- `valor_unitario` (number)
+- `observacoes` (textarea)
+- (não inclui `quantidade_atual`)
 
----
+**Entradas** (`src/routes/entradas.tsx`) — tabela `movimentacoes`, somente metadados
+- `fornecedor_id` (select com a lista de fornecedores ativos, allowClear)
+- `nota_fiscal` (text)
+- `entrada_tipo` (select com `entradaTipoLabels`)
+- `responsavel_lancamento` (text)
+- `data_movimento` (datetime)
+- `observacoes` (textarea)
 
-## 3. Edição em massa (Entradas, Saídas, Estoque, Fornecedores, Solicitantes)
-
-### 3.1 UI
-- Componente reutilizável `BulkEditBar` + checkbox por linha + checkbox "selecionar todos" no header.
-- Quando há ≥1 selecionado, aparece uma barra fixa: "X selecionados • [Editar em massa] [Limpar seleção]".
-- Diálogo "Editar em massa" lista apenas os **campos seguros** de cada tabela (nada que afete estoque). Cada campo tem um checkbox "alterar este campo" + o input.
-
-### 3.2 Campos liberados por aba
-- **Entradas** (cabeçalho): `fornecedor_id`, `nota_fiscal`, `entrada_tipo`, `responsavel_lancamento`, `observacoes`, `data_movimento`.
-- **Saídas** (cabeçalho): `solicitante_id`, `saida_tipo`, `evento_projeto`, `finalidade`, `responsavel_retirada`, `responsavel_recebimento`, `data_prevista_devolucao`, `observacoes`.
-- **Estoque** (`itens`): `categoria`, `subcategoria`, `unidade`, `localizacao`, `status`, `quantidade_minima`, `valor_unitario`, `observacoes`. (Não inclui `quantidade_atual`.)
-- **Fornecedores**: `status`, `tipo_fornecimento`, `observacoes`, `endereco`.
-- **Solicitantes**: `status`, `setor`, `cargo`, `observacoes`.
-
-### 3.3 Persistência
-- `UPDATE` em massa via Supabase com `.in("id", ids)` setando apenas os campos marcados.
+**Saídas** (`src/routes/saidas.tsx`) — tabela `movimentacoes`, somente metadados
+- `solicitante_id` (select com solicitantes ativos, allowClear)
+- `saida_tipo` (select com `saidaTipoLabels`, inclui `epi_fardamento`)
+- `evento_projeto` (text)
+- `finalidade` (text)
+- `responsavel_retirada` (text)
+- `responsavel_recebimento` (text)
+- `data_prevista_devolucao` (date, allowClear)
+- `observacoes` (textarea)
 
 ---
 
 ## Detalhes técnicos
 
-- **Migração SQL** (uma só): alter enum `saida_tipo` add `epi_fardamento`; alter `movimentacoes` torna `item_id`/`quantidade` nullable; FK `movimentacao_itens.movimentacao_id` com `ON DELETE CASCADE` (recriar se necessário); novo trigger `apply_movement_item` em `movimentacao_itens AFTER INSERT/UPDATE/DELETE`; `DROP TRIGGER` antigo em `movimentacoes`; backfill 1-para-1 de `movimentacoes` → `movimentacao_itens` com trigger desabilitado para não duplicar estoque.
-- **Devoluções** continuam em `movimentacoes` como antes (1 movimento = 1 item por enquanto), referenciando `saida_origem_id` do cabeçalho de saída. A função `refresh_saida_status` é ajustada para somar `quantidade` de todas as linhas da saída-origem (via `movimentacao_itens`).
-- **Tipos**: após a migration, `src/integrations/supabase/types.ts` é regenerado; ajusto todos os usos.
-- **Componentes novos**: `BulkSelectCheckbox`, `BulkEditBar`, `BulkEditDialog` (recebe schema dos campos editáveis).
-- **Sem regressão visual**: filtros, ordenação (SortableTh) e busca permanecem.
+- `applySort` retorna um array novo a cada render; passar para `useBulkSelection` é OK porque o hook deriva `allIds` via `useMemo` sobre `rows`. Mantém a seleção entre re-renders enquanto os IDs continuarem na lista filtrada.
+- A coluna de checkbox vai como **primeira** coluna em todas as tabelas; ajustar `colSpan` dos `<td>` "Nenhum…".
+- Todas as mutações em massa seguem RLS já existente (`has_module_access`).
+- Não mexer na lógica de estoque, triggers ou em qualquer fluxo de criação/edição individual.
 
-## Arquivos afetados (principais)
-- `supabase/migrations/<novo>.sql`
-- `src/routes/entradas.tsx`, `src/routes/saidas.tsx`, `src/routes/estoque.index.tsx`, `src/routes/fornecedores.tsx`, `src/routes/solicitantes.tsx`, `src/routes/devolucoes.tsx`
-- `src/lib/labels.ts`
-- Novos: `src/components/BulkEditBar.tsx`, `src/components/BulkEditDialog.tsx`, `src/components/MovimentacaoDetalhesDialog.tsx`
+## Arquivos afetados
+- `src/routes/fornecedores.tsx` (excluir + bulk)
+- `src/routes/solicitantes.tsx` (bulk)
+- `src/routes/estoque.index.tsx` (bulk)
+- `src/routes/entradas.tsx` (bulk)
+- `src/routes/saidas.tsx` (bulk)

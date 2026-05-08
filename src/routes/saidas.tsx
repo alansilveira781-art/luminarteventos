@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, RefreshCw, Trash2, Pencil, Search, Copy } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -21,6 +22,9 @@ import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { EntitySearchSelect } from "@/components/EntitySearchSelect";
 import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
 import { SortableTh, useSort } from "@/components/SortableTh";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/saidas")({
@@ -170,6 +174,53 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Filtros + bulk
+  const sBusca = q.toLowerCase().trim();
+  const filteredBaseList = (saidas ?? []).filter((m: any) => {
+    if (!sBusca) return true;
+    return [
+      m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
+      m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
+    ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
+  });
+  const filteredList = applySort(filteredBaseList, (m: any, k: string) => {
+    if (k === "data_movimento") return m.data_movimento;
+    if (k === "item") return m.item?.nome;
+    if (k === "solicitante") return m.solicitante?.nome;
+    if (k === "unidade") return m.item?.unidade;
+    if (k === "quantidade") return Number(m.quantidade);
+    return m[k];
+  });
+  const sel = useBulkSelection(filteredList);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const SAIDA_BULK_FIELDS: BulkField[] = [
+    { key: "solicitante_id", label: "Solicitante", type: "select", allowClear: true,
+      options: (solicitantes ?? []).map((s: any) => ({ value: s.id, label: s.nome })) },
+    { key: "saida_tipo", label: "Tipo de saída", type: "select",
+      options: Object.entries(saidaTipoLabels).map(([v, l]) => ({ value: v, label: l as string })) },
+    { key: "evento_projeto", label: "Evento/Projeto", type: "text" },
+    { key: "finalidade", label: "Finalidade", type: "text" },
+    { key: "responsavel_retirada", label: "Responsável retirada", type: "text" },
+    { key: "responsavel_recebimento", label: "Responsável recebimento", type: "text" },
+    { key: "data_prevista_devolucao", label: "Data prevista devolução", type: "date" },
+    { key: "observacoes", label: "Observações", type: "textarea" },
+  ];
+  const bulkMut = useMutation({
+    mutationFn: async (patch: Record<string, any>) => {
+      const ids = Array.from(sel.selected);
+      if (!ids.length) return;
+      const { error } = await supabase.from("movimentacoes").update(patch as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      toast.success("Saídas atualizadas");
+      setBulkOpen(false);
+      sel.clear();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <>
       <PageHeader
@@ -178,98 +229,98 @@ function SaidasPage() {
         actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
       />
 
-      {(() => {
-        const s = q.toLowerCase().trim();
-        const filteredBase = (saidas ?? []).filter((m: any) => {
-          if (!s) return true;
-          return [
-            m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
-            m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
-          ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(s);
-        });
-        const filtered = applySort(filteredBase, (m: any, k: string) => {
-          if (k === "data_movimento") return m.data_movimento;
-          if (k === "item") return m.item?.nome;
-          if (k === "solicitante") return m.solicitante?.nome;
-          if (k === "unidade") return m.item?.unidade;
-          if (k === "quantidade") return Number(m.quantidade);
-          return m[k];
-        });
-        return (
-          <>
-            <Card className="p-4 mb-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="text-xs text-muted-foreground mt-2">
-                {filtered.length} {filtered.length === 1 ? "saída" : "saídas"}
-                {saidas && filtered.length !== saidas.length ? ` (de ${saidas.length})` : ""}
-              </div>
-            </Card>
+      <Card className="p-4 mb-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="text-xs text-muted-foreground mt-2">
+          {filteredList.length} {filteredList.length === 1 ? "saída" : "saídas"}
+          {saidas && filteredList.length !== saidas.length ? ` (de ${saidas.length})` : ""}
+        </div>
+      </Card>
 
-            <Card className="overflow-hidden">
-              <div className="overflow-auto max-h-[calc(100vh-180px)]">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr className="text-left text-xs uppercase text-muted-foreground">
-                      <SortableTh sort={sort} onToggle={toggleSort} k="data_movimento" label="Data" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="item" label="Item" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="evento_projeto" label="Evento/Projeto" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="solicitante" label="Solicitante" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="saida_tipo" label="Tipo" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="quantidade" label="Qtd" align="right" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="unidade" label="UN" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="data_prevista_devolucao" label="Devolver até" />
-                      <SortableTh sort={sort} onToggle={toggleSort} k="saida_status" label="Status" />
-                      {isAdmin && <th className="px-4 py-3 font-medium"></th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.length ? filtered.map((m: any) => (
-                      <tr key={m.id} className="border-t border-border hover:bg-muted/30">
-                        <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
-                        <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
-                        <td className="px-4 py-3 text-foreground">{m.evento_projeto ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{m.saida_tipo ? saidaTipoLabels[m.saida_tipo] : "—"}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
-                        <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
-                        {isAdmin && (
-                          <td className="px-4 py-3">
-                            <div className="flex gap-1 justify-end">
-                              <Button type="button" variant="ghost" size="icon" onClick={() => { setPrefill(m); setOpen(true); }} title="Duplicar">
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => {
-                                if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
-                              }} title="Excluir">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma saída encontrada.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </>
-        );
-      })()}
+      {isAdmin && <BulkActionsBar count={sel.count} onEdit={() => setBulkOpen(true)} onClear={sel.clear} />}
+
+      <Card className="overflow-hidden">
+        <div className="overflow-auto max-h-[calc(100vh-180px)]">
+          <table className="min-w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr className="text-left text-xs uppercase text-muted-foreground">
+                {isAdmin && (
+                  <th className="px-3 py-3 w-8">
+                    <Checkbox checked={sel.allSelected} onCheckedChange={() => sel.toggleAll()} />
+                  </th>
+                )}
+                <SortableTh sort={sort} onToggle={toggleSort} k="data_movimento" label="Data" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="item" label="Item" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="evento_projeto" label="Evento/Projeto" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="solicitante" label="Solicitante" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="saida_tipo" label="Tipo" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="quantidade" label="Qtd" align="right" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="unidade" label="UN" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="data_prevista_devolucao" label="Devolver até" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="saida_status" label="Status" />
+                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredList.length ? filteredList.map((m: any) => (
+                <tr key={m.id} className="border-t border-border hover:bg-muted/30">
+                  {isAdmin && (
+                    <td className="px-3 py-3">
+                      <Checkbox checked={sel.selected.has(m.id)} onCheckedChange={() => sel.toggle(m.id)} />
+                    </td>
+                  )}
+                  <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                  <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
+                  <td className="px-4 py-3 text-foreground">{m.evento_projeto ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.saida_tipo ? saidaTipoLabels[m.saida_tipo] : "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-destructive">-{Number(m.quantidade)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.data_prevista_devolucao ? format(new Date(m.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
+                  <td className="px-4 py-3"><StatusBadge status={m.saida_status} /></td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 justify-end">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => { setPrefill(m); setOpen(true); }} title="Duplicar">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setEditing(m)} title="Editar">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => {
+                          if (confirm("Excluir esta saída? O estoque será revertido e devoluções vinculadas serão apagadas.")) delMut.mutate(m);
+                        }} title="Excluir">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              )) : (
+                <tr><td colSpan={isAdmin ? 11 : 9} className="text-center py-10 text-muted-foreground">Nenhuma saída encontrada.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <BulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        count={sel.count}
+        fields={SAIDA_BULK_FIELDS}
+        submitting={bulkMut.isPending}
+        onSubmit={(p) => bulkMut.mutate(normalizeBulkPatch(p))}
+        title="Editar saídas em massa"
+      />
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setPrefill(null); }}>
         <DialogContent className="max-w-4xl">
