@@ -8,12 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { SortableTh, useSort } from "@/components/SortableTh";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/devolucoes")({
   component: DevolucoesPage,
@@ -21,8 +26,12 @@ export const Route = createFileRoute("/devolucoes")({
 
 function DevolucoesPage() {
   const qc = useQueryClient();
+  const { isModuleAdmin } = useAuth();
+  const isAdmin = isModuleAdmin("estoque");
   const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
   const { sort, toggleSort, applySort } = useSort();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const { data: devolucoes } = useQuery({
     queryKey: ["devolucoes"],
@@ -38,7 +47,13 @@ function DevolucoesPage() {
     },
   });
 
-  // Saídas em aberto / parcial — vamos agrupar por (data+solicitante+evento) p/ representar "uma saída com vários itens"
+  const { data: solicitantes } = useQuery({
+    queryKey: ["solicitantes-select"],
+    queryFn: async () =>
+      (await supabase.from("solicitantes").select("id,nome").eq("status", "ativo").order("nome")).data ?? [],
+  });
+
+  // Saídas em aberto / parcial — vamos agrupar por (data+solicitante+evento)
   const { data: saidasAbertas } = useQuery({
     queryKey: ["saidas-abertas"],
     queryFn: async () => {
@@ -77,18 +92,89 @@ function DevolucoesPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["devolucoes"] });
-      qc.invalidateQueries({ queryKey: ["saidas"] });
-      qc.invalidateQueries({ queryKey: ["saidas-abertas"] });
-      qc.invalidateQueries({ queryKey: ["devolvido-por-origem"] });
-      qc.invalidateQueries({ queryKey: ["itens"] });
-      qc.invalidateQueries({ queryKey: ["dashboard-itens"] });
-      qc.invalidateQueries({ queryKey: ["dashboard-movs"] });
+      invalidateAll(qc);
       toast.success("Devolução registrada");
       setOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // Excluir devolução (revertendo estoque)
+  const delMut = useMutation({
+    mutationFn: async (rows: any[]) => {
+      for (const r of rows) {
+        // se a devolução agregou estoque, devolver: subtrair
+        if (r.condicao !== "perdido" && r.item_id) {
+          const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", r.item_id).single();
+          if (it) {
+            await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) - Number(r.quantidade) }).eq("id", r.item_id);
+          }
+        }
+      }
+      const ids = rows.map((r) => r.id);
+      const { error } = await supabase.from("movimentacoes").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll(qc);
+      toast.success("Devolução(ões) excluída(s)");
+      sel.clear();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Filtro
+  const sBusca = q.toLowerCase().trim();
+  const filtered = useMemo(() => {
+    const list = (devolucoes ?? []).filter((m: any) => {
+      if (!sBusca) return true;
+      return [
+        m.item?.nome, m.item?.codigo, m.solicitante?.nome,
+        m.responsavel_recebimento, m.responsavel_lancamento,
+        m.observacoes, m.condicao,
+      ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
+    });
+    return applySort(list, (m: any, k: string) => {
+      if (k === "item") return m.item?.nome;
+      if (k === "solicitante") return m.solicitante?.nome;
+      if (k === "unidade") return m.item?.unidade;
+      if (k === "quantidade") return Number(m.quantidade);
+      return m[k];
+    });
+  }, [devolucoes, sBusca, sort]);
+
+  const sel = useBulkSelection(filtered);
+
+  const BULK_FIELDS: BulkField[] = [
+    { key: "data_movimento", label: "Data/Hora", type: "datetime" },
+    { key: "responsavel_lancamento", label: "Responsável pela devolução", type: "text" },
+    { key: "responsavel_recebimento", label: "Responsável pelo recebimento", type: "text" },
+    { key: "observacoes", label: "Observações", type: "textarea" },
+  ];
+  const bulkMut = useMutation({
+    mutationFn: async (patch: Record<string, any>) => {
+      const ids = Array.from(sel.selected);
+      if (!ids.length) return;
+      const norm = normalizeBulkPatch(patch);
+      const { error } = await supabase.from("movimentacoes").update(norm as any).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["devolucoes"] });
+      toast.success("Devoluções atualizadas");
+      setBulkOpen(false);
+      sel.clear();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  function handleBulkDelete() {
+    const ids = Array.from(sel.selected);
+    const rows = (devolucoes ?? []).filter((d: any) => ids.includes(d.id));
+    if (!rows.length) return;
+    if (!confirm(`Excluir ${rows.length} devolução(ões)? O estoque será revertido.`)) return;
+    delMut.mutate(rows);
+  }
 
   return (
     <>
@@ -98,43 +184,91 @@ function DevolucoesPage() {
         actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova devolução</Button>}
       />
 
+      <Card className="p-4 mb-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por item, código, solicitante, responsável, condição…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="text-xs text-muted-foreground mt-2">
+          {filtered.length} {filtered.length === 1 ? "devolução" : "devoluções"}
+          {devolucoes && filtered.length !== devolucoes.length ? ` (de ${devolucoes.length})` : ""}
+        </div>
+      </Card>
+
+      {isAdmin && (
+        <BulkActionsBar
+          count={sel.count}
+          onEdit={() => setBulkOpen(true)}
+          onClear={sel.clear}
+          extraActions={
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={delMut.isPending}>
+              <Trash2 className="h-4 w-4 mr-1" /> Excluir selecionadas
+            </Button>
+          }
+        />
+      )}
+
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="text-left text-xs uppercase text-muted-foreground">
+                {isAdmin && (
+                  <th className="px-3 py-3 w-8">
+                    <Checkbox checked={sel.allSelected} onCheckedChange={() => sel.toggleAll()} />
+                  </th>
+                )}
                 <SortableTh sort={sort} onToggle={toggleSort} k="data_movimento" label="Data" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="item" label="Item" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="solicitante" label="Solicitante" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="quantidade" label="Qtd" align="right" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="unidade" label="UN" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="responsavel_lancamento" label="Devolvido por" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="responsavel_recebimento" label="Recebido por" />
                 <th className="px-4 py-3 font-medium">Obs</th>
+                {isAdmin && <th className="px-3 py-3 w-12" />}
               </tr>
             </thead>
             <tbody>
-              {(() => {
-                const sorted = applySort(devolucoes ?? [], (m: any, k: string) => {
-                  if (k === "item") return m.item?.nome;
-                  if (k === "solicitante") return m.solicitante?.nome;
-                  if (k === "unidade") return m.item?.unidade;
-                  if (k === "quantidade") return Number(m.quantidade);
-                  return m[k];
-                });
-                return sorted.length ? sorted.map((m: any) => (
-                  <tr key={m.id} className="border-t border-border hover:bg-muted/30">
-                    <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
-                    <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{m.responsavel_recebimento ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{m.observacoes ?? ""}</td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">Nenhuma devolução registrada.</td></tr>
-                );
-              })()}
+              {filtered.length ? filtered.map((m: any) => (
+                <tr key={m.id} className="border-t border-border hover:bg-muted/30">
+                  {isAdmin && (
+                    <td className="px-3 py-3">
+                      <Checkbox checked={sel.selected.has(m.id)} onCheckedChange={() => sel.toggle(m.id)} />
+                    </td>
+                  )}
+                  <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(m.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                  <td className="px-4 py-3 font-medium">{m.item?.nome}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.solicitante?.nome ?? "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-success">+{Number(m.quantidade)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.item?.unidade}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.responsavel_lancamento ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{m.responsavel_recebimento ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{m.observacoes ?? ""}</td>
+                  {isAdmin && (
+                    <td className="px-3 py-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Excluir devolução"
+                        onClick={() => {
+                          if (!confirm("Excluir esta devolução? O estoque será revertido.")) return;
+                          delMut.mutate([m]);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              )) : (
+                <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhuma devolução registrada.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -146,13 +280,33 @@ function DevolucoesPage() {
           <DevolucaoForm
             saidas={saidasAbertas ?? []}
             devolvidoPorOrigem={devolvidoPorOrigem ?? new Map()}
+            solicitantes={solicitantes ?? []}
             onSubmit={(linhas: any) => mut.mutate(linhas)}
             submitting={mut.isPending}
           />
         </DialogContent>
       </Dialog>
+
+      <BulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        count={sel.count}
+        fields={BULK_FIELDS}
+        submitting={bulkMut.isPending}
+        onSubmit={(patch) => bulkMut.mutate(patch)}
+      />
     </>
   );
+}
+
+function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["devolucoes"] });
+  qc.invalidateQueries({ queryKey: ["saidas"] });
+  qc.invalidateQueries({ queryKey: ["saidas-abertas"] });
+  qc.invalidateQueries({ queryKey: ["devolvido-por-origem"] });
+  qc.invalidateQueries({ queryKey: ["itens"] });
+  qc.invalidateQueries({ queryKey: ["dashboard-itens"] });
+  qc.invalidateQueries({ queryKey: ["dashboard-movs"] });
 }
 
 // Agrupa as saídas em "lotes" por (data_movimento + solicitante + evento)
@@ -175,7 +329,7 @@ function groupSaidas(saidas: any[]) {
   return Array.from(groups.values()).sort((a, b) => b.data.localeCompare(a.data));
 }
 
-function DevolucaoForm({ saidas, devolvidoPorOrigem, onSubmit, submitting }: any) {
+function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, submitting }: any) {
   const grupos = useMemo(() => groupSaidas(saidas), [saidas]);
   const [grupoKey, setGrupoKey] = useState("");
   const [meta, setMeta] = useState({
@@ -184,15 +338,14 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, onSubmit, submitting }: any
     responsavel_lancamento: "",
     observacoes: "",
   });
-  const [qtds, setQtds] = useState<Record<string, string>>({}); // por id de saída
+  const [qtds, setQtds] = useState<Record<string, string>>({});
 
   const grupo = grupos.find((g) => g.key === grupoKey);
-
   const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
 
   const handleSelectGrupo = (key: string) => {
     setGrupoKey(key);
-    setQtds({}); // reset
+    setQtds({});
   };
 
   return (
@@ -237,8 +390,27 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, onSubmit, submitting }: any
           </Select>
         </FormField>
         <FormField label="Data*"><Input required type="datetime-local" value={meta.data_movimento} onChange={(e) => setM("data_movimento", e.target.value)} /></FormField>
-        <FormField label="Responsável pela devolução"><Input value={meta.responsavel_lancamento} onChange={(e) => setM("responsavel_lancamento", e.target.value)} /></FormField>
-        <FormField label="Responsável pelo recebimento"><Input value={meta.responsavel_recebimento} onChange={(e) => setM("responsavel_recebimento", e.target.value)} /></FormField>
+        <FormField label="Responsável pela devolução">
+          <Input
+            list="solicitantes-list"
+            value={meta.responsavel_lancamento}
+            onChange={(e) => setM("responsavel_lancamento", e.target.value)}
+            placeholder="Pesquise ou digite um nome…"
+          />
+        </FormField>
+        <FormField label="Responsável pelo recebimento">
+          <Input
+            list="solicitantes-list"
+            value={meta.responsavel_recebimento}
+            onChange={(e) => setM("responsavel_recebimento", e.target.value)}
+            placeholder="Pesquise ou digite um nome…"
+          />
+        </FormField>
+        <datalist id="solicitantes-list">
+          {(solicitantes ?? []).map((s: any) => (
+            <option key={s.id} value={s.nome} />
+          ))}
+        </datalist>
         <FormField label="Observações" wide><Textarea rows={2} value={meta.observacoes} onChange={(e) => setM("observacoes", e.target.value)} /></FormField>
       </FormSection>
 
