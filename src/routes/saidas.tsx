@@ -726,7 +726,7 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
         </Card>
       </div>
 
-      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Registrando…" : "Registrar saída"}</Button></FormActions>
+      <FormActions><Button type="submit" size="lg" disabled={submitting}>{submitting ? "Salvando…" : (isEditing ? "Salvar alterações" : "Registrar saída")}</Button></FormActions>
     </form>
   );
 }
