@@ -110,14 +110,15 @@ function Dashboard() {
   });
 
   const { data: movsMes } = useQuery({
-    queryKey: ["dashboard-movs"],
+    queryKey: ["dashboard-movs", visaoRange.ini, visaoRange.fim],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimentacoes")
         .select("*, item:itens(nome,codigo), solicitante:solicitantes(nome), fornecedor:fornecedores(nome)")
-        .gte("data_movimento", startOfMonthIso())
+        .gte("data_movimento", visaoRange.ini)
+        .lte("data_movimento", visaoRange.fim)
         .order("data_movimento", { ascending: false })
-        .limit(500);
+        .limit(2000);
       if (error) throw error;
       return data;
     },
