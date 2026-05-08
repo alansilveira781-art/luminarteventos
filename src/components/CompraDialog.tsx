@@ -94,6 +94,16 @@ export function CompraDialog({
     },
   });
 
+  const { data: eventosData } = useQuery({
+    queryKey: ["sheets-eventos"],
+    queryFn: async () => await listEventos(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const eventosOptions = useMemo(() => {
+    const fromSheet = (eventosData?.eventos ?? []) as string[];
+    return Array.from(new Set([...fromSheet, ...EVENTOS_FIXOS])).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [eventosData]);
+
   useEffect(() => {
     if (!open) return;
     if (!compraId) {
