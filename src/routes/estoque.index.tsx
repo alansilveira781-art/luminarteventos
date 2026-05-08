@@ -7,13 +7,34 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
 import { ITEM_TEMPLATE } from "@/lib/import-utils";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
 import { toast } from "sonner";
+
+const ITEM_BULK_FIELDS: BulkField[] = [
+  { key: "categoria", label: "Categoria", type: "text" },
+  { key: "subcategoria", label: "Subcategoria", type: "text" },
+  { key: "unidade", label: "Unidade", type: "text" },
+  { key: "localizacao", label: "Localização", type: "text" },
+  { key: "status", label: "Status", type: "select", options: [
+    { value: "disponivel", label: "Disponível" },
+    { value: "baixo_estoque", label: "Baixo estoque" },
+    { value: "sem_estoque", label: "Sem estoque" },
+    { value: "em_manutencao", label: "Em manutenção" },
+    { value: "inativo", label: "Inativo" },
+  ]},
+  { key: "quantidade_minima", label: "Quantidade mínima", type: "number" },
+  { key: "valor_unitario", label: "Valor unitário (R$)", type: "number" },
+  { key: "observacoes", label: "Observações", type: "textarea" },
+];
 
 export const Route = createFileRoute("/estoque/")({
   component: EstoquePage,
