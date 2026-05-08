@@ -18,7 +18,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import {
   ResponsiveContainer,
   BarChart,
@@ -37,10 +37,10 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const ALL = "__all__";
-
-function startOfMonthIso() {
-  return startOfMonth(new Date()).toISOString();
-}
+const MESES_PT = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function Dashboard() {
   const hoje = new Date();
@@ -50,6 +50,30 @@ function Dashboard() {
   const [pessoaTipo, setPessoaTipo] = useState<"solicitante" | "fornecedor">("solicitante");
   const [pessoaId, setPessoaId] = useState(ALL);
   const [categoriaAbc, setCategoriaAbc] = useState(ALL);
+
+  // Filtro de visão geral (cards): ano e mês
+  const [anoVisao, setAnoVisao] = useState<number>(hoje.getFullYear());
+  const [mesVisao, setMesVisao] = useState<string>(String(hoje.getMonth() + 1)); // "1".."12" ou ALL
+
+  const visaoRange = useMemo(() => {
+    if (mesVisao === ALL) {
+      const ini = startOfYear(new Date(anoVisao, 0, 1));
+      const fim = endOfYear(new Date(anoVisao, 0, 1));
+      return { ini: ini.toISOString(), fim: fim.toISOString(), label: String(anoVisao) };
+    }
+    const m = Number(mesVisao) - 1;
+    const ini = startOfMonth(new Date(anoVisao, m, 1));
+    const fim = endOfMonth(new Date(anoVisao, m, 1));
+    return { ini: ini.toISOString(), fim: fim.toISOString(), label: `${MESES_PT[m]}/${anoVisao}` };
+  }, [anoVisao, mesVisao]);
+
+  const anosDisponiveis = useMemo(() => {
+    const atual = hoje.getFullYear();
+    const arr: number[] = [];
+    for (let y = atual; y >= atual - 5; y--) arr.push(y);
+    if (!arr.includes(anoVisao)) arr.push(anoVisao);
+    return arr.sort((a, b) => b - a);
+  }, [anoVisao, hoje]);
 
   const { data: itens } = useQuery({
     queryKey: ["dashboard-itens"],
@@ -86,14 +110,15 @@ function Dashboard() {
   });
 
   const { data: movsMes } = useQuery({
-    queryKey: ["dashboard-movs"],
+    queryKey: ["dashboard-movs", visaoRange.ini, visaoRange.fim],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimentacoes")
         .select("*, item:itens(nome,codigo), solicitante:solicitantes(nome), fornecedor:fornecedores(nome)")
-        .gte("data_movimento", startOfMonthIso())
+        .gte("data_movimento", visaoRange.ini)
+        .lte("data_movimento", visaoRange.fim)
         .order("data_movimento", { ascending: false })
-        .limit(500);
+        .limit(2000);
       if (error) throw error;
       return data;
     },
@@ -246,14 +271,39 @@ function Dashboard() {
         description="Visão geral da operação de estoque · Luminart Eventos"
       />
 
+      <Card className="p-3 mb-4 bg-muted/20">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Ano</label>
+            <Select value={String(anoVisao)} onValueChange={(v) => setAnoVisao(Number(v))}>
+              <SelectTrigger className="h-9 w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {anosDisponiveis.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Mês</label>
+            <Select value={mesVisao} onValueChange={setMesVisao}>
+              <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todos os meses</SelectItem>
+                {MESES_PT.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <span className="text-xs text-muted-foreground ml-auto">Período: {visaoRange.label}</span>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Kpi icon={Package} label="Total de itens" value={total} tone="primary" />
         <Kpi icon={AlertTriangle} label="Baixo estoque" value={baixo} tone="warning" />
         <Kpi icon={XCircle} label="Sem estoque" value={sem} tone="destructive" />
         <Kpi icon={Wrench} label="Em manutenção" value={manut} tone="accent" />
-        <Kpi icon={ArrowDownToLine} label="Entradas no mês" value={entradasMes} tone="success" />
-        <Kpi icon={ArrowUpFromLine} label="Saídas no mês" value={saidasMes} tone="primary" />
-        <Kpi icon={Undo2} label="Devoluções no mês" value={devolucoesMes} tone="accent" />
+        <Kpi icon={ArrowDownToLine} label={`Entradas (${visaoRange.label})`} value={entradasMes} tone="success" />
+        <Kpi icon={ArrowUpFromLine} label={`Saídas (${visaoRange.label})`} value={saidasMes} tone="primary" />
+        <Kpi icon={Undo2} label={`Devoluções (${visaoRange.label})`} value={devolucoesMes} tone="accent" />
         <Kpi icon={ListChecks} label="Saídas pendentes" value={saidasAbertas} tone="warning" />
       </div>
 
