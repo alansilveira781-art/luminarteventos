@@ -177,6 +177,19 @@ export function CompraDialog({
   function updateItem(idx: number, patch: Partial<CompraItem>) {
     setItens((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
   }
+  function updateCotacaoOrDesconto(idx: number, patch: Partial<CompraItem>) {
+    setItens((p) => p.map((it, i) => {
+      if (i !== idx) return it;
+      const next = { ...it, ...patch };
+      const cot = parseFloat(String(next.cotacao ?? "").replace(",", "."));
+      const desc = Number(next.desconto_percentual ?? 0);
+      if (!Number.isNaN(cot) && Number.isFinite(cot)) {
+        const sugerido = cot * (1 - (desc || 0) / 100);
+        next.valor_unitario = Number(sugerido.toFixed(4));
+      }
+      return next;
+    }));
+  }
   function removeItem(idx: number) { setItens((p) => p.filter((_, i) => i !== idx)); }
 
   return (
