@@ -1,85 +1,37 @@
-## Objetivo
+## Mudanças no módulo de Compras
 
-1. Adicionar botão de **excluir fornecedor** na aba Fornecedores.
-2. Aplicar a UI de **seleção múltipla + edição em massa** (componentes `BulkActionsBar` / `BulkEditDialog` / `useBulkSelection` já criados) nas abas: **Fornecedores, Solicitantes, Estoque, Entradas, Saídas**.
+### 1. ID da compra acima do botão de fechar (`src/components/CompraDialog.tsx`)
+Hoje o `COMPRA-XX` aparece na mesma linha do título, ao lado do "X" de fechar. Vou movê-lo para uma faixa própria no topo do `DialogContent`, acima do header, de forma que o número fique posicionado **acima** do botão de fechar (que continua no canto superior direito).
 
-Sem mudanças de banco — só frontend usando o que já existe.
+- Renderizar um pequeno bloco no topo: `COMPRA-XX` em fonte mono, com fundo sutil (`bg-muted/50`), alinhado à esquerda, antes do `<DialogHeader>`.
+- Remover o `<span>` do `COMPRA-XX` que está dentro do `DialogTitle`.
+- Quando for "Nova compra" (sem número ainda), o bloco não aparece.
 
----
+### 2. Campo Evento/Projeto por item
 
-## 1. Excluir fornecedor (`src/routes/fornecedores.tsx`)
+**Banco** (`compra_itens`):
+- Migration adicionando coluna `evento_projeto text NULL`.
 
-- Adicionar `useMutation` `del` que faz `supabase.from("fornecedores").delete().eq("id", id)`, com `onSuccess` invalidando `["fornecedores"]` e toast.
-- Acrescentar botão `Trash2` (variant ghost, vermelho) ao lado do botão de editar em cada linha, com `confirm("Remover fornecedor X?")`.
-- Tratar erro de FK (fornecedor referenciado em movimentações) mostrando mensagem amigável: "Não foi possível excluir: este fornecedor possui movimentações vinculadas. Inative-o em vez de excluir."
+**Lista de opções** — reaproveitar `listEventos` (`src/server/sheets.functions.ts`) que já lê a coluna A da planilha do Google Sheets, e concatenar localmente as 4 opções fixas que o usuário pediu:
+- Manutenção do Galpão
+- Reposição de Estoque
+- Showroom
+- Placas do Zé
 
----
+Estas 4 são adicionadas no front (deduplicadas e ordenadas) para não depender da planilha.
 
-## 2. Edição em massa por aba
+**UI** (`src/components/CompraDialog.tsx`, aba "Itens"):
+- `useQuery(["sheets-eventos"], listEventos)` no topo do componente (mesmo padrão de `saidas.tsx`).
+- Lista final = `Array.from(new Set([...sheetsEventos, "Manutenção do Galpão", "Reposição de Estoque", "Showroom", "Placas do Zé"])).sort()`.
+- Em cada card de item, adicionar um campo **Evento/Projeto** (Select com busca via `Combobox`/`SelectCreatable` simples — usar `Select` nativo já que o número de opções é gerenciável; permitir digitar via `SelectCreatable` se preferirmos liberdade). Decisão: usar `Select` padrão do shadcn com as opções da lista — campo opcional, sem obrigatoriedade.
+- `CompraItem` ganha `evento_projeto?: string | null`.
+- `save.mutationFn` passa `evento_projeto` no insert de `compra_itens`.
+- `useEffect` de carregamento já faz `select("*")`, então virá automaticamente.
 
-Padrão para todas as abas:
-- Importar `useBulkSelection`, `BulkActionsBar`, `BulkEditDialog` (+ tipo `BulkField`, `normalizeBulkPatch`).
-- `const sel = useBulkSelection(filtered);`
-- Adicionar coluna de checkbox no `<thead>` (com checkbox "selecionar todos") e em cada `<tr>` (parar `onClick` propagation onde existir).
-- Renderizar `<BulkActionsBar count={sel.count} onEdit={() => setBulkOpen(true)} onClear={sel.clear} />` acima da tabela.
-- `useMutation` `bulkMut`: faz `supabase.from(<tabela>).update(patch).in("id", Array.from(sel.selected))`, invalida queries, toast, fecha diálogo e limpa seleção.
-- `<BulkEditDialog open={bulkOpen} count={sel.count} fields={CAMPOS} onSubmit={(p) => bulkMut.mutate(normalizeBulkPatch(p))} />`.
+### Arquivos afetados
+- `supabase/migrations/<novo>.sql` — `ALTER TABLE compra_itens ADD COLUMN evento_projeto text;`
+- `src/components/CompraDialog.tsx` — reposicionar ID, adicionar campo Evento/Projeto por item, query de eventos.
 
-### Campos por aba (apenas campos seguros — não afetam estoque)
-
-**Fornecedores** (`src/routes/fornecedores.tsx`)
-- `status` (select: ativo / inativo)
-- `tipo_fornecimento` (text)
-- `endereco` (text)
-- `observacoes` (textarea)
-
-**Solicitantes** (`src/routes/solicitantes.tsx`)
-- `status` (select: ativo / inativo)
-- `setor` (text)
-- `cargo` (text)
-- `observacoes` (textarea)
-
-**Estoque** (`src/routes/estoque.index.tsx`) — tabela `itens`
-- `categoria` (text)
-- `subcategoria` (text)
-- `unidade` (text)
-- `localizacao` (text)
-- `status` (select: disponivel / baixo_estoque / sem_estoque / em_manutencao / inativo)
-- `quantidade_minima` (number)
-- `valor_unitario` (number)
-- `observacoes` (textarea)
-- (não inclui `quantidade_atual`)
-
-**Entradas** (`src/routes/entradas.tsx`) — tabela `movimentacoes`, somente metadados
-- `fornecedor_id` (select com a lista de fornecedores ativos, allowClear)
-- `nota_fiscal` (text)
-- `entrada_tipo` (select com `entradaTipoLabels`)
-- `responsavel_lancamento` (text)
-- `data_movimento` (datetime)
-- `observacoes` (textarea)
-
-**Saídas** (`src/routes/saidas.tsx`) — tabela `movimentacoes`, somente metadados
-- `solicitante_id` (select com solicitantes ativos, allowClear)
-- `saida_tipo` (select com `saidaTipoLabels`, inclui `epi_fardamento`)
-- `evento_projeto` (text)
-- `finalidade` (text)
-- `responsavel_retirada` (text)
-- `responsavel_recebimento` (text)
-- `data_prevista_devolucao` (date, allowClear)
-- `observacoes` (textarea)
-
----
-
-## Detalhes técnicos
-
-- `applySort` retorna um array novo a cada render; passar para `useBulkSelection` é OK porque o hook deriva `allIds` via `useMemo` sobre `rows`. Mantém a seleção entre re-renders enquanto os IDs continuarem na lista filtrada.
-- A coluna de checkbox vai como **primeira** coluna em todas as tabelas; ajustar `colSpan` dos `<td>` "Nenhum…".
-- Todas as mutações em massa seguem RLS já existente (`has_module_access`).
-- Não mexer na lógica de estoque, triggers ou em qualquer fluxo de criação/edição individual.
-
-## Arquivos afetados
-- `src/routes/fornecedores.tsx` (excluir + bulk)
-- `src/routes/solicitantes.tsx` (bulk)
-- `src/routes/estoque.index.tsx` (bulk)
-- `src/routes/entradas.tsx` (bulk)
-- `src/routes/saidas.tsx` (bulk)
+### Observações
+- Não altero comportamento de saídas/entradas (já usam `evento_projeto` na tabela `movimentacoes`).
+- O secret do Google Sheets já está configurado (a função `listEventos` é usada em saídas hoje); se a planilha falhar, o select ainda mostra as 4 opções fixas.
