@@ -710,7 +710,7 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
       const novo = [...arr];
       novo[i] = { ...novo[i], [k]: v };
       if (k === "item_id") {
-        const it = itens.find((x: any) => x.id === v);
+        const it = itensList.find((x: any) => x.id === v);
         if (it?.valor_unitario != null && !novo[i].valor_unitario) {
           novo[i].valor_unitario = String(it.valor_unitario);
         }
