@@ -18,7 +18,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import {
   ResponsiveContainer,
   BarChart,
