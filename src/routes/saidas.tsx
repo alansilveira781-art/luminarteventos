@@ -158,11 +158,15 @@ function SaidasPage() {
           throw new Error(`Estoque insuficiente para ${it.nome}. Disponível: ${it.quantidade_atual} ${it.unidade}`);
         }
       }
+      const { data: numData, error: numErr } = await supabase.rpc("next_requisicao_numero" as any);
+      if (numErr) throw numErr;
+      const requisicao_numero = numData as number;
       const inserts = p.linhas.map((l) => ({
         ...p.meta,
         tipo: "saida" as const,
         item_id: l.item_id,
         quantidade: l.quantidade,
+        requisicao_numero,
       }));
       const { error } = await supabase.from("movimentacoes").insert(inserts);
       if (error) throw error;
