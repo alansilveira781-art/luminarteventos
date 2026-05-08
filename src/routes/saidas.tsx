@@ -683,7 +683,7 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
         </div>
         <Card className="p-3 space-y-2">
           {linhas.map((l, i) => {
-            const it = itens.find((x: any) => x.id === l.item_id);
+            const it = itensList.find((x: any) => x.id === l.item_id);
             return (
               <div key={i} className="grid grid-cols-12 gap-2 items-end">
                 <div className="col-span-8">
