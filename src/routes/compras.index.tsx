@@ -263,5 +263,8 @@ function Card({ compra, onOpen }: { compra: Compra; onOpen: () => void }) {
 }
 
 function formatDate(d: string) {
+  // datas vêm como "YYYY-MM-DD" (tipo date no banco). Evita conversão UTC -> local que muda o dia.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   try { return new Date(d).toLocaleDateString("pt-BR"); } catch { return d; }
 }
