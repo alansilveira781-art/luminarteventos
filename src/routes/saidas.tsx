@@ -183,24 +183,55 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Filtros + bulk
+  // Filtros + agrupamento por requisicao_numero
   const sBusca = q.toLowerCase().trim();
   const filteredBaseList = (saidas ?? []).filter((m: any) => {
     if (!sBusca) return true;
     return [
       m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
       m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
+      m.requisicao_numero ? `req-${String(m.requisicao_numero).padStart(4, "0")}` : "",
     ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
   });
-  const filteredList = applySort(filteredBaseList, (m: any, k: string) => {
-    if (k === "data_movimento") return m.data_movimento;
-    if (k === "item") return m.item?.nome;
-    if (k === "solicitante") return m.solicitante?.nome;
-    if (k === "unidade") return m.item?.unidade;
-    if (k === "quantidade") return Number(m.quantidade);
-    return m[k];
-  });
-  const sel = useBulkSelection(filteredList);
+  const grupos = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const m of filteredBaseList) {
+      const key = m.requisicao_numero != null ? `req-${m.requisicao_numero}` : `solo-${m.id}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key, // usado para bulk selection
+          numero: m.requisicao_numero,
+          data_movimento: m.data_movimento,
+          solicitante_id: m.solicitante_id,
+          solicitante: m.solicitante,
+          evento_projeto: m.evento_projeto,
+          saida_tipo: m.saida_tipo,
+          saida_status: m.saida_status,
+          data_prevista_devolucao: m.data_prevista_devolucao,
+          observacoes: m.observacoes,
+          finalidade: m.finalidade,
+          responsavel_retirada: m.responsavel_retirada,
+          responsavel_recebimento: m.responsavel_recebimento,
+          responsavel_lancamento: m.responsavel_lancamento,
+          linhas: [],
+          qtd_total: 0,
+        });
+      }
+      const g = map.get(key)!;
+      g.linhas.push(m);
+      g.qtd_total += Number(m.quantidade);
+    }
+    const arr = Array.from(map.values());
+    return applySort(arr, (g: any, k: string) => {
+      if (k === "data_movimento") return g.data_movimento;
+      if (k === "solicitante") return g.solicitante?.nome;
+      if (k === "quantidade") return g.qtd_total;
+      if (k === "numero") return g.numero ?? 0;
+      return g[k];
+    });
+  }, [filteredBaseList, sort]);
+  const sel = useBulkSelection(grupos);
+  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
   const [bulkOpen, setBulkOpen] = useState(false);
   const SAIDA_BULK_FIELDS: BulkField[] = [
     { key: "solicitante_id", label: "Solicitante", type: "select", allowClear: true,
