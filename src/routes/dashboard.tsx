@@ -37,10 +37,10 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const ALL = "__all__";
-
-function startOfMonthIso() {
-  return startOfMonth(new Date()).toISOString();
-}
+const MESES_PT = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function Dashboard() {
   const hoje = new Date();
@@ -50,6 +50,30 @@ function Dashboard() {
   const [pessoaTipo, setPessoaTipo] = useState<"solicitante" | "fornecedor">("solicitante");
   const [pessoaId, setPessoaId] = useState(ALL);
   const [categoriaAbc, setCategoriaAbc] = useState(ALL);
+
+  // Filtro de visão geral (cards): ano e mês
+  const [anoVisao, setAnoVisao] = useState<number>(hoje.getFullYear());
+  const [mesVisao, setMesVisao] = useState<string>(String(hoje.getMonth() + 1)); // "1".."12" ou ALL
+
+  const visaoRange = useMemo(() => {
+    if (mesVisao === ALL) {
+      const ini = startOfYear(new Date(anoVisao, 0, 1));
+      const fim = endOfYear(new Date(anoVisao, 0, 1));
+      return { ini: ini.toISOString(), fim: fim.toISOString(), label: String(anoVisao) };
+    }
+    const m = Number(mesVisao) - 1;
+    const ini = startOfMonth(new Date(anoVisao, m, 1));
+    const fim = endOfMonth(new Date(anoVisao, m, 1));
+    return { ini: ini.toISOString(), fim: fim.toISOString(), label: `${MESES_PT[m]}/${anoVisao}` };
+  }, [anoVisao, mesVisao]);
+
+  const anosDisponiveis = useMemo(() => {
+    const atual = hoje.getFullYear();
+    const arr: number[] = [];
+    for (let y = atual; y >= atual - 5; y--) arr.push(y);
+    if (!arr.includes(anoVisao)) arr.push(anoVisao);
+    return arr.sort((a, b) => b - a);
+  }, [anoVisao, hoje]);
 
   const { data: itens } = useQuery({
     queryKey: ["dashboard-itens"],
