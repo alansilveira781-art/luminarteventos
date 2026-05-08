@@ -800,7 +800,10 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
           {linhas.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-6">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
+                  {l.item_id && <ItemInfoHover itemId={l.item_id} />}
+                </div>
                 <ItemSearchSelect
                   itens={itensList}
                   value={l.item_id}
