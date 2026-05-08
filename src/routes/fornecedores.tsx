@@ -93,7 +93,7 @@ function FornecedoresPage() {
     mutationFn: async (patch: Record<string, any>) => {
       const ids = Array.from(sel.selected);
       if (!ids.length) return;
-      const { error } = await supabase.from("fornecedores").update(patch).in("id", ids);
+      const { error } = await supabase.from("fornecedores").update(patch as any).in("id", ids);
       if (error) throw error;
     },
     onSuccess: () => {
