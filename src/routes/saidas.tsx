@@ -481,17 +481,26 @@ function SaidasPage() {
       </Dialog>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Editar saída</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              Editar saída{editing?.numero != null ? ` REQ-${String(editing.numero).padStart(4, "0")}` : ""}
+            </DialogTitle>
+          </DialogHeader>
           {editing && (
-            <SaidaEditForm
-              original={editing}
+            <SaidaForm
+              key={`edit-${editing.id}`}
+              prefill={editing}
+              isEditing
               itens={itens ?? []}
               solicitantes={solicitantes ?? []}
               onEditSolicitante={(s: any) => setEditingSolicitante(s)}
               eventos={eventosQuery.data?.eventos ?? []}
-              onSubmit={(patch: any) => editMut.mutate({ original: editing, patch })}
-              submitting={editMut.isPending}
+              eventosError={eventosQuery.data?.error}
+              onReloadEventos={() => eventosQuery.refetch()}
+              reloadingEventos={eventosQuery.isFetching}
+              onSubmit={(meta: any, linhas: any) => editGroupMut.mutate({ grupo: editing, meta, linhas })}
+              submitting={editGroupMut.isPending}
             />
           )}
         </DialogContent>
