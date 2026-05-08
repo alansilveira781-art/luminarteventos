@@ -72,6 +72,57 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const editGroupMut = useMutation({
+    mutationFn: async (p: { grupo: any; meta: any; linhas: Array<{ item_id: string; quantidade: number }> }) => {
+      const old: any[] = p.grupo.linhas ?? [];
+      // Bloquear se houver devoluções vinculadas a qualquer linha
+      for (const m of old) {
+        const { data: dev } = await supabase.from("movimentacoes").select("id").eq("saida_origem_id", m.id).limit(1);
+        if (dev && dev.length) throw new Error("Esta requisição já tem devoluções vinculadas. Exclua as devoluções antes de editar.");
+      }
+      // Validar estoque considerando reversão das antigas
+      const itemIds = Array.from(new Set([...old.map((o) => o.item_id), ...p.linhas.map((l) => l.item_id)]));
+      const { data: itensCur } = await supabase.from("itens").select("id,nome,unidade,quantidade_atual").in("id", itemIds);
+      const stockMap = new Map<string, { nome: string; unidade: string; qtd: number; original: number }>();
+      for (const i of itensCur ?? []) stockMap.set(i.id, { nome: i.nome, unidade: i.unidade, qtd: Number(i.quantidade_atual), original: Number(i.quantidade_atual) });
+      for (const m of old) { const s = stockMap.get(m.item_id); if (s) s.qtd += Number(m.quantidade); }
+      for (const l of p.linhas) {
+        const s = stockMap.get(l.item_id);
+        if (!s) throw new Error("Item inválido");
+        if (l.quantidade > s.qtd) throw new Error(`Estoque insuficiente para ${s.nome}. Disponível: ${s.qtd} ${s.unidade}`);
+        s.qtd -= l.quantidade;
+      }
+      // Aplicar reversão de estoque das antigas
+      for (const m of old) {
+        const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", m.item_id).single();
+        if (it) await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) + Number(m.quantidade) }).eq("id", m.item_id);
+      }
+      // Apagar antigas
+      const oldIds = old.map((o) => o.id);
+      const { error: delErr } = await supabase.from("movimentacoes").delete().in("id", oldIds);
+      if (delErr) throw delErr;
+      // Inserir novas mantendo o mesmo requisicao_numero
+      const requisicao_numero = p.grupo.numero ?? null;
+      const inserts = p.linhas.map((l) => ({
+        ...p.meta,
+        tipo: "saida" as const,
+        item_id: l.item_id,
+        quantidade: l.quantidade,
+        requisicao_numero,
+      }));
+      const { error } = await supabase.from("movimentacoes").insert(inserts);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["itens-select-saida"] });
+      toast.success("Saída atualizada");
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const delMut = useMutation({
     mutationFn: async (grupo: any) => {
       const linhas: any[] = grupo.linhas ?? [grupo];
