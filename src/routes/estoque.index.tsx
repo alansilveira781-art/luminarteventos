@@ -346,6 +346,16 @@ function EstoquePage() {
           return { inserted, skipped, errors };
         }}
       />
+
+      <BulkEditDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        count={sel.count}
+        fields={ITEM_BULK_FIELDS}
+        submitting={bulkMut.isPending}
+        onSubmit={(p) => bulkMut.mutate(normalizeBulkPatch(p))}
+        title="Editar itens em massa"
+      />
     </>
   );
 }
