@@ -29,16 +29,17 @@ export function ItemInfoHover({ itemId }: { itemId?: string | null }) {
   return (
     <HoverCard openDelay={120} closeDelay={80}>
       <HoverCardTrigger asChild>
-        <button
-          type="button"
+        <span
+          role="button"
           tabIndex={-1}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors cursor-help"
           aria-label="Ver detalhes do item"
+          onClick={(e) => e.preventDefault()}
         >
-          <Eye className="h-4 w-4" />
-        </button>
+          <Eye className="h-3.5 w-3.5" />
+        </span>
       </HoverCardTrigger>
-      <HoverCardContent side="right" align="start" className="w-80 text-xs">
+      <HoverCardContent side="right" align="start" sideOffset={8} collisionPadding={12} avoidCollisions className="w-80 max-h-[70vh] overflow-y-auto text-xs z-[60]">
         {!item ? (
           <p className="text-muted-foreground">Carregando…</p>
         ) : (
