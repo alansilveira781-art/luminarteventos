@@ -247,9 +247,13 @@ function SaidasPage() {
   ];
   const bulkMut = useMutation({
     mutationFn: async (patch: Record<string, any>) => {
-      const ids = Array.from(sel.selected);
-      if (!ids.length) return;
-      const { error } = await supabase.from("movimentacoes").update(patch as any).in("id", ids);
+      const groupIds = Array.from(sel.selected);
+      const movIds: string[] = [];
+      for (const g of grupos) {
+        if (groupIds.includes(g.id)) movIds.push(...g.linhas.map((l: any) => l.id));
+      }
+      if (!movIds.length) return;
+      const { error } = await supabase.from("movimentacoes").update(patch as any).in("id", movIds);
       if (error) throw error;
     },
     onSuccess: () => {
