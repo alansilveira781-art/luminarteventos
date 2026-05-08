@@ -77,6 +77,40 @@ function EntradasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const editGroupMut = useMutation({
+    mutationFn: async (p: { grupo: any; meta: any; linhas: Array<{ item_id: string; quantidade: number; valor_unitario: number | null }> }) => {
+      const old: any[] = p.grupo.linhas ?? [];
+      // Reverter estoque das antigas (entrada adicionou, então subtrair)
+      for (const m of old) {
+        const { data: it } = await supabase.from("itens").select("quantidade_atual").eq("id", m.item_id).single();
+        if (it) await supabase.from("itens").update({ quantidade_atual: Number(it.quantidade_atual) - Number(m.quantidade) }).eq("id", m.item_id);
+      }
+      // Apagar antigas
+      const oldIds = old.map((o) => o.id);
+      const { error: delErr } = await supabase.from("movimentacoes").delete().in("id", oldIds);
+      if (delErr) throw delErr;
+      // Inserir novas mantendo o mesmo requisicao_numero
+      const requisicao_numero = p.grupo.numero ?? null;
+      const inserts = p.linhas.map((l) => ({
+        ...p.meta,
+        tipo: "entrada" as const,
+        item_id: l.item_id,
+        quantidade: l.quantidade,
+        valor_unitario: l.valor_unitario,
+        requisicao_numero,
+      }));
+      const { error } = await supabase.from("movimentacoes").insert(inserts);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["entradas"] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success("Entrada atualizada");
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const delMut = useMutation({
     mutationFn: async (grupo: any) => {
       const linhas: any[] = grupo.linhas ?? [grupo];
