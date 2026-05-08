@@ -11,7 +11,7 @@ import { FormField, FormSection } from "@/components/FormSection";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { SelectCreatable } from "@/components/SelectCreatable";
 import { MentionInput, renderCommentText } from "@/components/MentionInput";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload, Download, FileIcon } from "lucide-react";
 import { toast } from "sonner";
 import { COMPRA_STATUSES, TIPO_COMPRA_OPTIONS, type CompraStatus } from "@/lib/compras";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,7 @@ export type CompraItem = {
   quantidade: number;
   unidade?: string | null;
   cotacao?: string | null;
+  desconto_percentual?: number | null;
   valor_unitario?: number | null;
   evento_projeto?: string | null;
 };
@@ -150,6 +151,7 @@ export function CompraDialog({
           quantidade: it.quantidade || 0,
           unidade: it.unidade || null,
           cotacao: it.cotacao || null,
+          desconto_percentual: it.desconto_percentual ?? null,
           valor_unitario: it.valor_unitario ?? null,
           evento_projeto: it.evento_projeto || null,
         }));
@@ -175,6 +177,19 @@ export function CompraDialog({
   function updateItem(idx: number, patch: Partial<CompraItem>) {
     setItens((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
   }
+  function updateCotacaoOrDesconto(idx: number, patch: Partial<CompraItem>) {
+    setItens((p) => p.map((it, i) => {
+      if (i !== idx) return it;
+      const next = { ...it, ...patch };
+      const cot = parseFloat(String(next.cotacao ?? "").replace(",", "."));
+      const desc = Number(next.desconto_percentual ?? 0);
+      if (!Number.isNaN(cot) && Number.isFinite(cot)) {
+        const sugerido = cot * (1 - (desc || 0) / 100);
+        next.valor_unitario = Number(sugerido.toFixed(4));
+      }
+      return next;
+    }));
+  }
   function removeItem(idx: number) { setItens((p) => p.filter((_, i) => i !== idx)); }
 
   return (
@@ -193,6 +208,7 @@ export function CompraDialog({
           <TabsList>
             <TabsTrigger value="dados">Dados</TabsTrigger>
             <TabsTrigger value="itens">Itens</TabsTrigger>
+            <TabsTrigger value="anexos">Anexos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
@@ -322,7 +338,7 @@ export function CompraDialog({
                     <Input value={it.descricao} onChange={(e) => updateItem(idx, { descricao: e.target.value })} placeholder="Item novo / não cadastrado" />
                   </div>
                 </div>
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-5">
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-6">
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Qtd</label>
                     <Input type="number" step="0.01" value={it.quantidade} onChange={(e) => updateItem(idx, { quantidade: Number(e.target.value) })} />
@@ -333,7 +349,21 @@ export function CompraDialog({
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Cotação</label>
-                    <Input value={it.cotacao ?? ""} onChange={(e) => updateItem(idx, { cotacao: e.target.value })} placeholder="Ref / fornecedor" />
+                    <Input
+                      value={it.cotacao ?? ""}
+                      onChange={(e) => updateCotacaoOrDesconto(idx, { cotacao: e.target.value })}
+                      placeholder="Ex: 12,50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Desc. %</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={it.desconto_percentual ?? ""}
+                      onChange={(e) => updateCotacaoOrDesconto(idx, { desconto_percentual: e.target.value === "" ? null : Number(e.target.value) })}
+                      placeholder="0"
+                    />
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Valor unit.</label>
@@ -371,6 +401,14 @@ export function CompraDialog({
             <div className="text-right text-sm font-medium pt-2">
               Total: {totalCalc.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
+          </TabsContent>
+
+          <TabsContent value="anexos" className="space-y-2 pt-4">
+            {compraId ? (
+              <Anexos compraId={compraId} userId={user?.id} />
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Salve a compra para anexar arquivos.</p>
+            )}
           </TabsContent>
 
         </Tabs>
@@ -495,6 +533,128 @@ function Historico({ compraId }: { compraId: string }) {
           <div className="text-muted-foreground">{new Date(h.created_at).toLocaleString("pt-BR")}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function Anexos({ compraId, userId }: { compraId: string; userId?: string }) {
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  const { data: anexos = [] } = useQuery({
+    queryKey: ["compra-anexos", compraId],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("compra_anexos")
+        .select("*")
+        .eq("compra_id", compraId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  async function handleUpload(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${compraId}/${Date.now()}_${safeName}`;
+        const { error: upErr } = await sb.storage.from("compra-anexos").upload(path, file, {
+          contentType: file.type || undefined,
+        });
+        if (upErr) throw upErr;
+        const { error: insErr } = await sb.from("compra_anexos").insert({
+          compra_id: compraId,
+          nome: file.name,
+          path,
+          mime_type: file.type || null,
+          tamanho: file.size,
+          uploaded_by: userId ?? null,
+        });
+        if (insErr) throw insErr;
+      }
+      toast.success("Anexos enviados");
+      qc.invalidateQueries({ queryKey: ["compra-anexos", compraId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro no upload");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDownload(a: any) {
+    const { data, error } = await sb.storage.from("compra-anexos").createSignedUrl(a.path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error("Não foi possível baixar");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  }
+
+  async function handleDelete(a: any) {
+    if (!confirm(`Remover anexo "${a.nome}"?`)) return;
+    try {
+      await sb.storage.from("compra-anexos").remove([a.path]);
+      const { error } = await sb.from("compra_anexos").delete().eq("id", a.id);
+      if (error) throw error;
+      toast.success("Anexo removido");
+      qc.invalidateQueries({ queryKey: ["compra-anexos", compraId] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao remover");
+    }
+  }
+
+  function fmtSize(n?: number | null) {
+    if (!n) return "—";
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-md py-6 cursor-pointer hover:bg-muted/40 transition">
+        <Upload className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">
+          {uploading ? "Enviando…" : "Clique para anexar arquivos (PDF, Excel, imagens, etc.)"}
+        </span>
+        <input
+          type="file"
+          multiple
+          className="hidden"
+          disabled={uploading}
+          onChange={(e) => {
+            handleUpload(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </label>
+
+      {anexos.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">Nenhum anexo.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {anexos.map((a: any) => (
+            <div key={a.id} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+              <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="truncate font-medium">{a.nome}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {fmtSize(a.tamanho)} · {new Date(a.created_at).toLocaleString("pt-BR")}
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={() => handleDownload(a)}>
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => handleDelete(a)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
