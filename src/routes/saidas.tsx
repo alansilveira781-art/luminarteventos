@@ -552,6 +552,19 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
 
   const isEvento = meta.saida_tipo === "evento";
 
+  // Em edição, garantir que itens da requisição (talvez com estoque 0 agora) apareçam na lista
+  const itensList = useMemo(() => {
+    if (!isEditing || !prefill?.linhas?.length) return itens;
+    const map = new Map<string, any>(itens.map((i: any) => [i.id, i]));
+    for (const l of prefill.linhas) {
+      if (!map.has(l.item_id) && l.item) {
+        map.set(l.item_id, { id: l.item_id, nome: l.item.nome, codigo: l.item.codigo, unidade: l.item.unidade, quantidade_atual: l.item.quantidade_atual ?? 0 });
+      }
+    }
+    return Array.from(map.values());
+  }, [itens, isEditing, prefill]);
+
+
   const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const [autoOpenIdx, setAutoOpenIdx] = useState<number | null>(null);
 
