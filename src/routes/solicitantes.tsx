@@ -3,20 +3,28 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
-import { FormActions, FormField, FormSection } from "@/components/FormSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, Pencil, Upload, Trash2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportDialog } from "@/components/ImportDialog";
 import { SOLICITANTE_TEMPLATE } from "@/lib/import-utils";
 import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
 import { SortableTh, useSort } from "@/components/SortableTh";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
 import { toast } from "sonner";
+
+const SOL_BULK_FIELDS: BulkField[] = [
+  { key: "status", label: "Status", type: "select", options: [{ value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }] },
+  { key: "setor", label: "Setor", type: "text" },
+  { key: "cargo", label: "Cargo", type: "text" },
+  { key: "observacoes", label: "Observações", type: "textarea" },
+];
 
 export const Route = createFileRoute("/solicitantes")({
   component: SolicitantesPage,
