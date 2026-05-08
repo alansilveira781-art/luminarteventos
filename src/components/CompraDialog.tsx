@@ -403,6 +403,14 @@ export function CompraDialog({
             </div>
           </TabsContent>
 
+          <TabsContent value="anexos" className="space-y-2 pt-4">
+            {compraId ? (
+              <Anexos compraId={compraId} userId={user?.id} />
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Salve a compra para anexar arquivos.</p>
+            )}
+          </TabsContent>
+
         </Tabs>
 
         <DialogFooter className="sm:justify-between">
