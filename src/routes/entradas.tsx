@@ -633,10 +633,19 @@ function EntradaForm({ prefill, itens, fornecedores, onEditFornecedor, onSubmit,
     nota_fiscal: prefill?.nota_fiscal ?? "",
     observacoes: prefill?.observacoes ?? "",
   });
-  const [linhas, setLinhas] = useState<Linha[]>(
-    prefill ? [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade), valor_unitario: prefill.valor_unitario != null ? String(prefill.valor_unitario) : "" }, { item_id: "", quantidade: "1", valor_unitario: "" }]
-            : [{ item_id: "", quantidade: "1", valor_unitario: "" }],
-  );
+  const [linhas, setLinhas] = useState<Linha[]>(() => {
+    if (prefill?.linhas?.length) {
+      return prefill.linhas.map((l: any) => ({
+        item_id: l.item_id,
+        quantidade: String(l.quantidade),
+        valor_unitario: l.valor_unitario != null ? String(l.valor_unitario) : "",
+      }));
+    }
+    if (prefill) {
+      return [{ item_id: prefill.item_id, quantidade: String(prefill.quantidade), valor_unitario: prefill.valor_unitario != null ? String(prefill.valor_unitario) : "" }, { item_id: "", quantidade: "1", valor_unitario: "" }];
+    }
+    return [{ item_id: "", quantidade: "1", valor_unitario: "" }];
+  });
 
   const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const valorRefs = useRef<Record<number, HTMLInputElement | null>>({});
