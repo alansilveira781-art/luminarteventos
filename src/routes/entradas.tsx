@@ -143,15 +143,19 @@ function EntradasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Múltiplos itens em uma única entrada: criamos N movimentações compartilhando metadados
+  // Múltiplos itens em uma única entrada: criamos N movimentações compartilhando metadados + requisicao_numero
   const mut = useMutation({
     mutationFn: async (p: { meta: any; linhas: Array<{ item_id: string; quantidade: number; valor_unitario: number | null }> }) => {
+      const { data: numData, error: numErr } = await supabase.rpc("next_requisicao_numero" as any);
+      if (numErr) throw numErr;
+      const requisicao_numero = numData as number;
       const inserts = p.linhas.map((l) => ({
         ...p.meta,
         tipo: "entrada" as const,
         item_id: l.item_id,
         quantidade: l.quantidade,
         valor_unitario: l.valor_unitario,
+        requisicao_numero,
       }));
       const { error } = await supabase.from("movimentacoes").insert(inserts);
       if (error) throw error;
@@ -167,25 +171,53 @@ function EntradasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Filtros e seleção em massa
+  // Filtros + agrupamento por requisicao_numero
   const sBusca = q.toLowerCase().trim();
   const filteredBaseList = (entradas ?? []).filter((m: any) => {
     if (!sBusca) return true;
     return [
       m.item?.nome, m.item?.codigo, m.fornecedor?.nome,
       m.entrada_tipo, m.nota_fiscal, m.responsavel_lancamento, m.observacoes,
+      m.requisicao_numero ? `req-${String(m.requisicao_numero).padStart(4, "0")}` : "",
     ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
   });
-  const filteredList = applySort(filteredBaseList, (m: any, k: string) => {
-    if (k === "data_movimento") return m.data_movimento;
-    if (k === "item") return m.item?.nome;
-    if (k === "fornecedor") return m.fornecedor?.nome;
-    if (k === "unidade") return m.item?.unidade;
-    if (k === "valor_total") return Number(m.valor_unitario ?? 0) * Number(m.quantidade ?? 0);
-    if (k === "quantidade") return Number(m.quantidade);
-    return m[k];
-  });
-  const sel = useBulkSelection(filteredList);
+  const grupos = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const m of filteredBaseList) {
+      const key = m.requisicao_numero != null ? `req-${m.requisicao_numero}` : `solo-${m.id}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          numero: m.requisicao_numero,
+          data_movimento: m.data_movimento,
+          fornecedor_id: m.fornecedor_id,
+          fornecedor: m.fornecedor,
+          entrada_tipo: m.entrada_tipo,
+          nota_fiscal: m.nota_fiscal,
+          observacoes: m.observacoes,
+          responsavel_lancamento: m.responsavel_lancamento,
+          linhas: [],
+          qtd_total: 0,
+          valor_total: 0,
+        });
+      }
+      const g = map.get(key)!;
+      g.linhas.push(m);
+      g.qtd_total += Number(m.quantidade);
+      g.valor_total += Number(m.valor_unitario ?? 0) * Number(m.quantidade ?? 0);
+    }
+    const arr = Array.from(map.values());
+    return applySort(arr, (g: any, k: string) => {
+      if (k === "data_movimento") return g.data_movimento;
+      if (k === "fornecedor") return g.fornecedor?.nome;
+      if (k === "valor_total") return g.valor_total;
+      if (k === "quantidade") return g.qtd_total;
+      if (k === "numero") return g.numero ?? 0;
+      return g[k];
+    });
+  }, [filteredBaseList, sort]);
+  const sel = useBulkSelection(grupos);
+  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
   const [bulkOpen, setBulkOpen] = useState(false);
   const ENTRADA_BULK_FIELDS: BulkField[] = [
     { key: "fornecedor_id", label: "Fornecedor", type: "select", allowClear: true,
@@ -199,9 +231,13 @@ function EntradasPage() {
   ];
   const bulkMut = useMutation({
     mutationFn: async (patch: Record<string, any>) => {
-      const ids = Array.from(sel.selected);
-      if (!ids.length) return;
-      const { error } = await supabase.from("movimentacoes").update(patch as any).in("id", ids);
+      const groupIds = Array.from(sel.selected);
+      const movIds: string[] = [];
+      for (const g of grupos) {
+        if (groupIds.includes(g.id)) movIds.push(...g.linhas.map((l: any) => l.id));
+      }
+      if (!movIds.length) return;
+      const { error } = await supabase.from("movimentacoes").update(patch as any).in("id", movIds);
       if (error) throw error;
     },
     onSuccess: () => {
