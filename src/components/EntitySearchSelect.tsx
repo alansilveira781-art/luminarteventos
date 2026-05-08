@@ -109,6 +109,9 @@ export function EntitySearchSelect({
                 <Check className={cn("h-4 w-4 shrink-0", value === o.id ? "opacity-100" : "opacity-0")} />
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm">{o.nome}</span>
+                  {(o as any).documento && (
+                    <span className="text-[11px] text-muted-foreground/70 font-mono">{(o as any).documento}</span>
+                  )}
                   {(o as any).nome_fantasia && (
                     <span className="text-[11px] text-muted-foreground">fantasia: {(o as any).nome_fantasia}</span>
                   )}
