@@ -506,7 +506,7 @@ function EntradasPage() {
       />
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setPrefill(null); }}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-[min(1200px,96vw)] w-[96vw]">
           <DialogHeader><DialogTitle>{prefill ? "Duplicar entrada" : "Nova entrada"}</DialogTitle></DialogHeader>
           <EntradaForm
             key={prefill?.id ?? "new"}
@@ -521,7 +521,7 @@ function EntradasPage() {
       </Dialog>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-[min(1200px,96vw)] w-[96vw]">
           <DialogHeader>
             <DialogTitle>
               Editar entrada{editing?.numero != null ? ` REQ-${String(editing.numero).padStart(4, "0")}` : ""}
