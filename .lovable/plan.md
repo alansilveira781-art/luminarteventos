@@ -1,79 +1,70 @@
-# Ajustes - Compras e Estoque
+## Plano de ajustes — Módulo Estoque
 
-## Módulo Compras
+### 1. Entradas com custo médio ponderado
+- Adicionar no formulário de **Entrada** os campos: **Custo Unitário**, **Desconto (R$ ou %)**, **Frete**, **IPI**, **Outros Custos** e **Valor Total** (calculado: `(custo_unit × qtd) − desconto + frete + ipi + outros`).
+- Persistir esses campos novos na tabela `movimentacoes` (migração: `desconto`, `frete`, `ipi`, `outros_custos`, `valor_total` numéricos).
+- Ao salvar a entrada, atualizar o `valor_unitario` do item em `itens` usando **custo médio ponderado**:
+  `novo_custo = (estoque_atual × custo_atual + qtd_entrada × custo_unit_efetivo_da_entrada) / (estoque_atual + qtd_entrada)`
+  onde `custo_unit_efetivo = valor_total / qtd_entrada`.
+- Implementar via trigger `BEFORE INSERT` na `movimentacoes` (tipo=entrada) ou em uma função SQL chamada após o insert do item da movimentação. Usar trigger para garantir consistência mesmo em importações.
 
-### 1. Card no quadro Kanban
-**Arquivo:** `src/routes/compras.index.tsx`
-- No componente `Card`, substituir a linha "Solicitada: {data_solicitacao}" por **"Comprada: {data_compra}"** quando houver data, ou **"Não comprado"** quando `data_compra` for nulo.
-- Manter os demais campos (título, fornecedor, solicitante, comprador, valor total).
+### 2. Casas decimais (3+ casas)
+- Trocar todos os `step="0.01"` para `step="0.001"` (ou `step="any"`) nos campos de quantidade, valor unitário, custo, desconto etc. nas abas Entradas, Saídas, Devoluções e cadastro de Itens.
 
-### 2. Anexos dentro do card (CompraDialog)
-**Arquivos:** nova migration + `src/components/CompraDialog.tsx`
-- **Storage:** criar bucket privado `compra-anexos` via migration, com policies que liberam SELECT/INSERT/DELETE para usuários autenticados com acesso aos módulos `compras` ou `estoque`.
-- **Tabela** `compra_anexos`: `id`, `compra_id`, `nome`, `path` (no bucket), `mime_type`, `tamanho`, `uploaded_by`, `created_at`. RLS espelhando a de `compra_itens`.
-- **UI:** adicionar uma terceira aba "Anexos" no `Tabs` interno (`dados | itens | anexos`). Disponível apenas após salvar a compra (precisa de `compraId`). Suporta upload múltiplo (pdf, xlsx, jpg, png, etc.), lista os arquivos com nome + tamanho + botão de download (URL assinada) e botão de remover. Drag-and-drop opcional, input `<input type="file" multiple>` é suficiente.
+### 3. UX dos formulários (Dialogs)
+- Aumentar `max-w-3xl` → `max-w-5xl` (ou `max-w-4xl`) nos Dialogs de cadastro de itens, fornecedores, solicitantes, compras.
+- Bloquear fechamento ao clicar fora: adicionar `onPointerDownOutside={(e) => e.preventDefault()}` e `onInteractOutside={(e) => e.preventDefault()}` em `DialogContent`. Fechamento só pelo X ou botão Cancelar.
 
-### 3. Desconto % na seção Itens
-**Arquivo:** `src/components/CompraDialog.tsx` + tipo `CompraItem` + migration adicionando coluna `desconto_percentual NUMERIC NULL` em `compra_itens`.
-- Na grid de itens, adicionar coluna **"Desc. %"** entre Cotação e Valor unit.
-- Comportamento: quando o usuário digita um valor em "Cotação" (que passará a aceitar número) **ou** edita o "Desc. %", o `valor_unitario` é **sugerido** automaticamente como `cotacao * (1 - desconto/100)`.
-- O campo `valor_unitario` continua editável livremente; a sugestão só sobrescreve quando cotação ou desconto mudam (não quando o usuário digita o valor unit manualmente).
-- Persistir `desconto_percentual` no insert/update de `compra_itens`.
+### 4. Sincronização de estoque após cadastro
+- Após criar item ou movimentação, invalidar **todas** as queries relevantes (`itens`, `movimentacoes`, e queries derivadas em Saídas) com `qc.invalidateQueries({ queryKey: ["itens"] })` + `refetchQueries`.
+- No formulário de saída, garantir que o `select` de itens use a query atualizada (sem cache stale). Adicionar `staleTime: 0` na query de itens da página de saída ou usar `qc.refetchQueries` no submit.
 
-> Observação: hoje `cotacao` é `text`. Para preservar dados existentes, manter como `text` e tentar `parseFloat` ao calcular a sugestão; se não for número, não sugere nada.
+### 5. Busca sem acento (normalização)
+- Criar utilitário `normalize(s)` em `src/lib/utils.ts`:
+  ```ts
+  export const normalize = (s: string) =>
+    (s ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  ```
+- Aplicar em todos os filtros client-side: itens, fornecedores, solicitantes, compras, devoluções, entradas, saídas.
+- Para selects pesquisáveis (`ItemSearchSelect`, `EntitySearchSelect`, `SelectCreatable`), aplicar normalização tanto na query quanto no termo digitado.
 
----
+### 6. Performance da aba Estoque
+- Reduzir delay no carregamento:
+  - Manter paginação de 1000 (já existe), mas adicionar `staleTime: 30_000` e `placeholderData: keepPreviousData` na query `["itens"]`.
+  - Pré-fetch da query no menu lateral (hover do link Estoque) com `qc.prefetchQuery`.
+  - Memoizar `filtered` (já está) e evitar recalculo do sort com chaves estáveis.
+  - Lazy-load do `ImportDialog` e `BulkEditDialog` com `React.lazy`.
 
-## Módulo Estoque
+### 7. Clonar itens
+- Adicionar botão **Clonar** (ícone Copy) na linha da tabela de itens, ao lado de Editar.
+- Ao clicar, abrir o `ItemForm` pré-preenchido com os dados do item (exceto `id` e `codigo` — código é gerado automaticamente via `generateNextSku()`).
+- Reutiliza a mutation de criação existente.
 
-### 4. Filtro Ano/Mês no Dashboard
-**Arquivo:** `src/routes/dashboard.tsx`
-- Logo abaixo da frase "Visão geral da operação de estoque Luminart Eventos", adicionar dois `Select`: **Ano** (lista dinâmica a partir das movimentações + ano atual) e **Mês** (1-12 + opção "Todos").
-- Aplicar o filtro a todos os cards/queries que usam `data_movimento` (entradas, saídas, devoluções, totais). Cards que mostram fotos/inventário absoluto (estoque atual) permanecem sem filtro.
+### 8. Totais nos Relatórios
+- Em `src/routes/relatorios.tsx`, ao final de cada tabela exportada/visualizada (saídas, entradas, devoluções, estoque), adicionar linha **Total** somando colunas numéricas: `quantidade`, `valor_unitario × quantidade`, `valor_total`.
+- Aplicar tanto na visualização em tela quanto na exportação (XLSX/CSV).
 
-### 5. Tipos de Saída: separar EPI/Fardamento e adicionar "Produção de Novos Itens"
-**Arquivos:** `src/lib/labels.ts` + migration ajustando o enum `saida_tipo`.
-- Migration: `ALTER TYPE saida_tipo ADD VALUE 'epi'`, `ADD VALUE 'fardamento'`, `ADD VALUE 'producao_novos_itens'`. Manter `epi_fardamento` no enum por compatibilidade com dados antigos, mas remover do dicionário/dropdown (ou marcar como legado).
-- `saidaTipoLabels`: substituir `epi_fardamento` por dois itens (`epi: "EPI"`, `fardamento: "Fardamento"`) e adicionar `producao_novos_itens: "Produção de Novos Itens"`.
-- Atualizar dropdowns em `src/routes/saidas.tsx` (form e filtros) e qualquer label exibido em relatórios.
-
-### 6. Devoluções: solicitantes pesquisáveis
-**Arquivo:** `src/routes/devolucoes.tsx`
-- Substituir os Inputs livres dos campos **"Responsável pela devolução"** e **"Responsável pelo recebimento"** por um combobox baseado em `EntitySearchSelect` (ou `SelectCreatable`) ligado à tabela `solicitantes`, permitindo digitar para filtrar e também escrever um nome novo livre, salvando o texto exibido em `responsavel_retirada` / `responsavel_recebimento`.
-
-### 7. Devoluções: paridade com Saídas/Entradas
-**Arquivo:** `src/routes/devolucoes.tsx`
-- Adicionar barra de filtros idêntica à de Saídas (período, busca, status, etc., conforme aplicável).
-- Habilitar seleção em massa (checkbox por linha + checkbox no header) usando `useBulkSelection`.
-- `BulkActionsBar` com ações: editar metadados em massa (observações, data, responsáveis) via `BulkEditDialog` e excluir devoluções selecionadas (com confirmação e revert de estoque pelo trigger existente).
-- Habilitar exclusão individual (botão lixeira em cada linha).
-
-### 8. Hover de informações do item em Saídas e Entradas
-**Arquivos:** `src/components/ItemSearchSelect.tsx` (ou wrapper local) + `src/routes/saidas.tsx` + `src/routes/entradas.tsx`
-- Ao lado do item selecionado no formulário, adicionar um ícone **olho** (`Eye` do lucide). Usar `HoverCard` (já existe em `components/ui/hover-card.tsx`) que ao passar o mouse mostra: nome completo, código, código próprio, categoria, subcategoria, unidade, quantidade atual, quantidade mínima, localização, status, valor unitário, descrição, observações.
-- Texto pequeno (`text-xs`) mas legível; layout em duas colunas dentro do hover card.
-
-### 9. Lista de Fornecedores em Entrada com CNPJ
-**Arquivo:** `src/routes/entradas.tsx` (e o componente de seleção de fornecedor utilizado, provavelmente `EntitySearchSelect` ou `SelectCreatable`)
-- No dropdown de fornecedores do formulário de Entrada, abaixo do nome exibir o `documento` (CNPJ/CPF) em `text-[11px] text-muted-foreground/70` (transparente porém legível).
-- Buscar `documento` na query de fornecedores (já existe em `compras-fornecedores-min`; aqui usar `fornecedores`). Garantir que a busca por digitação também combine com o documento.
+### 9. Filtros clicáveis em Saída e Entrada
+- Acima da tabela/lista, adicionar dois `Select` (ou `Combobox` pesquisável) clicáveis:
+  - **Filtrar por Item** (lista de itens do estoque)
+  - **Filtrar por Evento/Projeto** (lista distinct de `evento_projeto` da `movimentacoes`)
+- Filtros combinam com a busca de texto existente. Botão **Limpar** ao lado.
 
 ---
 
-## Ordem de execução
-1. Migrations (enum saida_tipo, tabela compra_anexos + bucket, coluna desconto_percentual).
-2. Compras: card kanban, desconto%, anexos.
-3. Estoque: labels/tipos, dashboard filtros, hover info, fornecedor com CNPJ.
-4. Devoluções: solicitantes pesquisáveis, filtros, seleção em massa, exclusão.
+### Arquivos afetados (resumo técnico)
+- **Migração SQL**: `movimentacoes` (novas colunas + trigger de custo médio).
+- `src/routes/entradas.tsx` — novos campos, filtros, custo médio na UI.
+- `src/routes/saidas.tsx` — filtros, decimais, sincronização.
+- `src/routes/devolucoes.tsx` — decimais.
+- `src/routes/estoque.index.tsx` — clonar, performance, decimais.
+- `src/routes/relatorios.tsx` — linhas de total.
+- `src/components/forms/ItemForm.tsx`, `FornecedorForm.tsx`, `SolicitanteForm.tsx` — decimais.
+- `src/components/ui/dialog.tsx` (ou cada uso) — bloquear fechamento outside-click; tamanho maior.
+- `src/lib/utils.ts` — utilitário `normalize`.
+- `src/components/ItemSearchSelect.tsx`, `EntitySearchSelect.tsx`, `SelectCreatable.tsx` — busca sem acento.
 
-## Arquivos afetados
-- `supabase/migrations/<novo>.sql` (3 mudanças combinadas ou separadas)
-- `src/routes/compras.index.tsx`
-- `src/components/CompraDialog.tsx`
-- `src/routes/dashboard.tsx`
-- `src/lib/labels.ts`
-- `src/routes/saidas.tsx`
-- `src/routes/entradas.tsx`
-- `src/routes/devolucoes.tsx`
-- `src/components/ItemSearchSelect.tsx` (ou novo componente `ItemHoverInfo.tsx`)
-- possivelmente `src/components/EntitySearchSelect.tsx` para suportar segunda linha (CNPJ)
+### Pontos a confirmar antes de implementar
+1. **Desconto na entrada**: em **R$** (valor absoluto) ou **%** sobre o subtotal? (na compra é %, aqui sugiro **R$** para alinhar com Frete/IPI)
+2. **Custo médio**: aplicar **somente** quando `quantidade_atual > 0`? Se o estoque estiver zerado, o novo custo é simplesmente o custo da entrada (sem média). Confirmar.
+3. **Bloquear fechamento outside-click**: aplicar em **todos** os dialogs do sistema ou só nos formulários de cadastro (Item, Fornecedor, Solicitante, Compra)?
