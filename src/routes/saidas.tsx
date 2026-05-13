@@ -339,17 +339,46 @@ function SaidasPage() {
         actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
       />
 
-      <Card className="p-4 mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
-          />
+      <Card className="p-4 mb-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="relative w-[260px]">
+            <Input
+              placeholder="Filtrar por item (digite código ou nome)"
+              value={filterItemQ}
+              onChange={(e) => setFilterItemQ(e.target.value)}
+              list="saidas-filter-itens-list"
+            />
+            <datalist id="saidas-filter-itens-list">
+              {(itens ?? []).slice(0, 500).map((it: any) => (
+                <option key={it.id} value={`${it.codigo} — ${it.nome}`} />
+              ))}
+            </datalist>
+          </div>
+          <Select value={filterEvento} onValueChange={setFilterEvento}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar por evento/projeto" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos eventos/projetos</SelectItem>
+              {eventosDisponiveis.map((ev) => (
+                <SelectItem key={ev} value={ev}>{ev}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterItemQ || filterEvento !== "__all" || q) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemQ(""); setFilterEvento("__all"); setQ(""); }}>
+              <X className="h-3 w-3 mr-1" /> Limpar
+            </Button>
+          )}
         </div>
-        <div className="text-xs text-muted-foreground mt-2">
+        <div className="text-xs text-muted-foreground">
           {grupos.length} {grupos.length === 1 ? "saída" : "saídas"}
           {saidas && filteredBaseList.length !== saidas.length ? ` (de ${saidas.length} itens)` : ""}
         </div>
