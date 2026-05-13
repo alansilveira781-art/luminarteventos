@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, RefreshCw, Trash2, Pencil, Search, Copy } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Pencil, Search, Copy, X } from "lucide-react";
+import { normalize } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,6 +41,8 @@ function SaidasPage() {
   const [prefill, setPrefill] = useState<any | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
   const [q, setQ] = useState("");
+  const [filterItemQ, setFilterItemQ] = useState<string>("");
+  const [filterEvento, setFilterEvento] = useState<string>("__all");
   const { sort, toggleSort, applySort } = useSort();
 
   const editMut = useMutation({
@@ -236,15 +239,26 @@ function SaidasPage() {
   });
 
   // Filtros + agrupamento por requisicao_numero
-  const sBusca = q.toLowerCase().trim();
+  const sBusca = normalize(q);
   const filteredBaseList = (saidas ?? []).filter((m: any) => {
+    if (filterItemQ.trim()) {
+      const itemHay = normalize(`${m.item?.codigo ?? ""} ${m.item?.nome ?? ""}`);
+      if (!itemHay.includes(normalize(filterItemQ))) return false;
+    }
+    if (filterEvento !== "__all" && (m.evento_projeto ?? "") !== filterEvento) return false;
     if (!sBusca) return true;
-    return [
+    const hay = normalize([
       m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
       m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
       m.requisicao_numero ? `req-${String(m.requisicao_numero).padStart(4, "0")}` : "",
-    ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
+    ].join(" "));
+    return hay.includes(sBusca);
   });
+  const eventosDisponiveis = useMemo(() => {
+    const s = new Set<string>();
+    (saidas ?? []).forEach((m: any) => { if (m.evento_projeto) s.add(m.evento_projeto); });
+    return Array.from(s).sort();
+  }, [saidas]);
   const grupos = useMemo(() => {
     const map = new Map<string, any>();
     for (const m of filteredBaseList) {
@@ -325,17 +339,46 @@ function SaidasPage() {
         actions={<Button type="button" size="lg" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova saída</Button>}
       />
 
-      <Card className="p-4 mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
-          />
+      <Card className="p-4 mb-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por item, código, evento/projeto, solicitante, tipo, status…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="relative w-[260px]">
+            <Input
+              placeholder="Filtrar por item (digite código ou nome)"
+              value={filterItemQ}
+              onChange={(e) => setFilterItemQ(e.target.value)}
+              list="saidas-filter-itens-list"
+            />
+            <datalist id="saidas-filter-itens-list">
+              {(itens ?? []).slice(0, 500).map((it: any) => (
+                <option key={it.id} value={`${it.codigo} — ${it.nome}`} />
+              ))}
+            </datalist>
+          </div>
+          <Select value={filterEvento} onValueChange={setFilterEvento}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar por evento/projeto" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos eventos/projetos</SelectItem>
+              {eventosDisponiveis.map((ev) => (
+                <SelectItem key={ev} value={ev}>{ev}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterItemQ || filterEvento !== "__all" || q) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemQ(""); setFilterEvento("__all"); setQ(""); }}>
+              <X className="h-3 w-3 mr-1" /> Limpar
+            </Button>
+          )}
         </div>
-        <div className="text-xs text-muted-foreground mt-2">
+        <div className="text-xs text-muted-foreground">
           {grupos.length} {grupos.length === 1 ? "saída" : "saídas"}
           {saidas && filteredBaseList.length !== saidas.length ? ` (de ${saidas.length} itens)` : ""}
         </div>

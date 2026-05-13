@@ -44,7 +44,7 @@ function EntradasPage() {
   const [importingExcel, setImportingExcel] = useState(false);
   const [importingXml, setImportingXml] = useState(false);
   const [q, setQ] = useState("");
-  const [filterItemId, setFilterItemId] = useState<string>("__all");
+  const [filterItemQ, setFilterItemQ] = useState<string>("");
   const [filterEvento, setFilterEvento] = useState<string>("__all");
   const { sort, toggleSort, applySort } = useSort();
 
@@ -221,7 +221,10 @@ function EntradasPage() {
   // Filtros + agrupamento por requisicao_numero
   const sBusca = normalize(q);
   const filteredBaseList = (entradas ?? []).filter((m: any) => {
-    if (filterItemId !== "__all" && m.item_id !== filterItemId) return false;
+    if (filterItemQ.trim()) {
+      const itemHay = normalize(`${m.item?.codigo ?? ""} ${m.item?.nome ?? ""}`);
+      if (!itemHay.includes(normalize(filterItemQ))) return false;
+    }
     if (filterEvento !== "__all" && (m.evento_projeto ?? "") !== filterEvento) return false;
     if (!sBusca) return true;
     const hay = normalize(
@@ -337,15 +340,19 @@ function EntradasPage() {
               className="pl-9"
             />
           </div>
-          <Select value={filterItemId} onValueChange={setFilterItemId}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filtrar por item" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Todos os itens</SelectItem>
-              {(itens ?? []).map((it: any) => (
-                <SelectItem key={it.id} value={it.id}>{it.codigo} — {it.nome}</SelectItem>
+          <div className="relative w-[260px]">
+            <Input
+              placeholder="Filtrar por item (digite código ou nome)"
+              value={filterItemQ}
+              onChange={(e) => setFilterItemQ(e.target.value)}
+              list="entradas-filter-itens-list"
+            />
+            <datalist id="entradas-filter-itens-list">
+              {(itens ?? []).slice(0, 500).map((it: any) => (
+                <option key={it.id} value={`${it.codigo} — ${it.nome}`} />
               ))}
-            </SelectContent>
-          </Select>
+            </datalist>
+          </div>
           <Select value={filterEvento} onValueChange={setFilterEvento}>
             <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar por evento/projeto" /></SelectTrigger>
             <SelectContent>
@@ -355,8 +362,8 @@ function EntradasPage() {
               ))}
             </SelectContent>
           </Select>
-          {(filterItemId !== "__all" || filterEvento !== "__all" || q) && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemId("__all"); setFilterEvento("__all"); setQ(""); }}>
+          {(filterItemQ || filterEvento !== "__all" || q) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemQ(""); setFilterEvento("__all"); setQ(""); }}>
               <X className="h-3 w-3 mr-1" /> Limpar
             </Button>
           )}
