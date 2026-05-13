@@ -589,14 +589,18 @@ export type Database = {
           created_at: string
           data_movimento: string
           data_prevista_devolucao: string | null
+          desconto: number | null
           entrada_tipo: Database["public"]["Enums"]["entrada_tipo"] | null
           evento_projeto: string | null
           finalidade: string | null
           fornecedor_id: string | null
+          frete: number | null
           id: string
+          ipi: number | null
           item_id: string | null
           nota_fiscal: string | null
           observacoes: string | null
+          outros_custos: number | null
           quantidade: number | null
           quantidade_solicitada: number | null
           requisicao_numero: number | null
@@ -608,6 +612,7 @@ export type Database = {
           saida_tipo: Database["public"]["Enums"]["saida_tipo"] | null
           solicitante_id: string | null
           tipo: Database["public"]["Enums"]["movement_kind"]
+          valor_total: number | null
           valor_unitario: number | null
         }
         Insert: {
@@ -615,14 +620,18 @@ export type Database = {
           created_at?: string
           data_movimento?: string
           data_prevista_devolucao?: string | null
+          desconto?: number | null
           entrada_tipo?: Database["public"]["Enums"]["entrada_tipo"] | null
           evento_projeto?: string | null
           finalidade?: string | null
           fornecedor_id?: string | null
+          frete?: number | null
           id?: string
+          ipi?: number | null
           item_id?: string | null
           nota_fiscal?: string | null
           observacoes?: string | null
+          outros_custos?: number | null
           quantidade?: number | null
           quantidade_solicitada?: number | null
           requisicao_numero?: number | null
@@ -634,6 +643,7 @@ export type Database = {
           saida_tipo?: Database["public"]["Enums"]["saida_tipo"] | null
           solicitante_id?: string | null
           tipo: Database["public"]["Enums"]["movement_kind"]
+          valor_total?: number | null
           valor_unitario?: number | null
         }
         Update: {
@@ -641,14 +651,18 @@ export type Database = {
           created_at?: string
           data_movimento?: string
           data_prevista_devolucao?: string | null
+          desconto?: number | null
           entrada_tipo?: Database["public"]["Enums"]["entrada_tipo"] | null
           evento_projeto?: string | null
           finalidade?: string | null
           fornecedor_id?: string | null
+          frete?: number | null
           id?: string
+          ipi?: number | null
           item_id?: string | null
           nota_fiscal?: string | null
           observacoes?: string | null
+          outros_custos?: number | null
           quantidade?: number | null
           quantidade_solicitada?: number | null
           requisicao_numero?: number | null
@@ -660,6 +674,7 @@ export type Database = {
           saida_tipo?: Database["public"]["Enums"]["saida_tipo"] | null
           solicitante_id?: string | null
           tipo?: Database["public"]["Enums"]["movement_kind"]
+          valor_total?: number | null
           valor_unitario?: number | null
         }
         Relationships: [
