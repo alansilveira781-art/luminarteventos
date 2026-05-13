@@ -56,7 +56,7 @@ function RelatoriosPage() {
   const { headers, body, totals } = useMemo(() => formatReport(reportId, rows ?? []), [reportId, rows]);
 
   const exportCsv = () => {
-    const linhas = [headers, ...body];
+    const linhas = [headers, ...body, ...(totals ? [totals] : [])];
     const csv = linhas.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
