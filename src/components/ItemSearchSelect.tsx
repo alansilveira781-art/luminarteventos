@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalize } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -35,13 +35,13 @@ export function ItemSearchSelect({
   const [search, setSearch] = useState("");
   const selected = itens.find((i) => i.id === value);
   const filteredItens = useMemo(() => {
-    const terms = search.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const terms = normalize(search).split(/\s+/).filter(Boolean);
     if (!terms.length) return itens;
 
     return itens.filter((it) => {
-      const haystack = [it.codigo, it.codigo_proprio ?? "", it.nome, it.unidade ?? ""]
-        .join(" ")
-        .toLowerCase();
+      const haystack = normalize(
+        [it.codigo, it.codigo_proprio ?? "", it.nome, it.unidade ?? ""].join(" "),
+      );
       return terms.every((term) => haystack.includes(term));
     });
   }, [itens, search]);

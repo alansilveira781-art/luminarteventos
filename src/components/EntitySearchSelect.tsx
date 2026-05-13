@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Eye, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalize } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -32,15 +32,17 @@ export function EntitySearchSelect({
   const selected = options.find((o) => o.id === value);
 
   const filtered = useMemo(() => {
-    const terms = search.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const terms = normalize(search).split(/\s+/).filter(Boolean);
     if (!terms.length) return options;
     return options.filter((o) => {
-      const haystack = [
-        o.nome, o.apelido ?? "", (o as any).nome_fantasia ?? "",
-        (o as any).documento ?? "", (o as any).email ?? "",
-        (o as any).telefone ?? "", (o as any).contato_nome ?? "",
-        (o as any).setor ?? "", (o as any).cargo ?? "",
-      ].join(" ").toLowerCase();
+      const haystack = normalize(
+        [
+          o.nome, o.apelido ?? "", (o as any).nome_fantasia ?? "",
+          (o as any).documento ?? "", (o as any).email ?? "",
+          (o as any).telefone ?? "", (o as any).contato_nome ?? "",
+          (o as any).setor ?? "", (o as any).cargo ?? "",
+        ].join(" "),
+      );
       return terms.every((t) => haystack.includes(t));
     });
   }, [options, search]);
