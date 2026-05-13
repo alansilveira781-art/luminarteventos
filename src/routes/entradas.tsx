@@ -506,7 +506,7 @@ function EntradasPage() {
       />
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setPrefill(null); }}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-[min(1200px,96vw)] w-[96vw]">
           <DialogHeader><DialogTitle>{prefill ? "Duplicar entrada" : "Nova entrada"}</DialogTitle></DialogHeader>
           <EntradaForm
             key={prefill?.id ?? "new"}
@@ -521,7 +521,7 @@ function EntradasPage() {
       </Dialog>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-[min(1200px,96vw)] w-[96vw]">
           <DialogHeader>
             <DialogTitle>
               Editar entrada{editing?.numero != null ? ` REQ-${String(editing.numero).padStart(4, "0")}` : ""}
@@ -863,49 +863,49 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
             <Plus className="h-3 w-3 mr-1" /> Adicionar item
           </Button>
         </div>
-        <Card className="p-3 space-y-2 overflow-x-auto">
+        <Card className="p-3 space-y-3">
           {linhas.map((l, i) => (
-            <div key={i} className="grid grid-cols-24 gap-2 items-start min-w-[1000px]" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}>
-              <div className="col-span-7">
+            <div key={i} className="flex flex-wrap gap-2 items-start border-b border-border/40 pb-3 last:border-0 last:pb-0">
+              <div className="flex-1 basis-full lg:basis-[260px] min-w-[200px]">
                 <div className="flex items-center gap-1.5 h-4">
                   <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
                   {l.item_id && <ItemInfoHover itemId={l.item_id} />}
                 </div>
                 <ItemSearchSelect itens={itensList} value={l.item_id} onChange={(v) => setL(i, "item_id", v)} autoOpen={(!l.item_id && i === linhas.length - 1 && i > 0) || autoOpenIdx === i} onAfterSelect={() => focusQty(i)} />
               </div>
-              <div className="col-span-2">
+              <div className="w-[70px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Qtd</label>
                 <Input ref={(el) => { qtyRefs.current[i] = el; }} type="number" min="0" step="any" value={l.quantidade} onChange={(e) => setL(i, "quantidade", e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (l.item_id && Number(l.quantidade) > 0) focusValor(i); } }} />
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (l.item_id && Number(l.quantidade) > 0) focusValor(i); } }} className="px-2" />
               </div>
-              <div className="col-span-3">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Cust. Unit. (R$)</label>
+              <div className="w-[100px]">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Cust. Unit.</label>
                 <Input ref={(el) => { valorRefs.current[i] = el; }} type="number" min="0" step="any" value={l.valor_unitario} onChange={(e) => setL(i, "valor_unitario", e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (l.item_id && Number(l.quantidade) > 0) goNextItem(i); } }} />
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (l.item_id && Number(l.quantidade) > 0) goNextItem(i); } }} className="px-2" />
               </div>
-              <div className="col-span-2">
+              <div className="w-[80px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Desconto</label>
-                <Input type="number" min="0" step="any" value={l.desconto} onChange={(e) => setL(i, "desconto", e.target.value)} />
+                <Input type="number" min="0" step="any" value={l.desconto} onChange={(e) => setL(i, "desconto", e.target.value)} className="px-2" />
               </div>
-              <div className="col-span-2">
+              <div className="w-[80px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Frete</label>
-                <Input type="number" min="0" step="any" value={l.frete} onChange={(e) => setL(i, "frete", e.target.value)} />
+                <Input type="number" min="0" step="any" value={l.frete} onChange={(e) => setL(i, "frete", e.target.value)} className="px-2" />
               </div>
-              <div className="col-span-2">
+              <div className="w-[80px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">IPI</label>
-                <Input type="number" min="0" step="any" value={l.ipi} onChange={(e) => setL(i, "ipi", e.target.value)} />
+                <Input type="number" min="0" step="any" value={l.ipi} onChange={(e) => setL(i, "ipi", e.target.value)} className="px-2" />
               </div>
-              <div className="col-span-2">
+              <div className="w-[80px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Outros</label>
-                <Input type="number" min="0" step="any" value={l.outros_custos} onChange={(e) => setL(i, "outros_custos", e.target.value)} />
+                <Input type="number" min="0" step="any" value={l.outros_custos} onChange={(e) => setL(i, "outros_custos", e.target.value)} className="px-2" />
               </div>
-              <div className="col-span-3">
+              <div className="w-[110px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Total linha</label>
                 <div className="h-9 flex items-center px-2 rounded-md border border-input bg-muted/30 text-sm tabular-nums">
                   R$ {calcLinha(l).toFixed(2)}
                 </div>
               </div>
-              <div className="col-span-1 flex justify-end pt-4">
+              <div className="flex items-end h-[52px]">
                 <Button type="button" variant="ghost" size="icon" onClick={() => remLinha(i)} disabled={linhas.length === 1} title="Remover">
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
                 </Button>
