@@ -317,17 +317,42 @@ function EntradasPage() {
         }
       />
 
-      <Card className="p-4 mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por item, código, fornecedor, NF, responsável…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
-          />
+      <Card className="p-4 mb-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por item, código, fornecedor, NF, responsável…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={filterItemId} onValueChange={setFilterItemId}>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filtrar por item" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos os itens</SelectItem>
+              {(itens ?? []).map((it: any) => (
+                <SelectItem key={it.id} value={it.id}>{it.codigo} — {it.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterEvento} onValueChange={setFilterEvento}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar por evento/projeto" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos eventos/projetos</SelectItem>
+              {eventosDisponiveis.map((ev) => (
+                <SelectItem key={ev} value={ev}>{ev}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterItemId !== "__all" || filterEvento !== "__all" || q) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemId("__all"); setFilterEvento("__all"); setQ(""); }}>
+              <X className="h-3 w-3 mr-1" /> Limpar
+            </Button>
+          )}
         </div>
-        <div className="text-xs text-muted-foreground mt-2">
+        <div className="text-xs text-muted-foreground">
           {grupos.length} {grupos.length === 1 ? "entrada" : "entradas"}
           {entradas && filteredBaseList.length !== entradas.length ? ` (de ${entradas.length} itens)` : ""}
         </div>
