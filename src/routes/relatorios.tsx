@@ -53,7 +53,7 @@ function RelatoriosPage() {
     queryFn: async () => loadReport(reportId, dataIni, dataFim),
   });
 
-  const { headers, body } = useMemo(() => formatReport(reportId, rows ?? []), [reportId, rows]);
+  const { headers, body, totals } = useMemo(() => formatReport(reportId, rows ?? []), [reportId, rows]);
 
   const exportCsv = () => {
     const linhas = [headers, ...body];
