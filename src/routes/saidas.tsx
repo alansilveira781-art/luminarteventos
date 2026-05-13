@@ -239,15 +239,26 @@ function SaidasPage() {
   });
 
   // Filtros + agrupamento por requisicao_numero
-  const sBusca = q.toLowerCase().trim();
+  const sBusca = normalize(q);
   const filteredBaseList = (saidas ?? []).filter((m: any) => {
+    if (filterItemQ.trim()) {
+      const itemHay = normalize(`${m.item?.codigo ?? ""} ${m.item?.nome ?? ""}`);
+      if (!itemHay.includes(normalize(filterItemQ))) return false;
+    }
+    if (filterEvento !== "__all" && (m.evento_projeto ?? "") !== filterEvento) return false;
     if (!sBusca) return true;
-    return [
+    const hay = normalize([
       m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
       m.saida_tipo, m.finalidade, m.observacoes, m.saida_status,
       m.requisicao_numero ? `req-${String(m.requisicao_numero).padStart(4, "0")}` : "",
-    ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
+    ].join(" "));
+    return hay.includes(sBusca);
   });
+  const eventosDisponiveis = useMemo(() => {
+    const s = new Set<string>();
+    (saidas ?? []).forEach((m: any) => { if (m.evento_projeto) s.add(m.evento_projeto); });
+    return Array.from(s).sort();
+  }, [saidas]);
   const grupos = useMemo(() => {
     const map = new Map<string, any>();
     for (const m of filteredBaseList) {
