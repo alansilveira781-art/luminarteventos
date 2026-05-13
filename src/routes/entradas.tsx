@@ -362,8 +362,8 @@ function EntradasPage() {
               ))}
             </SelectContent>
           </Select>
-          {(filterItemId !== "__all" || filterEvento !== "__all" || q) && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemId("__all"); setFilterEvento("__all"); setQ(""); }}>
+          {(filterItemQ || filterEvento !== "__all" || q) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemQ(""); setFilterEvento("__all"); setQ(""); }}>
               <X className="h-3 w-3 mr-1" /> Limpar
             </Button>
           )}
