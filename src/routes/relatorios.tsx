@@ -93,8 +93,10 @@ function RelatoriosPage() {
       startY: 80,
       head: [headers],
       body: body.map((r) => r.map((c) => String(c ?? ""))),
+      foot: totals ? [totals.map((c) => String(c ?? ""))] : undefined,
       styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
       headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: "bold" },
+      footStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       margin: { left: 40, right: 40 },
       didDrawPage: (data) => {
