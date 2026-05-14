@@ -294,13 +294,15 @@ function EstoquePage() {
         </div>
       </Card>
 
-      <Dialog open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }}>
+      <Dialog open={creating || !!editing || !!duplicating} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); setDuplicating(null); } }}>
         <DialogContent className="max-w-[min(1100px,96vw)] w-[96vw]">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar item" : "Novo item"}</DialogTitle>
+            <DialogTitle>{editing ? "Editar item" : duplicating ? `Duplicar “${duplicating.nome}”` : "Novo item"}</DialogTitle>
           </DialogHeader>
           <ItemForm
+            key={editing?.id ?? (duplicating ? `dup-${duplicating.id}` : "new")}
             initial={editing}
+            seed={duplicating ? { ...duplicating, id: undefined, codigo: "", quantidade_atual: 0 } : undefined}
             allowEditCodigo={isAdmin}
             onSubmit={(payload) => mut.mutate(editing ? { ...payload, id: editing.id } : payload)}
             submitting={mut.isPending}
