@@ -32,6 +32,9 @@ import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.das
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
+import { Route as ComercialValidacoesRouteImport } from './routes/comercial.validacoes'
+import { Route as ComercialPropostasRouteImport } from './routes/comercial.propostas'
+import { Route as ComercialClientesRouteImport } from './routes/comercial.clientes'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
@@ -152,6 +155,21 @@ const ComprasDashboardRoute = ComprasDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ComprasRoute,
 } as any)
+const ComercialValidacoesRoute = ComercialValidacoesRouteImport.update({
+  id: '/validacoes',
+  path: '/validacoes',
+  getParentRoute: () => ComercialRoute,
+} as any)
+const ComercialPropostasRoute = ComercialPropostasRouteImport.update({
+  id: '/propostas',
+  path: '/propostas',
+  getParentRoute: () => ComercialRoute,
+} as any)
+const ComercialClientesRoute = ComercialClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => ComercialRoute,
+} as any)
 const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
   id: '/usuarios',
   path: '/usuarios',
@@ -191,6 +209,9 @@ export interface FileRoutesByFullPath {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/propostas': typeof ComercialPropostasRoute
+  '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
@@ -216,6 +237,9 @@ export interface FileRoutesByTo {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/propostas': typeof ComercialPropostasRoute
+  '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
@@ -246,6 +270,9 @@ export interface FileRoutesById {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/propostas': typeof ComercialPropostasRoute
+  '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
@@ -277,6 +304,9 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/comercial/clientes'
+    | '/comercial/propostas'
+    | '/comercial/validacoes'
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
@@ -302,6 +332,9 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/comercial/clientes'
+    | '/comercial/propostas'
+    | '/comercial/validacoes'
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
@@ -331,6 +364,9 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/comercial/clientes'
+    | '/comercial/propostas'
+    | '/comercial/validacoes'
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
@@ -527,6 +563,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComprasDashboardRouteImport
       parentRoute: typeof ComprasRoute
     }
+    '/comercial/validacoes': {
+      id: '/comercial/validacoes'
+      path: '/validacoes'
+      fullPath: '/comercial/validacoes'
+      preLoaderRoute: typeof ComercialValidacoesRouteImport
+      parentRoute: typeof ComercialRoute
+    }
+    '/comercial/propostas': {
+      id: '/comercial/propostas'
+      path: '/propostas'
+      fullPath: '/comercial/propostas'
+      preLoaderRoute: typeof ComercialPropostasRouteImport
+      parentRoute: typeof ComercialRoute
+    }
+    '/comercial/clientes': {
+      id: '/comercial/clientes'
+      path: '/clientes'
+      fullPath: '/comercial/clientes'
+      preLoaderRoute: typeof ComercialClientesRouteImport
+      parentRoute: typeof ComercialRoute
+    }
     '/admin/usuarios': {
       id: '/admin/usuarios'
       path: '/usuarios'
@@ -575,10 +632,16 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ComercialRouteChildren {
+  ComercialClientesRoute: typeof ComercialClientesRoute
+  ComercialPropostasRoute: typeof ComercialPropostasRoute
+  ComercialValidacoesRoute: typeof ComercialValidacoesRoute
   ComercialIndexRoute: typeof ComercialIndexRoute
 }
 
 const ComercialRouteChildren: ComercialRouteChildren = {
+  ComercialClientesRoute: ComercialClientesRoute,
+  ComercialPropostasRoute: ComercialPropostasRoute,
+  ComercialValidacoesRoute: ComercialValidacoesRoute,
   ComercialIndexRoute: ComercialIndexRoute,
 }
 
