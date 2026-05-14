@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye } from "lucide-react";
+import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye, Copy } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -46,6 +46,7 @@ function EstoquePage() {
   const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
+  const [duplicating, setDuplicating] = useState<any | null>(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [hideZero, setHideZero] = useState(false);
@@ -89,6 +90,7 @@ function EstoquePage() {
       toast.success("Item salvo");
       setEditing(null);
       setCreating(false);
+      setDuplicating(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -262,8 +264,11 @@ function EstoquePage() {
                         </Button>
                         {isAdmin && (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => setEditing(i)}>
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(i)} title="Editar">
                               <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setDuplicating(i)} title="Duplicar">
+                              <Copy className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -273,6 +278,7 @@ function EstoquePage() {
                                   delMut.mutate(i.id);
                                 }
                               }}
+                              title="Excluir"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -288,13 +294,15 @@ function EstoquePage() {
         </div>
       </Card>
 
-      <Dialog open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }}>
+      <Dialog open={creating || !!editing || !!duplicating} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); setDuplicating(null); } }}>
         <DialogContent className="max-w-[min(1100px,96vw)] w-[96vw]">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar item" : "Novo item"}</DialogTitle>
+            <DialogTitle>{editing ? "Editar item" : duplicating ? `Duplicar “${duplicating.nome}”` : "Novo item"}</DialogTitle>
           </DialogHeader>
           <ItemForm
+            key={editing?.id ?? (duplicating ? `dup-${duplicating.id}` : "new")}
             initial={editing}
+            seed={duplicating ? { ...duplicating, id: undefined, codigo: "", quantidade_atual: 0 } : undefined}
             allowEditCodigo={isAdmin}
             onSubmit={(payload) => mut.mutate(editing ? { ...payload, id: editing.id } : payload)}
             submitting={mut.isPending}

@@ -23,6 +23,7 @@ import { listEventos } from "@/server/sheets.functions";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { ItemInfoHover } from "@/components/ItemInfoHover";
 import { EntitySearchSelect } from "@/components/EntitySearchSelect";
+import { ComboboxCreatable } from "@/components/ComboboxCreatable";
 import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
 import { SortableTh, useSort } from "@/components/SortableTh";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -673,15 +674,15 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
         {isEvento && (
           <FormField label="Evento / Projeto*" wide>
             <div className="flex gap-2">
-              <Input
-                list="eventos-list"
-                value={meta.evento_projeto}
-                onChange={(e) => setM("evento_projeto", e.target.value)}
-                placeholder="Digite para buscar ou criar…"
-              />
-              <datalist id="eventos-list">
-                {eventos.map((ev: string) => <option key={ev} value={ev} />)}
-              </datalist>
+              <div className="flex-1">
+                <ComboboxCreatable
+                  options={eventos}
+                  value={meta.evento_projeto}
+                  onChange={(v) => setM("evento_projeto", v)}
+                  placeholder="Selecione ou digite um novo…"
+                  searchPlaceholder="Buscar (sem acentos OK)…"
+                />
+              </div>
               <Button type="button" variant="outline" size="icon" onClick={onReloadEventos} disabled={reloadingEventos} title="Recarregar lista">
                 <RefreshCw className={`h-4 w-4 ${reloadingEventos ? "animate-spin" : ""}`} />
               </Button>
@@ -828,15 +829,13 @@ function SaidaEditForm({ original, itens, solicitantes, onEditSolicitante, event
         <FormField label="Quantidade*"><Input required type="number" min="0.01" step="0.01" value={form.quantidade} onChange={(e) => set("quantidade", e.target.value)} /></FormField>
         {isEvento && (
           <FormField label="Evento / Projeto*" wide>
-            <Input
-              list="eventos-edit-list"
+            <ComboboxCreatable
+              options={eventos}
               value={form.evento_projeto}
-              onChange={(e) => set("evento_projeto", e.target.value)}
-              placeholder="Digite para buscar ou criar…"
+              onChange={(v) => set("evento_projeto", v)}
+              placeholder="Selecione ou digite um novo…"
+              searchPlaceholder="Buscar (sem acentos OK)…"
             />
-            <datalist id="eventos-edit-list">
-              {eventos.map((ev: string) => <option key={ev} value={ev} />)}
-            </datalist>
           </FormField>
         )}
         <FormField label="Solicitante">
