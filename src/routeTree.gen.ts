@@ -19,17 +19,22 @@ import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as DevolucoesRouteImport } from './routes/devolucoes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ComprasRouteImport } from './routes/compras'
+import { Route as ComercialRouteImport } from './routes/comercial'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FinanceiroIndexRouteImport } from './routes/financeiro.index'
 import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
 import { Route as ComprasIndexRouteImport } from './routes/compras.index'
+import { Route as ComercialIndexRouteImport } from './routes/comercial.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.dashboard'
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
+import { Route as ComercialValidacoesRouteImport } from './routes/comercial.validacoes'
+import { Route as ComercialPropostasRouteImport } from './routes/comercial.propostas'
+import { Route as ComercialClientesRouteImport } from './routes/comercial.clientes'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
@@ -85,6 +90,11 @@ const ComprasRoute = ComprasRouteImport.update({
   path: '/compras',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComercialRoute = ComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -115,6 +125,11 @@ const ComprasIndexRoute = ComprasIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ComprasRoute,
 } as any)
+const ComercialIndexRoute = ComercialIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ComercialRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -139,6 +154,21 @@ const ComprasDashboardRoute = ComprasDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => ComprasRoute,
+} as any)
+const ComercialValidacoesRoute = ComercialValidacoesRouteImport.update({
+  id: '/validacoes',
+  path: '/validacoes',
+  getParentRoute: () => ComercialRoute,
+} as any)
+const ComercialPropostasRoute = ComercialPropostasRouteImport.update({
+  id: '/propostas',
+  path: '/propostas',
+  getParentRoute: () => ComercialRoute,
+} as any)
+const ComercialClientesRoute = ComercialClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => ComercialRoute,
 } as any)
 const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
   id: '/usuarios',
@@ -165,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/comercial': typeof ComercialRouteWithChildren
   '/compras': typeof ComprasRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
@@ -178,11 +209,15 @@ export interface FileRoutesByFullPath {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/propostas': typeof ComercialPropostasRoute
+  '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
+  '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
@@ -202,11 +237,15 @@ export interface FileRoutesByTo {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/propostas': typeof ComercialPropostasRoute
+  '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin': typeof AdminIndexRoute
+  '/comercial': typeof ComercialIndexRoute
   '/compras': typeof ComprasIndexRoute
   '/estoque': typeof EstoqueIndexRoute
   '/financeiro': typeof FinanceiroIndexRoute
@@ -217,6 +256,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/comercial': typeof ComercialRouteWithChildren
   '/compras': typeof ComprasRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
@@ -230,11 +270,15 @@ export interface FileRoutesById {
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
+  '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/propostas': typeof ComercialPropostasRoute
+  '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
+  '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
@@ -246,6 +290,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/comercial'
     | '/compras'
     | '/dashboard'
     | '/devolucoes'
@@ -259,11 +304,15 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/comercial/clientes'
+    | '/comercial/propostas'
+    | '/comercial/validacoes'
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
     | '/financeiro/dashboard'
     | '/admin/'
+    | '/comercial/'
     | '/compras/'
     | '/estoque/'
     | '/financeiro/'
@@ -283,11 +332,15 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/comercial/clientes'
+    | '/comercial/propostas'
+    | '/comercial/validacoes'
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
     | '/financeiro/dashboard'
     | '/admin'
+    | '/comercial'
     | '/compras'
     | '/estoque'
     | '/financeiro'
@@ -297,6 +350,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/comercial'
     | '/compras'
     | '/dashboard'
     | '/devolucoes'
@@ -310,11 +364,15 @@ export interface FileRouteTypes {
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
+    | '/comercial/clientes'
+    | '/comercial/propostas'
+    | '/comercial/validacoes'
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
     | '/financeiro/dashboard'
     | '/admin/'
+    | '/comercial/'
     | '/compras/'
     | '/estoque/'
     | '/financeiro/'
@@ -325,6 +383,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ComercialRoute: typeof ComercialRouteWithChildren
   ComprasRoute: typeof ComprasRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   DevolucoesRoute: typeof DevolucoesRoute
@@ -413,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComprasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/comercial': {
+      id: '/comercial'
+      path: '/comercial'
+      fullPath: '/comercial'
+      preLoaderRoute: typeof ComercialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -455,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComprasIndexRouteImport
       parentRoute: typeof ComprasRoute
     }
+    '/comercial/': {
+      id: '/comercial/'
+      path: '/'
+      fullPath: '/comercial/'
+      preLoaderRoute: typeof ComercialIndexRouteImport
+      parentRoute: typeof ComercialRoute
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
@@ -489,6 +562,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/compras/dashboard'
       preLoaderRoute: typeof ComprasDashboardRouteImport
       parentRoute: typeof ComprasRoute
+    }
+    '/comercial/validacoes': {
+      id: '/comercial/validacoes'
+      path: '/validacoes'
+      fullPath: '/comercial/validacoes'
+      preLoaderRoute: typeof ComercialValidacoesRouteImport
+      parentRoute: typeof ComercialRoute
+    }
+    '/comercial/propostas': {
+      id: '/comercial/propostas'
+      path: '/propostas'
+      fullPath: '/comercial/propostas'
+      preLoaderRoute: typeof ComercialPropostasRouteImport
+      parentRoute: typeof ComercialRoute
+    }
+    '/comercial/clientes': {
+      id: '/comercial/clientes'
+      path: '/clientes'
+      fullPath: '/comercial/clientes'
+      preLoaderRoute: typeof ComercialClientesRouteImport
+      parentRoute: typeof ComercialRoute
     }
     '/admin/usuarios': {
       id: '/admin/usuarios'
@@ -537,6 +631,24 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ComercialRouteChildren {
+  ComercialClientesRoute: typeof ComercialClientesRoute
+  ComercialPropostasRoute: typeof ComercialPropostasRoute
+  ComercialValidacoesRoute: typeof ComercialValidacoesRoute
+  ComercialIndexRoute: typeof ComercialIndexRoute
+}
+
+const ComercialRouteChildren: ComercialRouteChildren = {
+  ComercialClientesRoute: ComercialClientesRoute,
+  ComercialPropostasRoute: ComercialPropostasRoute,
+  ComercialValidacoesRoute: ComercialValidacoesRoute,
+  ComercialIndexRoute: ComercialIndexRoute,
+}
+
+const ComercialRouteWithChildren = ComercialRoute._addFileChildren(
+  ComercialRouteChildren,
+)
+
 interface ComprasRouteChildren {
   ComprasDashboardRoute: typeof ComprasDashboardRoute
   ComprasIndexRoute: typeof ComprasIndexRoute
@@ -568,6 +680,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  ComercialRoute: ComercialRouteWithChildren,
   ComprasRoute: ComprasRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DevolucoesRoute: DevolucoesRoute,
