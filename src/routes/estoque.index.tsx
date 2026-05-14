@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye } from "lucide-react";
+import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, ArrowUpDown, EyeOff, Eye, Copy } from "lucide-react";
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -46,6 +46,7 @@ function EstoquePage() {
   const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
+  const [duplicating, setDuplicating] = useState<any | null>(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [hideZero, setHideZero] = useState(false);
