@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SolicitarRouteImport } from './routes/solicitar'
 import { Route as SolicitantesRouteImport } from './routes/solicitantes'
 import { Route as SaidasRouteImport } from './routes/saidas'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
@@ -34,6 +35,11 @@ import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
 import { Route as ApiPublicSolicitarRouteImport } from './routes/api/public/solicitar'
 
+const SolicitarRoute = SolicitarRouteImport.update({
+  id: '/solicitar',
+  path: '/solicitar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SolicitantesRoute = SolicitantesRouteImport.update({
   id: '/solicitantes',
   path: '/solicitantes',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
+  '/solicitar': typeof SolicitarRoute
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
+  '/solicitar': typeof SolicitarRoute
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
+  '/solicitar': typeof SolicitarRoute
   '/admin/dados': typeof AdminDadosRoute
   '/admin/modulos': typeof AdminModulosRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
+    | '/solicitar'
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
+    | '/solicitar'
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
+    | '/solicitar'
     | '/admin/dados'
     | '/admin/modulos'
     | '/admin/usuarios'
@@ -322,6 +334,7 @@ export interface RootRouteChildren {
   RelatoriosRoute: typeof RelatoriosRoute
   SaidasRoute: typeof SaidasRoute
   SolicitantesRoute: typeof SolicitantesRoute
+  SolicitarRoute: typeof SolicitarRoute
   EstoqueItemIdRoute: typeof EstoqueItemIdRoute
   EstoqueAReceberRoute: typeof EstoqueAReceberRoute
   EstoqueIndexRoute: typeof EstoqueIndexRoute
@@ -330,6 +343,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/solicitar': {
+      id: '/solicitar'
+      path: '/solicitar'
+      fullPath: '/solicitar'
+      preLoaderRoute: typeof SolicitarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solicitantes': {
       id: '/solicitantes'
       path: '/solicitantes'
@@ -557,6 +577,7 @@ const rootRouteChildren: RootRouteChildren = {
   RelatoriosRoute: RelatoriosRoute,
   SaidasRoute: SaidasRoute,
   SolicitantesRoute: SolicitantesRoute,
+  SolicitarRoute: SolicitarRoute,
   EstoqueItemIdRoute: EstoqueItemIdRoute,
   EstoqueAReceberRoute: EstoqueAReceberRoute,
   EstoqueIndexRoute: EstoqueIndexRoute,
