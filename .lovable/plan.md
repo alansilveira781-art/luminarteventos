@@ -1,69 +1,84 @@
-## 1. Anexos liberados na criação da demanda
+## Módulo Comercial — Plano de Implementação
 
-Hoje a aba **Anexos** só aparece depois de salvar (mostra a mensagem *"Salve a demanda para anexar arquivos"*). Vou mudar para que seja possível anexar arquivos já durante a criação:
+Módulo novo, isolado, seguindo o padrão dos módulos existentes (Compras/Financeiro). Sem alterar componentes ou rotas dos outros módulos. Persistência **localStorage** conforme solicitado (MVP).
 
-- Quando a demanda ainda não tem `id`, os arquivos selecionados ficam guardados em memória (lista de pendentes com nome, tipo e tamanho).
-- Ao salvar a demanda pela primeira vez, o sistema cria a demanda, faz o upload dos arquivos pendentes para o bucket `demanda-anexos` e registra cada um na tabela `demanda_anexos`.
-- Para demandas já salvas, o comportamento continua igual (upload imediato).
+### 1. Sidebar
+Editar `src/components/AppSidebar.tsx`:
+- Adicionar grupo **"Comercial"** com ícone `Briefcase`
+- 4 itens: Quadro de Vendas (`/comercial`), Propostas (`/comercial/propostas`), Validações (`/comercial/validacoes`), Clientes (`/comercial/clientes`)
+- Adicionar `/comercial` em `COMERCIAL_ROUTES` e no `getContext()`
+- Liberar acesso por `hasModule("comercial")` ou admin (mesmo padrão dos outros)
 
-Isso mantém a segurança (nada vai pro storage antes de existir uma demanda) e dá a sensação de que o anexo já está "liberado" desde o início.
+### 2. Rotas (TanStack file-based)
+```
+src/routes/comercial.tsx              → layout + guard de módulo
+src/routes/comercial.index.tsx        → Quadro de Vendas (Kanban)
+src/routes/comercial.propostas.tsx    → Lista de propostas aprovadas
+src/routes/comercial.validacoes.tsx   → Aprovação interna
+src/routes/comercial.clientes.tsx     → CRM
+```
 
-## 2. Renomear/reordenar as colunas do Quadro de Demandas
+### 3. Camada de dados (`src/lib/comercial/`)
+- `storage.ts` — wrapper genérico `read<T>(key)` / `write<T>(key, val)` com fallback seguro
+- `types.ts` — tipos `Card`, `Proposta`, `Cliente`, `ItemProposta`, `CustoExtra`, status enums
+- `store.ts` — hooks `useCards()`, `usePropostas()`, `useClientes()` com estado em React + sync com localStorage; helpers `moveCard`, `createProposta`, `aprovarProposta`, `reprovarProposta`, `vincularClienteEvento`
+- `catalogo.ts` — lista base de 8 itens pré-cadastrados (Buffet, Decoração, DJ, etc.)
 
-O módulo Financeiro hoje reaproveita os status do módulo de Compras (`src/lib/demandas.ts` re-exporta de `compras.ts`). Vou separar: criar uma lista própria de status só para demandas, sem afetar Compras.
+### 4. Quadro de Vendas (Kanban)
+Arquivo: `src/routes/comercial.index.tsx` + componentes em `src/components/comercial/`
+- 6 colunas: Lead, Projeto, Orçamento Enviado, Negociação, Fechamento, Perda — cores distintas por status
+- DnD com `@dnd-kit/core` + `@dnd-kit/sortable` (já instalados ou instalar)
+- Componentes: `KanbanBoard`, `KanbanColumn`, `KanbanCard`
+- Card mostra: cliente, evento, data, valor estimado, responsável, observações
+- Ações: "Marcar venda" (→ Fechamento), "Marcar perda" (modal motivo obrigatório), "Editar" (modal), "Detalhes" (Drawer lateral)
+- Coluna Projeto: botão extra "Criar Proposta" abre o wizard
+- Coluna Perda: tag/tooltip com motivo
+- Botão "Novo Lead" no topo do quadro
 
-Novas colunas, nesta ordem:
+### 5. Wizard de Proposta (5 etapas)
+Componente: `src/components/comercial/PropostaWizard.tsx` em `Dialog` com `Progress`
+- Etapa 1 — Cliente (nome, telefone, email) — autopreenche se card já tem cliente
+- Etapa 2 — Evento (tipo select, data, início, término, local, cidade, observações)
+- Etapa 3 — Itens: lista do catálogo com botão "Adicionar"; tabela editável (qtd, valor unit., subtotal calculado)
+- Etapa 4 — Custos extras (frete, montagem, desmontagem, outros[descrição+valor])
+- Etapa 5 — Resumo (subtotal itens, total custos, total final, margem %, validade)
+- Ao concluir: cria/atualiza Cliente, cria Proposta com status `aguardando_aprovacao`, vincula `cardId`
 
-1. Solicitação de Demanda
-2. Análise
-3. Pendente Aprovação
-4. Demanda Aprovada
-5. Demanda Em Andamento
-6. Finalizado
-7. Demanda Negada
+### 6. Validações
+`src/routes/comercial.validacoes.tsx`
+- Lista propostas com status `aguardando_aprovacao` ou `em_revisao`
+- Cada item expansível mostra: cliente, evento, itens, totais, responsável
+- Ações: Aprovar → status `enviado` + card vai para "Orçamento Enviado"; Reprovar → status `em_revisao`; Editar → reabre wizard
 
-Mapeamento para os valores já existentes no banco (a coluna `demandas.status` continua usando o enum `compra_status`, sem migração):
+### 7. Propostas
+`src/routes/comercial.propostas.tsx`
+- Tabela: cliente, evento, data, valor, status (Enviado/Em negociação/Fechado/Perdido)
+- Ações por linha: alterar status (Select), Gerar PDF (jsPDF), Enviar (toast simulado)
+- PDF: `src/lib/comercial/pdf.ts` usando `jsPDF` com cabeçalho "Logo da Empresa", dados cliente/evento, tabela itens, custos, total, validade, rodapé
+- Sincroniza status com card do Kanban quando aplicável (Fechado → coluna Fechamento; Perdido → coluna Perda c/ motivo opcional)
 
-| Coluna nova | Valor no banco |
-|---|---|
-| Solicitação de Demanda | `solicitacao` |
-| Análise | `analise` |
-| Pendente Aprovação | `pendente_aprovacao` |
-| Demanda Aprovada | `aprovada` |
-| Demanda Em Andamento | `em_andamento` |
-| Finalizado | `finalizado` |
-| Demanda Negada | `negada` |
+### 8. Clientes (CRM)
+`src/routes/comercial.clientes.tsx`
+- Lista de clientes (nome, telefone, email, status atual)
+- Drawer/Dialog "Detalhes": timeline de eventos (criação card, proposta enviada, aprovação, fechamento), lista de propostas vinculadas, lista de eventos
+- Botão "Criar novo lead" → cria Card vinculado já com dados do cliente
 
-A coluna "Compras a Receber" (`a_receber`) some do quadro de Demandas (não faz sentido aqui). Demandas antigas que estiverem nesse status — se houver — vão aparecer apenas na busca, com aviso visual; podemos migrá-las depois se quiser.
+### 9. Automações / vínculos
+- Drag-drop atualiza `card.status`
+- Wizard cria/atualiza cliente por email (chave) + grava proposta com `clienteId`/`cardId`
+- Aprovação: `proposta.status = 'enviado'` + `card.status = 'orcamento_enviado'`
+- Card → Fechamento: `proposta.status = 'fechado'` se houver proposta vinculada
+- Card → Perda: pede motivo (obrigatório); se houver proposta, `proposta.status = 'perdido'`
+- Toda mutação grava no localStorage e dispara re-render via `useSyncExternalStore`
 
-## 3. Formulário "estilo app" para entrada de Compras e Demandas
+### 10. Dependências
+- `@dnd-kit/core`, `@dnd-kit/sortable` (instalar se ausentes)
+- `jspdf` e `jspdf-autotable` (instalar)
 
-A ideia é ter um ambiente de entrada simplificado onde a pessoa escolhe **Compra** ou **Demanda**, preenche os mesmos campos do sistema, e o registro cai automaticamente como card na coluna **Solicitação de Compra** (módulo Compras) ou **Solicitação de Demanda** (módulo Financeiro).
+### 11. Permissão de módulo
+Para usuários não-admin verem o módulo, adicionar `comercial` à lista de módulos em `Administração → Módulos` (registro feito via mesmo fluxo dos outros). Admin já vê tudo.
 
-Antes de eu escolher o caminho, preciso entender duas coisas:
-
-**a) Quem usa esse formulário?**
-- *Opção A — Interno:* só pessoas já cadastradas no sistema. Faço uma rota nova tipo `/solicitar` (ou um botão flutuante "Nova solicitação" no topo) que abre um wizard curto: passo 1 escolhe o tipo, passo 2 mostra os campos do sistema, salva direto na tabela `compras` ou `demandas` com status `solicitacao`. Sem mudança de banco, sem login extra.
-- *Opção B — Público (link compartilhável):* qualquer pessoa com o link consegue enviar, mesmo sem conta. Isso exige uma rota pública (`/api/public/solicitar` ou página `/solicitar-publico`), regras de RLS específicas (uma policy de INSERT pública só para status `solicitacao`), e idealmente um campo de identificação (nome/email do solicitante externo) e algum anti-spam (rate limit, captcha leve, ou token na URL).
-
-**b) Formato do formulário:**
-- Wizard em passos (1. tipo, 2. dados básicos, 3. descritivo/itens, 4. anexos, 5. revisar e enviar) — fica bem "appzão", ótimo no celular.
-- Ou formulário único, scroll vertical, mais rápido pra quem já conhece.
-
-Minha recomendação: **Opção A + wizard em passos**, responsivo (mobile-first), reaproveitando os mesmos componentes que já temos (`SelectCreatable`, `EntitySearchSelect`, anexos). Fica pronto rápido e cobre o caso "a pessoa abre no celular e manda a solicitação". Se depois precisar abrir pra fora, evoluímos pra Opção B com as proteções certas.
-
-### Pergunta antes de implementar a parte 3
-Você quer:
-- **(A)** formulário interno (só usuários logados), ou
-- **(B)** link público que qualquer pessoa abre sem conta?
-
-E prefere **wizard em passos** ou **formulário único**?
-
----
-
-## Resumo técnico (para referência)
-
-- `src/components/DemandaDialog.tsx`: estado `pendingFiles` quando `!demandaId`; mutação `save` faz upload dos pendentes após criar a demanda.
-- `src/lib/demandas.ts`: deixar de re-exportar de `compras.ts`; definir `DEMANDA_STATUSES` próprio com os 7 status na ordem pedida e cores correspondentes.
-- `src/routes/financeiro.index.tsx` e `src/routes/financeiro.dashboard.tsx`: continuam funcionando — já consomem `DEMANDA_STATUSES`.
-- Parte 3 fica fora deste plano até você escolher A/B + formato; implemento em seguida.
+### Notas
+- Persistência em localStorage como pedido — sem migração Supabase para este módulo
+- Visual herda tokens do design system (sem cores hardcoded), botões shadcn, Drawer/Dialog/Progress já disponíveis
+- Nenhum arquivo dos módulos Estoque/Compras/Financeiro será alterado, exceto `AppSidebar.tsx` (adição de itens) e `routeTree.gen.ts` (auto-gerado)
