@@ -264,8 +264,11 @@ function EstoquePage() {
                         </Button>
                         {isAdmin && (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => setEditing(i)}>
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(i)} title="Editar">
                               <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setDuplicating(i)} title="Duplicar">
+                              <Copy className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -275,6 +278,7 @@ function EstoquePage() {
                                   delMut.mutate(i.id);
                                 }
                               }}
+                              title="Excluir"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
