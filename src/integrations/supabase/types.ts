@@ -394,6 +394,183 @@ export type Database = {
         }
         Relationships: []
       }
+      demanda_anexos: {
+        Row: {
+          created_at: string
+          demanda_id: string
+          id: string
+          mime_type: string | null
+          nome: string
+          path: string
+          tamanho: number | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          demanda_id: string
+          id?: string
+          mime_type?: string | null
+          nome: string
+          path: string
+          tamanho?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          demanda_id?: string
+          id?: string
+          mime_type?: string | null
+          nome?: string
+          path?: string
+          tamanho?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      demanda_comentarios: {
+        Row: {
+          created_at: string
+          demanda_id: string
+          id: string
+          mencoes: string[] | null
+          texto: string
+          user_id: string | null
+          user_nome: string | null
+        }
+        Insert: {
+          created_at?: string
+          demanda_id: string
+          id?: string
+          mencoes?: string[] | null
+          texto: string
+          user_id?: string | null
+          user_nome?: string | null
+        }
+        Update: {
+          created_at?: string
+          demanda_id?: string
+          id?: string
+          mencoes?: string[] | null
+          texto?: string
+          user_id?: string | null
+          user_nome?: string | null
+        }
+        Relationships: []
+      }
+      demanda_historico: {
+        Row: {
+          acao: string
+          created_at: string
+          demanda_id: string
+          detalhes: string | null
+          id: string
+          status_anterior: Database["public"]["Enums"]["compra_status"] | null
+          status_novo: Database["public"]["Enums"]["compra_status"] | null
+          user_id: string | null
+          user_nome: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          demanda_id: string
+          detalhes?: string | null
+          id?: string
+          status_anterior?: Database["public"]["Enums"]["compra_status"] | null
+          status_novo?: Database["public"]["Enums"]["compra_status"] | null
+          user_id?: string | null
+          user_nome?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          demanda_id?: string
+          detalhes?: string | null
+          id?: string
+          status_anterior?: Database["public"]["Enums"]["compra_status"] | null
+          status_novo?: Database["public"]["Enums"]["compra_status"] | null
+          user_id?: string | null
+          user_nome?: string | null
+        }
+        Relationships: []
+      }
+      demandas: {
+        Row: {
+          comprador: string | null
+          condicao_pagamento: string | null
+          created_at: string
+          created_by: string | null
+          data_compra: string | null
+          data_solicitacao: string
+          descritivo: string | null
+          documento: string | null
+          fornecedor: string | null
+          fornecedor_id: string | null
+          id: string
+          motivo_negacao: string | null
+          numero: number | null
+          observacoes: string | null
+          ordem: number
+          parcelamento: string | null
+          solicitante: string | null
+          solicitante_id: string | null
+          status: Database["public"]["Enums"]["compra_status"]
+          tipo_demanda: string | null
+          titulo: string | null
+          updated_at: string
+          valor_total: number | null
+        }
+        Insert: {
+          comprador?: string | null
+          condicao_pagamento?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_compra?: string | null
+          data_solicitacao?: string
+          descritivo?: string | null
+          documento?: string | null
+          fornecedor?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          motivo_negacao?: string | null
+          numero?: number | null
+          observacoes?: string | null
+          ordem?: number
+          parcelamento?: string | null
+          solicitante?: string | null
+          solicitante_id?: string | null
+          status?: Database["public"]["Enums"]["compra_status"]
+          tipo_demanda?: string | null
+          titulo?: string | null
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Update: {
+          comprador?: string | null
+          condicao_pagamento?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_compra?: string | null
+          data_solicitacao?: string
+          descritivo?: string | null
+          documento?: string | null
+          fornecedor?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          motivo_negacao?: string | null
+          numero?: number | null
+          observacoes?: string | null
+          ordem?: number
+          parcelamento?: string | null
+          solicitante?: string | null
+          solicitante_id?: string | null
+          status?: Database["public"]["Enums"]["compra_status"]
+          tipo_demanda?: string | null
+          titulo?: string | null
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Relationships: []
+      }
       fornecedores: {
         Row: {
           contato_nome: string | null
