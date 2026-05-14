@@ -48,12 +48,6 @@ function Hub() {
               <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
                 Usuários, módulos e dados
               </div>
-
-              <div className="mt-2 grid grid-cols-3 gap-1 text-center">
-                <Stat icon={UsersIcon} label="Usuários" value={stats?.users} />
-                <Stat icon={Boxes} label="Módulos" value={stats?.modules} />
-                <Stat icon={Database} label="Admins" value={stats?.admins} />
-              </div>
             </Card>
           </Link>
         )}
