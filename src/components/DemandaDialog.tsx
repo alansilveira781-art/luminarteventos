@@ -52,6 +52,7 @@ export function DemandaDialog({
   const qc = useQueryClient();
   const { user } = useAuth();
   const [form, setForm] = useState<Demanda>({ status: defaultStatus });
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const { data: fornecedores = [] } = useQuery({
     queryKey: ["compras-fornecedores-min"],
