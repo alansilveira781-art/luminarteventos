@@ -13,6 +13,7 @@ import { Route as SolicitantesRouteImport } from './routes/solicitantes'
 import { Route as SaidasRouteImport } from './routes/saidas'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as FornecedoresRouteImport } from './routes/fornecedores'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as DevolucoesRouteImport } from './routes/devolucoes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -20,9 +21,11 @@ import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FinanceiroIndexRouteImport } from './routes/financeiro.index'
 import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
 import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.dashboard'
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
@@ -48,6 +51,11 @@ const RelatoriosRoute = RelatoriosRouteImport.update({
 const FornecedoresRoute = FornecedoresRouteImport.update({
   id: '/fornecedores',
   path: '/fornecedores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntradasRoute = EntradasRouteImport.update({
@@ -85,6 +93,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FinanceiroIndexRoute = FinanceiroIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FinanceiroRoute,
+} as any)
 const EstoqueIndexRoute = EstoqueIndexRouteImport.update({
   id: '/estoque/',
   path: '/estoque/',
@@ -99,6 +112,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const FinanceiroDashboardRoute = FinanceiroDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => FinanceiroRoute,
 } as any)
 const EstoqueAReceberRoute = EstoqueAReceberRouteImport.update({
   id: '/estoque/a-receber',
@@ -139,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
+  '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
@@ -149,9 +168,11 @@ export interface FileRoutesByFullPath {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
+  '/financeiro/': typeof FinanceiroIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -169,9 +190,11 @@ export interface FileRoutesByTo {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin': typeof AdminIndexRoute
   '/compras': typeof ComprasIndexRoute
   '/estoque': typeof EstoqueIndexRoute
+  '/financeiro': typeof FinanceiroIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -182,6 +205,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
+  '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
@@ -192,9 +216,11 @@ export interface FileRoutesById {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
+  '/financeiro/': typeof FinanceiroIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -206,6 +232,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/devolucoes'
     | '/entradas'
+    | '/financeiro'
     | '/fornecedores'
     | '/relatorios'
     | '/saidas'
@@ -216,9 +243,11 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/dashboard'
     | '/admin/'
     | '/compras/'
     | '/estoque/'
+    | '/financeiro/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -236,9 +265,11 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/dashboard'
     | '/admin'
     | '/compras'
     | '/estoque'
+    | '/financeiro'
   id:
     | '__root__'
     | '/'
@@ -248,6 +279,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/devolucoes'
     | '/entradas'
+    | '/financeiro'
     | '/fornecedores'
     | '/relatorios'
     | '/saidas'
@@ -258,9 +290,11 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/dashboard'
     | '/admin/'
     | '/compras/'
     | '/estoque/'
+    | '/financeiro/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -271,6 +305,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DevolucoesRoute: typeof DevolucoesRoute
   EntradasRoute: typeof EntradasRoute
+  FinanceiroRoute: typeof FinanceiroRouteWithChildren
   FornecedoresRoute: typeof FornecedoresRoute
   RelatoriosRoute: typeof RelatoriosRoute
   SaidasRoute: typeof SaidasRoute
@@ -308,6 +343,13 @@ declare module '@tanstack/react-router' {
       path: '/fornecedores'
       fullPath: '/fornecedores'
       preLoaderRoute: typeof FornecedoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entradas': {
@@ -359,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/financeiro/': {
+      id: '/financeiro/'
+      path: '/'
+      fullPath: '/financeiro/'
+      preLoaderRoute: typeof FinanceiroIndexRouteImport
+      parentRoute: typeof FinanceiroRoute
+    }
     '/estoque/': {
       id: '/estoque/'
       path: '/estoque'
@@ -379,6 +428,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/financeiro/dashboard': {
+      id: '/financeiro/dashboard'
+      path: '/dashboard'
+      fullPath: '/financeiro/dashboard'
+      preLoaderRoute: typeof FinanceiroDashboardRouteImport
+      parentRoute: typeof FinanceiroRoute
     }
     '/estoque/a-receber': {
       id: '/estoque/a-receber'
@@ -454,6 +510,20 @@ const ComprasRouteChildren: ComprasRouteChildren = {
 const ComprasRouteWithChildren =
   ComprasRoute._addFileChildren(ComprasRouteChildren)
 
+interface FinanceiroRouteChildren {
+  FinanceiroDashboardRoute: typeof FinanceiroDashboardRoute
+  FinanceiroIndexRoute: typeof FinanceiroIndexRoute
+}
+
+const FinanceiroRouteChildren: FinanceiroRouteChildren = {
+  FinanceiroDashboardRoute: FinanceiroDashboardRoute,
+  FinanceiroIndexRoute: FinanceiroIndexRoute,
+}
+
+const FinanceiroRouteWithChildren = FinanceiroRoute._addFileChildren(
+  FinanceiroRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
@@ -462,6 +532,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DevolucoesRoute: DevolucoesRoute,
   EntradasRoute: EntradasRoute,
+  FinanceiroRoute: FinanceiroRouteWithChildren,
   FornecedoresRoute: FornecedoresRoute,
   RelatoriosRoute: RelatoriosRoute,
   SaidasRoute: SaidasRoute,

@@ -1,0 +1,260 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Search } from "lucide-react";
+import { DemandaDialog } from "@/components/DemandaDialog";
+import { DEMANDA_STATUSES, type DemandaStatus } from "@/lib/demandas";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { toast } from "sonner";
+
+const sb = supabase as any;
+
+export const Route = createFileRoute("/financeiro/")({
+  component: DemandasKanban,
+});
+
+type Demanda = {
+  id: string;
+  numero: number | null;
+  status: DemandaStatus;
+  titulo: string | null;
+  solicitante: string | null;
+  fornecedor: string | null;
+  comprador: string | null;
+  data_solicitacao: string | null;
+  data_compra: string | null;
+  valor_total: number | null;
+};
+
+function DemandasKanban() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [defaultStatus, setDefaultStatus] = useState<DemandaStatus>("solicitacao");
+  const [q, setQ] = useState("");
+
+  const { data: demandas = [] } = useQuery({
+    queryKey: ["demandas"],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("demandas")
+        .select("id,numero,status,titulo,solicitante,fornecedor,comprador,data_solicitacao,data_compra,valor_total")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Demanda[];
+    },
+  });
+
+  const filtered = useMemo(() => {
+    const s = q.toLowerCase().trim();
+    if (!s) return demandas;
+    return demandas.filter((c) => {
+      const num = c.numero != null ? `demanda-${c.numero}` : "";
+      return [num, String(c.numero ?? ""), c.titulo, c.solicitante, c.fornecedor, c.comprador]
+        .some((v) => String(v ?? "").toLowerCase().includes(s));
+    });
+  }, [demandas, q]);
+
+  const byStatus = useMemo(() => {
+    const m: Record<DemandaStatus, Demanda[]> = {} as any;
+    DEMANDA_STATUSES.forEach((s) => (m[s.key] = []));
+    filtered.forEach((c) => {
+      (m[c.status] ??= []).push(c);
+    });
+    return m;
+  }, [filtered]);
+
+  const moveStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: DemandaStatus }) => {
+      const { error } = await sb.from("demandas").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["demandas"] });
+      const prev = qc.getQueryData<Demanda[]>(["demandas"]);
+      qc.setQueryData<Demanda[]>(["demandas"], (old) =>
+        (old ?? []).map((c) => (c.id === id ? { ...c, status } : c)),
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["demandas"], ctx.prev);
+      toast.error("Não foi possível mover o card");
+    },
+  });
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function onDragEnd(e: DragEndEvent) {
+    const id = String(e.active.id);
+    const overId = e.over?.id ? String(e.over.id) : null;
+    if (!overId) return;
+    const status = overId as DemandaStatus;
+    const d = demandas.find((c) => c.id === id);
+    if (!d || d.status === status) return;
+    moveStatus.mutate({ id, status });
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Quadro de Demandas"
+        description="Arraste os cards entre as colunas para alterar o status"
+        actions={
+          <Button onClick={() => { setEditId(null); setDefaultStatus("solicitacao"); setOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" /> Nova demanda
+          </Button>
+        }
+      />
+
+      <div className="mb-3 relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por código, título, fornecedor, solicitante…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {q.trim() ? (
+        <div className="rounded-lg border border-border bg-card divide-y divide-border max-h-[calc(100vh-180px)] overflow-auto">
+          {filtered.length === 0 && (
+            <div className="p-4 text-sm text-muted-foreground text-center">Nenhum card encontrado.</div>
+          )}
+          {filtered.map((c) => {
+            const statusInfo = DEMANDA_STATUSES.find((s) => s.key === c.status);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { setEditId(c.id); setOpen(true); }}
+                className="w-full text-left p-3 hover:bg-muted/50 flex items-center gap-3 text-sm"
+              >
+                <span className="text-[11px] font-mono text-muted-foreground w-24 shrink-0">
+                  {c.numero != null ? `DEMANDA-${c.numero}` : "—"}
+                </span>
+                <span className="flex-1 min-w-0 truncate font-medium">
+                  {c.titulo || c.fornecedor || "Demanda sem título"}
+                </span>
+                {statusInfo && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                    <span className={`h-2 w-2 rounded-full ${statusInfo.color}`} />
+                    <span className="hidden sm:inline">{statusInfo.label}</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <div className="flex gap-3 overflow-auto pb-4 max-h-[calc(100vh-140px)] items-start">
+          {DEMANDA_STATUSES.map((s) => (
+            <Column key={s.key} statusKey={s.key} label={s.label} color={s.color} count={byStatus[s.key]?.length ?? 0}>
+              {(byStatus[s.key] ?? []).map((c) => (
+                <Card key={c.id} demanda={c} onOpen={() => { setEditId(c.id); setOpen(true); }} />
+              ))}
+              <button
+                type="button"
+                onClick={() => { setEditId(null); setDefaultStatus(s.key); setOpen(true); }}
+                className="w-full text-xs text-muted-foreground hover:text-foreground py-1.5 rounded border border-dashed border-border hover:border-primary"
+              >
+                + adicionar
+              </button>
+            </Column>
+          ))}
+        </div>
+      </DndContext>
+      )}
+
+      <DemandaDialog open={open} onOpenChange={setOpen} demandaId={editId} defaultStatus={defaultStatus} />
+    </>
+  );
+}
+
+function Column({
+  statusKey, label, color, count, children,
+}: { statusKey: string; label: string; color: string; count: number; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: statusKey });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-shrink-0 w-72 rounded-lg border bg-muted/30 ${isOver ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+    >
+      <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`h-2 w-2 rounded-full ${color}`} />
+          <span className="text-xs font-semibold truncate">{label}</span>
+        </div>
+        <span className="text-[10px] text-muted-foreground">{count}</span>
+      </div>
+      <div className="p-2 space-y-2 min-h-[120px]">{children}</div>
+    </div>
+  );
+}
+
+function Card({ demanda, onOpen }: { demanda: Demanda; onOpen: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: demanda.id });
+  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-md border border-border bg-card p-2.5 text-xs shadow-sm ${isDragging ? "opacity-50" : ""}`}
+    >
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          {...listeners}
+          {...attributes}
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground select-none"
+          aria-label="Mover"
+        >⋮⋮</button>
+        <button type="button" onClick={onOpen} className="flex-1 text-left min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="font-medium text-sm truncate text-foreground flex-1 min-w-0">
+              {demanda.titulo || demanda.fornecedor || "Demanda sem título"}
+            </div>
+            {demanda.numero != null && (
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0 mt-0.5">
+                DEMANDA-{demanda.numero}
+              </span>
+            )}
+          </div>
+          {demanda.fornecedor && demanda.titulo && (
+            <div className="text-[11px] text-muted-foreground truncate">{demanda.fornecedor}</div>
+          )}
+          <div className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
+            {demanda.solicitante && <div>Solic.: {demanda.solicitante}</div>}
+            {demanda.comprador && <div>Comprador: {demanda.comprador}</div>}
+            <div>{demanda.data_compra ? `Comprada: ${formatDate(demanda.data_compra)}` : "Não comprado"}</div>
+            {demanda.valor_total != null && (
+              <div className="font-medium text-foreground">
+                {Number(demanda.valor_total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </div>
+            )}
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatDate(d: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  try { return new Date(d).toLocaleDateString("pt-BR"); } catch { return d; }
+}

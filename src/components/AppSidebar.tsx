@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   KanbanSquare,
   PackageCheck,
+  Wallet,
   Sun,
   Moon,
 } from "lucide-react";
@@ -43,13 +44,16 @@ const allItems: NavItem[] = [
   { title: "Relatórios", url: "/relatorios", icon: BarChart3, group: "Estoque", module: "estoque" },
   { title: "Quadro de Compras", url: "/compras", icon: KanbanSquare, group: "Compras", module: "compras" },
   { title: "Dashboard", url: "/compras/dashboard", icon: BarChart3, group: "Compras", module: "compras" },
+  { title: "Quadro de Demandas", url: "/financeiro", icon: KanbanSquare, group: "Financeiro", module: "financeiro" },
+  { title: "Dashboard", url: "/financeiro/dashboard", icon: BarChart3, group: "Financeiro", module: "financeiro" },
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Estoque", "Compras", "Administração"];
+const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Administração"];
 
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 const COMPRAS_ROUTES = ["/compras"];
+const FINANCEIRO_ROUTES = ["/financeiro"];
 
 function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   if (url === "/") return pathname === "/";
@@ -62,8 +66,9 @@ function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   return pathname.startsWith(url + "/");
 }
 
-function getContext(pathname: string): "home" | "estoque" | "compras" | "admin" {
+function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "admin" {
   if (pathname.startsWith("/admin")) return "admin";
+  if (FINANCEIRO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "financeiro";
   if (COMPRAS_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "compras";
   if (ESTOQUE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "estoque";
   return "home";
@@ -77,6 +82,7 @@ function useNavItems(pathname: string) {
     if (i.adminOnly) return ctx === "admin" && isAdmin;
     if (i.module === "estoque") return ctx === "estoque" && (isAdmin || hasModule("estoque"));
     if (i.module === "compras") return ctx === "compras" && (isAdmin || hasModule("compras"));
+    if (i.module === "financeiro") return ctx === "financeiro" && (isAdmin || hasModule("financeiro"));
     return true;
   });
 }
