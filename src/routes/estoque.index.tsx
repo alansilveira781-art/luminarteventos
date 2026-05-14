@@ -90,6 +90,7 @@ function EstoquePage() {
       toast.success("Item salvo");
       setEditing(null);
       setCreating(false);
+      setDuplicating(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
