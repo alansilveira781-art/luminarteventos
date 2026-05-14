@@ -1,70 +1,69 @@
-## Plano de ajustes — Módulo Estoque
+## 1. Anexos liberados na criação da demanda
 
-### 1. Entradas com custo médio ponderado
-- Adicionar no formulário de **Entrada** os campos: **Custo Unitário**, **Desconto (R$ ou %)**, **Frete**, **IPI**, **Outros Custos** e **Valor Total** (calculado: `(custo_unit × qtd) − desconto + frete + ipi + outros`).
-- Persistir esses campos novos na tabela `movimentacoes` (migração: `desconto`, `frete`, `ipi`, `outros_custos`, `valor_total` numéricos).
-- Ao salvar a entrada, atualizar o `valor_unitario` do item em `itens` usando **custo médio ponderado**:
-  `novo_custo = (estoque_atual × custo_atual + qtd_entrada × custo_unit_efetivo_da_entrada) / (estoque_atual + qtd_entrada)`
-  onde `custo_unit_efetivo = valor_total / qtd_entrada`.
-- Implementar via trigger `BEFORE INSERT` na `movimentacoes` (tipo=entrada) ou em uma função SQL chamada após o insert do item da movimentação. Usar trigger para garantir consistência mesmo em importações.
+Hoje a aba **Anexos** só aparece depois de salvar (mostra a mensagem *"Salve a demanda para anexar arquivos"*). Vou mudar para que seja possível anexar arquivos já durante a criação:
 
-### 2. Casas decimais (3+ casas)
-- Trocar todos os `step="0.01"` para `step="0.001"` (ou `step="any"`) nos campos de quantidade, valor unitário, custo, desconto etc. nas abas Entradas, Saídas, Devoluções e cadastro de Itens.
+- Quando a demanda ainda não tem `id`, os arquivos selecionados ficam guardados em memória (lista de pendentes com nome, tipo e tamanho).
+- Ao salvar a demanda pela primeira vez, o sistema cria a demanda, faz o upload dos arquivos pendentes para o bucket `demanda-anexos` e registra cada um na tabela `demanda_anexos`.
+- Para demandas já salvas, o comportamento continua igual (upload imediato).
 
-### 3. UX dos formulários (Dialogs)
-- Aumentar `max-w-3xl` → `max-w-5xl` (ou `max-w-4xl`) nos Dialogs de cadastro de itens, fornecedores, solicitantes, compras.
-- Bloquear fechamento ao clicar fora: adicionar `onPointerDownOutside={(e) => e.preventDefault()}` e `onInteractOutside={(e) => e.preventDefault()}` em `DialogContent`. Fechamento só pelo X ou botão Cancelar.
+Isso mantém a segurança (nada vai pro storage antes de existir uma demanda) e dá a sensação de que o anexo já está "liberado" desde o início.
 
-### 4. Sincronização de estoque após cadastro
-- Após criar item ou movimentação, invalidar **todas** as queries relevantes (`itens`, `movimentacoes`, e queries derivadas em Saídas) com `qc.invalidateQueries({ queryKey: ["itens"] })` + `refetchQueries`.
-- No formulário de saída, garantir que o `select` de itens use a query atualizada (sem cache stale). Adicionar `staleTime: 0` na query de itens da página de saída ou usar `qc.refetchQueries` no submit.
+## 2. Renomear/reordenar as colunas do Quadro de Demandas
 
-### 5. Busca sem acento (normalização)
-- Criar utilitário `normalize(s)` em `src/lib/utils.ts`:
-  ```ts
-  export const normalize = (s: string) =>
-    (s ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-  ```
-- Aplicar em todos os filtros client-side: itens, fornecedores, solicitantes, compras, devoluções, entradas, saídas.
-- Para selects pesquisáveis (`ItemSearchSelect`, `EntitySearchSelect`, `SelectCreatable`), aplicar normalização tanto na query quanto no termo digitado.
+O módulo Financeiro hoje reaproveita os status do módulo de Compras (`src/lib/demandas.ts` re-exporta de `compras.ts`). Vou separar: criar uma lista própria de status só para demandas, sem afetar Compras.
 
-### 6. Performance da aba Estoque
-- Reduzir delay no carregamento:
-  - Manter paginação de 1000 (já existe), mas adicionar `staleTime: 30_000` e `placeholderData: keepPreviousData` na query `["itens"]`.
-  - Pré-fetch da query no menu lateral (hover do link Estoque) com `qc.prefetchQuery`.
-  - Memoizar `filtered` (já está) e evitar recalculo do sort com chaves estáveis.
-  - Lazy-load do `ImportDialog` e `BulkEditDialog` com `React.lazy`.
+Novas colunas, nesta ordem:
 
-### 7. Clonar itens
-- Adicionar botão **Clonar** (ícone Copy) na linha da tabela de itens, ao lado de Editar.
-- Ao clicar, abrir o `ItemForm` pré-preenchido com os dados do item (exceto `id` e `codigo` — código é gerado automaticamente via `generateNextSku()`).
-- Reutiliza a mutation de criação existente.
+1. Solicitação de Demanda
+2. Análise
+3. Pendente Aprovação
+4. Demanda Aprovada
+5. Demanda Em Andamento
+6. Finalizado
+7. Demanda Negada
 
-### 8. Totais nos Relatórios
-- Em `src/routes/relatorios.tsx`, ao final de cada tabela exportada/visualizada (saídas, entradas, devoluções, estoque), adicionar linha **Total** somando colunas numéricas: `quantidade`, `valor_unitario × quantidade`, `valor_total`.
-- Aplicar tanto na visualização em tela quanto na exportação (XLSX/CSV).
+Mapeamento para os valores já existentes no banco (a coluna `demandas.status` continua usando o enum `compra_status`, sem migração):
 
-### 9. Filtros clicáveis em Saída e Entrada
-- Acima da tabela/lista, adicionar dois `Select` (ou `Combobox` pesquisável) clicáveis:
-  - **Filtrar por Item** (lista de itens do estoque)
-  - **Filtrar por Evento/Projeto** (lista distinct de `evento_projeto` da `movimentacoes`)
-- Filtros combinam com a busca de texto existente. Botão **Limpar** ao lado.
+| Coluna nova | Valor no banco |
+|---|---|
+| Solicitação de Demanda | `solicitacao` |
+| Análise | `analise` |
+| Pendente Aprovação | `pendente_aprovacao` |
+| Demanda Aprovada | `aprovada` |
+| Demanda Em Andamento | `em_andamento` |
+| Finalizado | `finalizado` |
+| Demanda Negada | `negada` |
+
+A coluna "Compras a Receber" (`a_receber`) some do quadro de Demandas (não faz sentido aqui). Demandas antigas que estiverem nesse status — se houver — vão aparecer apenas na busca, com aviso visual; podemos migrá-las depois se quiser.
+
+## 3. Formulário "estilo app" para entrada de Compras e Demandas
+
+A ideia é ter um ambiente de entrada simplificado onde a pessoa escolhe **Compra** ou **Demanda**, preenche os mesmos campos do sistema, e o registro cai automaticamente como card na coluna **Solicitação de Compra** (módulo Compras) ou **Solicitação de Demanda** (módulo Financeiro).
+
+Antes de eu escolher o caminho, preciso entender duas coisas:
+
+**a) Quem usa esse formulário?**
+- *Opção A — Interno:* só pessoas já cadastradas no sistema. Faço uma rota nova tipo `/solicitar` (ou um botão flutuante "Nova solicitação" no topo) que abre um wizard curto: passo 1 escolhe o tipo, passo 2 mostra os campos do sistema, salva direto na tabela `compras` ou `demandas` com status `solicitacao`. Sem mudança de banco, sem login extra.
+- *Opção B — Público (link compartilhável):* qualquer pessoa com o link consegue enviar, mesmo sem conta. Isso exige uma rota pública (`/api/public/solicitar` ou página `/solicitar-publico`), regras de RLS específicas (uma policy de INSERT pública só para status `solicitacao`), e idealmente um campo de identificação (nome/email do solicitante externo) e algum anti-spam (rate limit, captcha leve, ou token na URL).
+
+**b) Formato do formulário:**
+- Wizard em passos (1. tipo, 2. dados básicos, 3. descritivo/itens, 4. anexos, 5. revisar e enviar) — fica bem "appzão", ótimo no celular.
+- Ou formulário único, scroll vertical, mais rápido pra quem já conhece.
+
+Minha recomendação: **Opção A + wizard em passos**, responsivo (mobile-first), reaproveitando os mesmos componentes que já temos (`SelectCreatable`, `EntitySearchSelect`, anexos). Fica pronto rápido e cobre o caso "a pessoa abre no celular e manda a solicitação". Se depois precisar abrir pra fora, evoluímos pra Opção B com as proteções certas.
+
+### Pergunta antes de implementar a parte 3
+Você quer:
+- **(A)** formulário interno (só usuários logados), ou
+- **(B)** link público que qualquer pessoa abre sem conta?
+
+E prefere **wizard em passos** ou **formulário único**?
 
 ---
 
-### Arquivos afetados (resumo técnico)
-- **Migração SQL**: `movimentacoes` (novas colunas + trigger de custo médio).
-- `src/routes/entradas.tsx` — novos campos, filtros, custo médio na UI.
-- `src/routes/saidas.tsx` — filtros, decimais, sincronização.
-- `src/routes/devolucoes.tsx` — decimais.
-- `src/routes/estoque.index.tsx` — clonar, performance, decimais.
-- `src/routes/relatorios.tsx` — linhas de total.
-- `src/components/forms/ItemForm.tsx`, `FornecedorForm.tsx`, `SolicitanteForm.tsx` — decimais.
-- `src/components/ui/dialog.tsx` (ou cada uso) — bloquear fechamento outside-click; tamanho maior.
-- `src/lib/utils.ts` — utilitário `normalize`.
-- `src/components/ItemSearchSelect.tsx`, `EntitySearchSelect.tsx`, `SelectCreatable.tsx` — busca sem acento.
+## Resumo técnico (para referência)
 
-### Pontos a confirmar antes de implementar
-1. **Desconto na entrada**: em **R$** (valor absoluto) ou **%** sobre o subtotal? (na compra é %, aqui sugiro **R$** para alinhar com Frete/IPI)
-2. **Custo médio**: aplicar **somente** quando `quantidade_atual > 0`? Se o estoque estiver zerado, o novo custo é simplesmente o custo da entrada (sem média). Confirmar.
-3. **Bloquear fechamento outside-click**: aplicar em **todos** os dialogs do sistema ou só nos formulários de cadastro (Item, Fornecedor, Solicitante, Compra)?
+- `src/components/DemandaDialog.tsx`: estado `pendingFiles` quando `!demandaId`; mutação `save` faz upload dos pendentes após criar a demanda.
+- `src/lib/demandas.ts`: deixar de re-exportar de `compras.ts`; definir `DEMANDA_STATUSES` próprio com os 7 status na ordem pedida e cores correspondentes.
+- `src/routes/financeiro.index.tsx` e `src/routes/financeiro.dashboard.tsx`: continuam funcionando — já consomem `DEMANDA_STATUSES`.
+- Parte 3 fica fora deste plano até você escolher A/B + formato; implemento em seguida.
