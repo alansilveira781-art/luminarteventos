@@ -72,6 +72,7 @@ export function DemandaDialog({
 
   useEffect(() => {
     if (!open) return;
+    setPendingFiles([]);
     if (!demandaId) {
       setForm({ status: defaultStatus, data_solicitacao: new Date().toISOString().slice(0, 10) });
       return;
