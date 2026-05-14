@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ImportDialog } from "@/components/ImportDialog";
 import { SOLICITANTE_TEMPLATE } from "@/lib/import-utils";
 import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
+import { normalize } from "@/lib/utils";
 import { SortableTh, useSort } from "@/components/SortableTh";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
@@ -71,11 +72,10 @@ function SolicitantesPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const s = q.toLowerCase().trim();
+  const s = normalize(q);
   const filteredBase = (data ?? []).filter((it: any) => {
     if (!s) return true;
-    return [it.nome, it.apelido, it.setor, it.cargo, it.telefone, it.email]
-      .map((x) => String(x ?? "").toLowerCase()).join(" ").includes(s);
+    return normalize([it.nome, it.apelido, it.setor, it.cargo, it.telefone, it.email].join(" ")).includes(s);
   });
   const filtered = applySort(filteredBase);
 
