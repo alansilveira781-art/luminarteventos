@@ -268,7 +268,7 @@ export function DemandaDialog({
             {demandaId ? (
               <Anexos demandaId={demandaId} userId={user?.id} />
             ) : (
-              <p className="text-xs text-muted-foreground italic">Salve a demanda para anexar arquivos.</p>
+              <PendingAnexos files={pendingFiles} onChange={setPendingFiles} />
             )}
           </TabsContent>
         </Tabs>
