@@ -13,6 +13,7 @@ import { Plus, Search, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { normalize } from "@/lib/utils";
 import { format } from "date-fns";
 import { SortableTh, useSort } from "@/components/SortableTh";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -124,15 +125,15 @@ function DevolucoesPage() {
   });
 
   // Filtro
-  const sBusca = q.toLowerCase().trim();
+  const sBusca = normalize(q);
   const filtered = useMemo(() => {
     const list = (devolucoes ?? []).filter((m: any) => {
       if (!sBusca) return true;
-      return [
+      return normalize([
         m.item?.nome, m.item?.codigo, m.solicitante?.nome,
         m.responsavel_recebimento, m.responsavel_lancamento,
         m.observacoes, m.condicao,
-      ].map((x) => String(x ?? "").toLowerCase()).join(" ").includes(sBusca);
+      ].join(" ")).includes(sBusca);
     });
     return applySort(list, (m: any, k: string) => {
       if (k === "item") return m.item?.nome;

@@ -13,6 +13,7 @@ import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, Arro
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
+import { normalize } from "@/lib/utils";
 import { ITEM_TEMPLATE } from "@/lib/import-utils";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
@@ -110,15 +111,10 @@ function EstoquePage() {
   const filtered = useMemo(() => {
     if (!itens) return [];
     let arr = itens as any[];
-    const s = q.toLowerCase().trim();
+    const s = normalize(q);
     if (s) {
-      arr = arr.filter(
-        (i) =>
-          i.nome.toLowerCase().includes(s) ||
-          i.codigo.toLowerCase().includes(s) ||
-          (i.categoria ?? "").toLowerCase().includes(s) ||
-          (i.localizacao ?? "").toLowerCase().includes(s) ||
-          i.status.includes(s),
+      arr = arr.filter((i) =>
+        normalize([i.nome, i.codigo, i.categoria, i.localizacao, i.status].join(" ")).includes(s),
       );
     }
     if (hideZero) arr = arr.filter((i) => Number(i.quantidade_atual) > 0);

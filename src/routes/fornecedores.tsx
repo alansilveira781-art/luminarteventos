@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ImportDialog } from "@/components/ImportDialog";
 import { FORNECEDOR_TEMPLATE } from "@/lib/import-utils";
 import { FornecedorForm } from "@/components/forms/FornecedorForm";
+import { normalize } from "@/lib/utils";
 import { SortableTh, useSort } from "@/components/SortableTh";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
@@ -79,11 +80,10 @@ function FornecedoresPage() {
     },
   });
 
-  const s = q.toLowerCase().trim();
+  const s = normalize(q);
   const filteredBase = (data ?? []).filter((f: any) => {
     if (!s) return true;
-    return [f.nome, f.nome_fantasia, f.documento, f.contato_nome, f.telefone, f.email, f.tipo_fornecimento]
-      .map((x) => String(x ?? "").toLowerCase()).join(" ").includes(s);
+    return normalize([f.nome, f.nome_fantasia, f.documento, f.contato_nome, f.telefone, f.email, f.tipo_fornecimento].join(" ")).includes(s);
   });
   const filtered = applySort(filteredBase);
 
