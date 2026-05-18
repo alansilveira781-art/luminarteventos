@@ -256,14 +256,27 @@ export function DemandaDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="descritivo" className="space-y-2 pt-4">
-            <label className="text-xs font-medium text-muted-foreground">Descritivo da solicitação</label>
-            <Textarea
-              rows={14}
-              value={form.descritivo ?? ""}
-              onChange={(e) => setForm({ ...form, descritivo: e.target.value })}
-              placeholder="Descreva em detalhes a solicitação (o que precisa, quantidades, observações, prazos, etc.)"
-            />
+          <TabsContent value="descritivo" className="space-y-3 pt-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Evento / Projeto</label>
+              <SelectCreatable
+                table="eventos_projetos"
+                value={form.evento_projeto}
+                onChange={(v) => {
+                  setForm({ ...form, evento_projeto: v, evento_projeto_id: null });
+                }}
+                placeholder="Selecione ou cadastre um evento/projeto…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Descritivo da solicitação</label>
+              <Textarea
+                rows={12}
+                value={form.descritivo ?? ""}
+                onChange={(e) => setForm({ ...form, descritivo: e.target.value })}
+                placeholder="Descreva em detalhes a solicitação (o que precisa, quantidades, observações, prazos, etc.)"
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="anexos" className="space-y-2 pt-4">
