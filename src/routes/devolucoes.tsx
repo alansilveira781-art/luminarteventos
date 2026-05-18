@@ -420,13 +420,13 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
           <h3 className="text-sm font-semibold">Itens da saída</h3>
           <Card className="p-0 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm table-fixed">
+              <table className="w-full text-sm table-fixed">
                 <colgroup>
                   <col />
-                  <col className="w-28" />
-                  <col className="w-28" />
+                  <col className="w-20" />
                   <col className="w-24" />
-                  <col className="w-32" />
+                  <col className="w-20" />
+                  <col className="w-28" />
                 </colgroup>
                 <thead className="bg-muted/50">
                   <tr className="text-xs uppercase text-muted-foreground">
