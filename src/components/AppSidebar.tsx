@@ -27,6 +27,7 @@ import {
   Users2,
   ClipboardCheck,
   FileText,
+  Link2,
 } from "lucide-react";
 import logo from "@/assets/luminart-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
