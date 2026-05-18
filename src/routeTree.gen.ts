@@ -29,6 +29,7 @@ import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as ComercialIndexRouteImport } from './routes/comercial.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.dashboard'
+import { Route as FinanceiroContaAzulRouteImport } from './routes/financeiro.conta-azul'
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
@@ -39,6 +40,10 @@ import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
 import { Route as ApiPublicSolicitarRouteImport } from './routes/api/public/solicitar'
+import { Route as ApiContaazulSyncRouteImport } from './routes/api/contaazul/sync'
+import { Route as ApiContaazulStatusRouteImport } from './routes/api/contaazul/status'
+import { Route as ApiContaazulOauthPrepareRouteImport } from './routes/api/contaazul/oauth.prepare'
+import { Route as ApiContaazulOauthCallbackRouteImport } from './routes/api/contaazul/oauth.callback'
 
 const SolicitarRoute = SolicitarRouteImport.update({
   id: '/solicitar',
@@ -140,6 +145,11 @@ const FinanceiroDashboardRoute = FinanceiroDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => FinanceiroRoute,
 } as any)
+const FinanceiroContaAzulRoute = FinanceiroContaAzulRouteImport.update({
+  id: '/conta-azul',
+  path: '/conta-azul',
+  getParentRoute: () => FinanceiroRoute,
+} as any)
 const EstoqueAReceberRoute = EstoqueAReceberRouteImport.update({
   id: '/estoque/a-receber',
   path: '/estoque/a-receber',
@@ -190,6 +200,28 @@ const ApiPublicSolicitarRoute = ApiPublicSolicitarRouteImport.update({
   path: '/api/public/solicitar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiContaazulSyncRoute = ApiContaazulSyncRouteImport.update({
+  id: '/api/contaazul/sync',
+  path: '/api/contaazul/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContaazulStatusRoute = ApiContaazulStatusRouteImport.update({
+  id: '/api/contaazul/status',
+  path: '/api/contaazul/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContaazulOauthPrepareRoute =
+  ApiContaazulOauthPrepareRouteImport.update({
+    id: '/api/contaazul/oauth/prepare',
+    path: '/api/contaazul/oauth/prepare',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiContaazulOauthCallbackRoute =
+  ApiContaazulOauthCallbackRouteImport.update({
+    id: '/api/contaazul/oauth/callback',
+    path: '/api/contaazul/oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -215,13 +247,18 @@ export interface FileRoutesByFullPath {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
+  '/api/contaazul/status': typeof ApiContaazulStatusRoute
+  '/api/contaazul/sync': typeof ApiContaazulSyncRoute
   '/api/public/solicitar': typeof ApiPublicSolicitarRoute
+  '/api/contaazul/oauth/callback': typeof ApiContaazulOauthCallbackRoute
+  '/api/contaazul/oauth/prepare': typeof ApiContaazulOauthPrepareRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -243,13 +280,18 @@ export interface FileRoutesByTo {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin': typeof AdminIndexRoute
   '/comercial': typeof ComercialIndexRoute
   '/compras': typeof ComprasIndexRoute
   '/estoque': typeof EstoqueIndexRoute
   '/financeiro': typeof FinanceiroIndexRoute
+  '/api/contaazul/status': typeof ApiContaazulStatusRoute
+  '/api/contaazul/sync': typeof ApiContaazulSyncRoute
   '/api/public/solicitar': typeof ApiPublicSolicitarRoute
+  '/api/contaazul/oauth/callback': typeof ApiContaazulOauthCallbackRoute
+  '/api/contaazul/oauth/prepare': typeof ApiContaazulOauthPrepareRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -276,13 +318,18 @@ export interface FileRoutesById {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
+  '/api/contaazul/status': typeof ApiContaazulStatusRoute
+  '/api/contaazul/sync': typeof ApiContaazulSyncRoute
   '/api/public/solicitar': typeof ApiPublicSolicitarRoute
+  '/api/contaazul/oauth/callback': typeof ApiContaazulOauthCallbackRoute
+  '/api/contaazul/oauth/prepare': typeof ApiContaazulOauthPrepareRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -310,13 +357,18 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
     | '/admin/'
     | '/comercial/'
     | '/compras/'
     | '/estoque/'
     | '/financeiro/'
+    | '/api/contaazul/status'
+    | '/api/contaazul/sync'
     | '/api/public/solicitar'
+    | '/api/contaazul/oauth/callback'
+    | '/api/contaazul/oauth/prepare'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -338,13 +390,18 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
     | '/admin'
     | '/comercial'
     | '/compras'
     | '/estoque'
     | '/financeiro'
+    | '/api/contaazul/status'
+    | '/api/contaazul/sync'
     | '/api/public/solicitar'
+    | '/api/contaazul/oauth/callback'
+    | '/api/contaazul/oauth/prepare'
   id:
     | '__root__'
     | '/'
@@ -370,13 +427,18 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
     | '/admin/'
     | '/comercial/'
     | '/compras/'
     | '/estoque/'
     | '/financeiro/'
+    | '/api/contaazul/status'
+    | '/api/contaazul/sync'
     | '/api/public/solicitar'
+    | '/api/contaazul/oauth/callback'
+    | '/api/contaazul/oauth/prepare'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -397,7 +459,11 @@ export interface RootRouteChildren {
   EstoqueItemIdRoute: typeof EstoqueItemIdRoute
   EstoqueAReceberRoute: typeof EstoqueAReceberRoute
   EstoqueIndexRoute: typeof EstoqueIndexRoute
+  ApiContaazulStatusRoute: typeof ApiContaazulStatusRoute
+  ApiContaazulSyncRoute: typeof ApiContaazulSyncRoute
   ApiPublicSolicitarRoute: typeof ApiPublicSolicitarRoute
+  ApiContaazulOauthCallbackRoute: typeof ApiContaazulOauthCallbackRoute
+  ApiContaazulOauthPrepareRoute: typeof ApiContaazulOauthPrepareRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -542,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceiroDashboardRouteImport
       parentRoute: typeof FinanceiroRoute
     }
+    '/financeiro/conta-azul': {
+      id: '/financeiro/conta-azul'
+      path: '/conta-azul'
+      fullPath: '/financeiro/conta-azul'
+      preLoaderRoute: typeof FinanceiroContaAzulRouteImport
+      parentRoute: typeof FinanceiroRoute
+    }
     '/estoque/a-receber': {
       id: '/estoque/a-receber'
       path: '/estoque/a-receber'
@@ -612,6 +685,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSolicitarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/contaazul/sync': {
+      id: '/api/contaazul/sync'
+      path: '/api/contaazul/sync'
+      fullPath: '/api/contaazul/sync'
+      preLoaderRoute: typeof ApiContaazulSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contaazul/status': {
+      id: '/api/contaazul/status'
+      path: '/api/contaazul/status'
+      fullPath: '/api/contaazul/status'
+      preLoaderRoute: typeof ApiContaazulStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contaazul/oauth/prepare': {
+      id: '/api/contaazul/oauth/prepare'
+      path: '/api/contaazul/oauth/prepare'
+      fullPath: '/api/contaazul/oauth/prepare'
+      preLoaderRoute: typeof ApiContaazulOauthPrepareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contaazul/oauth/callback': {
+      id: '/api/contaazul/oauth/callback'
+      path: '/api/contaazul/oauth/callback'
+      fullPath: '/api/contaazul/oauth/callback'
+      preLoaderRoute: typeof ApiContaazulOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -663,11 +764,13 @@ const ComprasRouteWithChildren =
   ComprasRoute._addFileChildren(ComprasRouteChildren)
 
 interface FinanceiroRouteChildren {
+  FinanceiroContaAzulRoute: typeof FinanceiroContaAzulRoute
   FinanceiroDashboardRoute: typeof FinanceiroDashboardRoute
   FinanceiroIndexRoute: typeof FinanceiroIndexRoute
 }
 
 const FinanceiroRouteChildren: FinanceiroRouteChildren = {
+  FinanceiroContaAzulRoute: FinanceiroContaAzulRoute,
   FinanceiroDashboardRoute: FinanceiroDashboardRoute,
   FinanceiroIndexRoute: FinanceiroIndexRoute,
 }
@@ -694,7 +797,11 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueItemIdRoute: EstoqueItemIdRoute,
   EstoqueAReceberRoute: EstoqueAReceberRoute,
   EstoqueIndexRoute: EstoqueIndexRoute,
+  ApiContaazulStatusRoute: ApiContaazulStatusRoute,
+  ApiContaazulSyncRoute: ApiContaazulSyncRoute,
   ApiPublicSolicitarRoute: ApiPublicSolicitarRoute,
+  ApiContaazulOauthCallbackRoute: ApiContaazulOauthCallbackRoute,
+  ApiContaazulOauthPrepareRoute: ApiContaazulOauthPrepareRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

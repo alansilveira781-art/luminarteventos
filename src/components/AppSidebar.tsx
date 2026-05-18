@@ -27,6 +27,7 @@ import {
   Users2,
   ClipboardCheck,
   FileText,
+  Link2,
 } from "lucide-react";
 import logo from "@/assets/luminart-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,6 +51,7 @@ const allItems: NavItem[] = [
   { title: "Dashboard", url: "/compras/dashboard", icon: BarChart3, group: "Compras", module: "compras" },
   { title: "Dashboard", url: "/financeiro/dashboard", icon: BarChart3, group: "Financeiro", module: "financeiro" },
   { title: "Quadro de Demandas", url: "/financeiro", icon: KanbanSquare, group: "Financeiro", module: "financeiro" },
+  { title: "Conta Azul", url: "/financeiro/conta-azul", icon: Link2, group: "Financeiro", module: "financeiro" },
   { title: "Quadro de Vendas", url: "/comercial", icon: KanbanSquare, group: "Comercial", module: "comercial" },
   { title: "Propostas", url: "/comercial/propostas", icon: FileText, group: "Comercial", module: "comercial" },
   { title: "Validações", url: "/comercial/validacoes", icon: ClipboardCheck, group: "Comercial", module: "comercial" },
