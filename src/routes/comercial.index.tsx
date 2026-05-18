@@ -31,11 +31,6 @@ const fmtPeriodo = (ini: string, fim: string) => {
   if (!fim || ini === fim) return fmt(ini);
   return `${fmt(ini)} – ${fmt(fim)}`;
 };
-const _origFmt = (d: string) => {
-  if (!d) return "—";
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
-};
 
 function QuadroVendas() {
   const { cards } = useComercial();
