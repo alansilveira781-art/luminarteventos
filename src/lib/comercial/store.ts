@@ -5,17 +5,21 @@ import type {
   CardStatus,
   Proposta,
   PropostaStatus,
+  Ambiente,
 } from "./types";
+import { CONSULTORES_PADRAO } from "./types";
 
 const KEY_CARDS = "comercial.cards.v1";
 const KEY_PROPOSTAS = "comercial.propostas.v1";
 const KEY_CLIENTES = "comercial.clientes.v1";
 const KEY_PROP_SEQ = "comercial.proposta.seq.v1";
+const KEY_CONSULTORES = "comercial.consultores.v1";
 
 type State = {
   cards: ComercialCard[];
   propostas: Proposta[];
   clientes: Cliente[];
+  consultores: string[];
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -37,10 +41,60 @@ function write<T>(key: string, value: T) {
   }
 }
 
+// ----- Migrations -----
+function migrateCards(raw: any[]): ComercialCard[] {
+  return (raw || []).map((c) => {
+    if (c.eventoDataInicio !== undefined) return c as ComercialCard;
+    const data = c.eventoData || "";
+    return { ...c, eventoDataInicio: data, eventoDataFim: data } as ComercialCard;
+  });
+}
+
+function migratePropostas(raw: any[]): Proposta[] {
+  return (raw || []).map((p) => {
+    let evento = p.evento || {};
+    if (evento.dataInicio === undefined) {
+      evento = {
+        tipo: evento.tipo ?? "",
+        dataInicio: evento.data || "",
+        dataFim: evento.data || "",
+        local: evento.local || "",
+        cidade: evento.cidade || "",
+        observacoes: evento.observacoes || "",
+      };
+    }
+    let ambientes: Ambiente[] = p.ambientes;
+    if (!ambientes) {
+      const oldItens = p.itens || [];
+      ambientes = oldItens.length
+        ? [{
+            id: uid(),
+            nome: "Geral",
+            imagens: [],
+            itens: oldItens.map((it: any) => ({
+              id: uid(),
+              nome: it.nome || "Item",
+              descricoes: [{
+                id: it.id || uid(),
+                descricao: it.nome || "",
+                unidade: it.unidade || "un",
+                quantidade: Number(it.quantidade) || 0,
+                valorUnitario: Number(it.valorUnitario) || 0,
+              }],
+            })),
+          }]
+        : [];
+    }
+    const { itens: _drop, ...rest } = p;
+    return { ...rest, evento, ambientes } as Proposta;
+  });
+}
+
 let state: State = {
-  cards: read<ComercialCard[]>(KEY_CARDS, []),
-  propostas: read<Proposta[]>(KEY_PROPOSTAS, []),
+  cards: migrateCards(read<any[]>(KEY_CARDS, [])),
+  propostas: migratePropostas(read<any[]>(KEY_PROPOSTAS, [])),
   clientes: read<Cliente[]>(KEY_CLIENTES, []),
+  consultores: read<string[]>(KEY_CONSULTORES, [...CONSULTORES_PADRAO]),
 };
 
 const listeners = new Set<() => void>();
@@ -62,6 +116,7 @@ function setState(next: Partial<State>) {
   if (next.cards) write(KEY_CARDS, next.cards);
   if (next.propostas) write(KEY_PROPOSTAS, next.propostas);
   if (next.clientes) write(KEY_CLIENTES, next.clientes);
+  if (next.consultores) write(KEY_CONSULTORES, next.consultores);
   emit();
 }
 
@@ -110,7 +165,6 @@ export function moveCard(id: string, status: CardStatus, motivoPerda?: string) {
   if (status === "perda") patch.motivoPerda = motivoPerda ?? card.motivoPerda ?? "";
   if (status !== "perda") patch.motivoPerda = undefined;
   updateCard(id, patch);
-  // Sync proposta status if linked
   if (card.propostaId) {
     if (status === "fechamento") updatePropostaStatus(card.propostaId, "fechado");
     if (status === "perda") updatePropostaStatus(card.propostaId, "perdido");
@@ -137,6 +191,14 @@ export function upsertCliente(input: { nome: string; telefone: string; email: st
   };
   setState({ clientes: [cliente, ...state.clientes] });
   return cliente;
+}
+
+// ----- Consultores -----
+export function addConsultor(nome: string) {
+  const n = nome.trim();
+  if (!n) return;
+  if (state.consultores.some((c) => c.toLowerCase() === n.toLowerCase())) return;
+  setState({ consultores: [...state.consultores, n] });
 }
 
 // ----- Propostas -----
