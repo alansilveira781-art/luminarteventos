@@ -8,8 +8,10 @@ export const CARD_STATUSES = [
 ] as const;
 export type CardStatus = (typeof CARD_STATUSES)[number]["key"];
 
-export const TIPOS_EVENTO = ["Casamento", "Aniversário", "Corporativo", "Formatura", "Outro"] as const;
+export const TIPOS_EVENTO = ["Cenografia", "Casamento", "Corporativo", "Stand"] as const;
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
+
+export const CONSULTORES_PADRAO = ["Pádua Costa", "Romulo Manoel"] as const;
 
 export type Cliente = {
   id: string;
@@ -24,22 +26,36 @@ export type ComercialCard = {
   clienteId: string | null;
   clienteNome: string;
   eventoNome: string;
-  eventoData: string; // YYYY-MM-DD
+  eventoDataInicio: string; // YYYY-MM-DD
+  eventoDataFim: string;    // YYYY-MM-DD
   valorEstimado: number;
   status: CardStatus;
-  responsavel: string;
+  responsavel: string; // consultor(a)
   observacoes: string;
   motivoPerda?: string;
   propostaId?: string | null;
   createdAt: string;
 };
 
-export type ItemProposta = {
+export type DescricaoItem = {
   id: string;
-  nome: string;
+  descricao: string;
   unidade: string;
   quantidade: number;
   valorUnitario: number;
+};
+
+export type ItemAmbiente = {
+  id: string;
+  nome: string;
+  descricoes: DescricaoItem[];
+};
+
+export type Ambiente = {
+  id: string;
+  nome: string;
+  imagens: string[]; // data URLs
+  itens: ItemAmbiente[];
 };
 
 export type CustoExtra = { descricao: string; valor: number };
@@ -60,14 +76,13 @@ export type Proposta = {
   cliente: { nome: string; telefone: string; email: string };
   evento: {
     tipo: TipoEvento | "";
-    data: string;
-    horarioInicio: string;
-    horarioTermino: string;
+    dataInicio: string;
+    dataFim: string;
     local: string;
     cidade: string;
     observacoes: string;
   };
-  itens: ItemProposta[];
+  ambientes: Ambiente[];
   custos: { frete: number; montagem: number; desmontagem: number; outros: CustoExtra[] };
   resumo: { margem: number; validade: string };
   responsavel: string;
@@ -84,3 +99,28 @@ export const PROPOSTA_STATUS_LABEL: Record<PropostaStatus, string> = {
   fechado: "Fechado",
   perdido: "Perdido",
 };
+
+// ----- Helpers de cálculo -----
+export function descricaoSubtotal(d: DescricaoItem) {
+  return (Number(d.quantidade) || 0) * (Number(d.valorUnitario) || 0);
+}
+export function itemSubtotal(i: ItemAmbiente) {
+  return i.descricoes.reduce((s, d) => s + descricaoSubtotal(d), 0);
+}
+export function ambienteSubtotal(a: Ambiente) {
+  return a.itens.reduce((s, i) => s + itemSubtotal(i), 0);
+}
+export function propostaSubtotalAmbientes(p: Proposta) {
+  return (p.ambientes || []).reduce((s, a) => s + ambienteSubtotal(a), 0);
+}
+export function propostaCustos(p: Proposta) {
+  return (
+    (p.custos.frete || 0) +
+    (p.custos.montagem || 0) +
+    (p.custos.desmontagem || 0) +
+    (p.custos.outros || []).reduce((s, c) => s + (c.valor || 0), 0)
+  );
+}
+export function propostaTotal(p: Proposta) {
+  return propostaSubtotalAmbientes(p) + propostaCustos(p);
+}
