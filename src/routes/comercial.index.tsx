@@ -4,7 +4,7 @@ import {
   DndContext, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable, type DragEndEvent,
 } from "@dnd-kit/core";
-import { Plus, FileText, CheckCircle2, XCircle, Pencil, Eye } from "lucide-react";
+import { Plus, FileText, CheckCircle2, XCircle, Pencil, Eye, Printer } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ import { CardDialog } from "@/components/comercial/CardDialog";
 import { PerdaDialog } from "@/components/comercial/PerdaDialog";
 import { DetalhesDrawer } from "@/components/comercial/DetalhesDrawer";
 import { PropostaWizard } from "@/components/comercial/PropostaWizard";
+import { gerarPropostaPDF } from "@/lib/comercial/pdf";
 
 export const Route = createFileRoute("/comercial/")({
   component: QuadroVendas,
