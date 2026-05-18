@@ -29,6 +29,7 @@ import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as ComercialIndexRouteImport } from './routes/comercial.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.dashboard'
+import { Route as FinanceiroContaAzulRouteImport } from './routes/financeiro.conta-azul'
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
@@ -144,6 +145,11 @@ const FinanceiroDashboardRoute = FinanceiroDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => FinanceiroRoute,
 } as any)
+const FinanceiroContaAzulRoute = FinanceiroContaAzulRouteImport.update({
+  id: '/conta-azul',
+  path: '/conta-azul',
+  getParentRoute: () => FinanceiroRoute,
+} as any)
 const EstoqueAReceberRoute = EstoqueAReceberRouteImport.update({
   id: '/estoque/a-receber',
   path: '/estoque/a-receber',
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
@@ -273,6 +280,7 @@ export interface FileRoutesByTo {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin': typeof AdminIndexRoute
   '/comercial': typeof ComercialIndexRoute
@@ -310,6 +318,7 @@ export interface FileRoutesById {
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
+  '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
@@ -348,6 +357,7 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
     | '/admin/'
     | '/comercial/'
@@ -380,6 +390,7 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
     | '/admin'
     | '/comercial'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/compras/dashboard'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
+    | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
     | '/admin/'
     | '/comercial/'
@@ -596,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceiroDashboardRouteImport
       parentRoute: typeof FinanceiroRoute
     }
+    '/financeiro/conta-azul': {
+      id: '/financeiro/conta-azul'
+      path: '/conta-azul'
+      fullPath: '/financeiro/conta-azul'
+      preLoaderRoute: typeof FinanceiroContaAzulRouteImport
+      parentRoute: typeof FinanceiroRoute
+    }
     '/estoque/a-receber': {
       id: '/estoque/a-receber'
       path: '/estoque/a-receber'
@@ -745,11 +764,13 @@ const ComprasRouteWithChildren =
   ComprasRoute._addFileChildren(ComprasRouteChildren)
 
 interface FinanceiroRouteChildren {
+  FinanceiroContaAzulRoute: typeof FinanceiroContaAzulRoute
   FinanceiroDashboardRoute: typeof FinanceiroDashboardRoute
   FinanceiroIndexRoute: typeof FinanceiroIndexRoute
 }
 
 const FinanceiroRouteChildren: FinanceiroRouteChildren = {
+  FinanceiroContaAzulRoute: FinanceiroContaAzulRoute,
   FinanceiroDashboardRoute: FinanceiroDashboardRoute,
   FinanceiroIndexRoute: FinanceiroIndexRoute,
 }
