@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Proposta } from "./types";
+import { ambienteSubtotal, propostaSubtotalAmbientes, propostaCustos, propostaTotal } from "./types";
 
 const brl = (v: number) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -14,6 +15,11 @@ const fmtDate = (d: string) => {
   } catch {
     return d;
   }
+};
+const fmtPeriodo = (ini: string, fim: string) => {
+  if (!ini && !fim) return "—";
+  if (!fim || ini === fim) return fmtDate(ini);
+  return `${fmtDate(ini)} – ${fmtDate(fim)}`;
 };
 
 export function gerarPropostaPDF(p: Proposta) {
@@ -50,9 +56,7 @@ export function gerarPropostaPDF(p: Proposta) {
   doc.setFontSize(10);
   y += 6;
   doc.text(`Tipo: ${p.evento.tipo || "—"}`, 14, y);
-  doc.text(`Data: ${fmtDate(p.evento.data)}`, 90, y);
-  y += 5;
-  doc.text(`Horário: ${p.evento.horarioInicio || "—"} - ${p.evento.horarioTermino || "—"}`, 14, y);
+  doc.text(`Período: ${fmtPeriodo(p.evento.dataInicio, p.evento.dataFim)}`, 90, y);
   y += 5;
   doc.text(`Local: ${p.evento.local || "—"}`, 14, y);
   doc.text(`Cidade: ${p.evento.cidade || "—"}`, 120, y);
@@ -62,29 +66,44 @@ export function gerarPropostaPDF(p: Proposta) {
   }
 
   y += 8;
+
+  // Tabela hierárquica
+  const rows: any[] = [];
+  (p.ambientes || []).forEach((amb) => {
+    rows.push([
+      { content: amb.nome || "Ambiente", colSpan: 4, styles: { fontStyle: "bold", fillColor: [230, 230, 240] } },
+      { content: brl(ambienteSubtotal(amb)), styles: { fontStyle: "bold", halign: "right", fillColor: [230, 230, 240] } },
+    ]);
+    amb.itens.forEach((it) => {
+      rows.push([
+        { content: `  ${it.nome || "Item"}`, colSpan: 5, styles: { fontStyle: "bold" } },
+      ]);
+      it.descricoes.forEach((d) => {
+        rows.push([
+          `    ${d.descricao || "—"}`,
+          d.unidade,
+          String(d.quantidade),
+          brl(d.valorUnitario),
+          brl(d.quantidade * d.valorUnitario),
+        ]);
+      });
+    });
+  });
+
   autoTable(doc, {
     startY: y,
-    head: [["Item", "Unid.", "Qtd", "Valor unit.", "Subtotal"]],
-    body: p.itens.map((i) => [
-      i.nome,
-      i.unidade,
-      String(i.quantidade),
-      brl(i.valorUnitario),
-      brl(i.quantidade * i.valorUnitario),
-    ]),
+    head: [["Descrição", "Unid.", "Qtd", "Valor unit.", "Subtotal"]],
+    body: rows,
     headStyles: { fillColor: [40, 40, 60] },
     styles: { fontSize: 9 },
+    columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
   });
 
   y = (doc as any).lastAutoTable.finalY + 8;
 
-  const subtotalItens = p.itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0);
-  const totalCustos =
-    (p.custos.frete || 0) +
-    (p.custos.montagem || 0) +
-    (p.custos.desmontagem || 0) +
-    (p.custos.outros || []).reduce((s, c) => s + (c.valor || 0), 0);
-  const totalFinal = subtotalItens + totalCustos;
+  const subtotalItens = propostaSubtotalAmbientes(p);
+  const totalCustos = propostaCustos(p);
+  const totalFinal = propostaTotal(p);
 
   doc.setFontSize(13);
   doc.text("Custos adicionais", 14, y);
@@ -103,7 +122,7 @@ export function gerarPropostaPDF(p: Proposta) {
   doc.line(14, y, W - 14, y);
   y += 7;
   doc.setFontSize(11);
-  doc.text(`Subtotal itens: ${brl(subtotalItens)}`, W - 14, y, { align: "right" });
+  doc.text(`Subtotal ambientes: ${brl(subtotalItens)}`, W - 14, y, { align: "right" });
   y += 6;
   doc.text(`Total custos: ${brl(totalCustos)}`, W - 14, y, { align: "right" });
   y += 7;

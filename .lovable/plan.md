@@ -1,134 +1,70 @@
-## Objetivo
+## Mudanças no módulo Comercial → Quadro de Vendas
 
-Conectar o sistema ao **Conta Azul** em modo **somente leitura** (Conta Azul → Lovable), puxando periodicamente:
+### 1. Formulário "Novo lead" (CardDialog)
+- Substituir o campo único **Data do evento** por **período** com dois campos: **Data início** e **Data fim** (ambos `type="date"`). O card no Kanban passa a mostrar "DD/MM/AAAA – DD/MM/AAAA" (ou só uma data se forem iguais).
+- Corrigir o bug dos campos numéricos (valor estimado, quantidade etc.): hoje usam `value={number}` + `Number(e.target.value)`, o que impede apagar o `0`. Vamos armazenar como string controlada no formulário e converter para número só ao salvar — assim o usuário consegue limpar e digitar normalmente.
+- Renomear **Responsável** para **Consultor(a)** e trocar o `Input` por um `Select` (combobox) com:
+  - Pádua Costa
+  - Romulo Manoel
+  - opção **"+ Adicionar consultor(a)"** que abre um pequeno prompt/dialog para cadastrar um novo nome.
+- A lista de consultores fica persistida em `localStorage` (mesma estratégia já usada em `src/lib/comercial/store.ts`).
 
-- **Plano de Contas**
-- **Centros de Custo**
-- **Contas a Pagar**
-- **Contas a Receber**
-- **Movimentação de Extrato** (transações bancárias)
+### 2. Tipos e store (`src/lib/comercial/types.ts`, `store.ts`)
+- `ComercialCard.eventoData: string` → `eventoDataInicio: string; eventoDataFim: string` (com migração simples lendo o valor antigo).
+- `TIPOS_EVENTO` passa a ser: **Cenografia, Casamento, Corporativo, Stand**.
+- Novo tipo `Consultor = { id; nome }` + funções `listConsultores / addConsultor`.
 
-Os dados ficam armazenados em tabelas locais (cache), e novos **dashboards** no módulo Financeiro consomem essas tabelas — substituindo o que hoje está no Power BI.
+### 3. Wizard de Proposta (`PropostaWizard.tsx`)
+- Quando aberto a partir de um card, pré-preencher:
+  - **Cliente**: nome, telefone e email (buscando o `Cliente` vinculado pelo `clienteId` do card, com fallback para o `clienteNome`).
+  - **Evento**: nome/local (a partir de `eventoNome`), `dataInicio` e `dataFim` do card, e tipo se já estiver definido.
+  - **Consultor(a)**: o consultor do card.
+- Na etapa **Evento**:
+  - Remover os campos **Horário de início** e **Horário de término**.
+  - Trocar **Data do evento** por **Data início / Data fim**.
+  - Tipo de evento limitado às 4 opções acima.
+- Aplicar a mesma correção dos inputs numéricos (permitir apagar o 0) em toda a etapa de Itens, Custos e Resumo.
 
-A integração usa **uma única conexão da empresa** (OAuth feito uma vez por um admin).
+### 4. Nova estrutura da etapa "Itens": Ambiente → Item → Descrição
+Substituir a tabela plana atual por uma estrutura hierárquica de 3 níveis:
 
----
+```text
+Ambiente "Recepção"
+  ├── Imagens do ambiente [upload múltiplo]
+  ├── Item "Painel LED"
+  │     ├── Descrição "Painel 3x2m P3" — qtd, valor unit.
+  │     └── Descrição "Estrutura box truss" — qtd, valor unit.
+  └── Item "Mobiliário"
+        └── Descrição "Sofá branco" — qtd, valor unit.
+Ambiente "Palco"
+  └── ...
+```
 
-## 1. Credenciais e secrets
+- Cada **Ambiente** tem: `nome`, `imagens: string[]` (data URLs / base64 em localStorage), e uma lista de **Itens**.
+- Cada **Item** tem: `nome` e uma lista de **Descrições**.
+- Cada **Descrição** tem: `descricao`, `unidade`, `quantidade`, `valorUnitario`. O subtotal é calculado por descrição e agregado por item/ambiente e na proposta.
+- UI: cards/accordions colapsáveis por ambiente, botões **+ Adicionar ambiente**, **+ Adicionar item**, **+ Adicionar descrição** e ações de remover em cada nível.
+- O catálogo existente (`CATALOGO`) vira sugestão para o campo Item (autocomplete simples), mantendo a lógica.
 
-Antes do código:
+### 5. Imagens por ambiente
+- Componente de upload em cada ambiente: aceita múltiplas imagens, converte para data URL (`FileReader.readAsDataURL`), exibe miniaturas com botão de remover.
+- Persistência junto com a proposta no `localStorage` (mesmo store atual).
+- Observação: como hoje todo o módulo Comercial é client-side em localStorage, isso evita dependência de backend. Se no futuro mover para Supabase Storage, o shape `ambiente.imagens: string[]` permanece compatível (basta trocar data URLs por URLs públicas).
 
-- Você precisa garantir, no painel do **Conta Azul Developers**, que o App tem como **Redirect URI** cadastrada:
-  - Produção: `https://luminarteventos.lovable.app/api/contaazul/oauth/callback`
-  - Preview: `https://id-preview--6426c238-9a04-43ca-bcba-50cca625fad7.lovable.app/api/contaazul/oauth/callback`
-- Vou pedir 2 secrets (via `add_secret`):
-  - `CONTA_AZUL_CLIENT_ID`
-  - `CONTA_AZUL_CLIENT_SECRET`
-
----
-
-## 2. Banco de dados (migration)
-
-Tabelas novas (todas com RLS exigindo acesso ao módulo `financeiro`; tabela de credenciais restrita a admin):
-
-- **`conta_azul_credentials`** (linha única): `access_token`, `refresh_token`, `expires_at`, `scope`, `connected_by`, `connected_at`, `updated_at`. Acesso: somente admin do módulo.
-- **`ca_plano_contas`**: `id` (uuid local), `external_id`, `codigo`, `nome`, `tipo` (receita/despesa), `pai_external_id`, `ativo`, `synced_at`.
-- **`ca_centros_custo`**: `id`, `external_id`, `nome`, `ativo`, `synced_at`.
-- **`ca_contas_pagar`**: `id`, `external_id`, `descricao`, `fornecedor_nome`, `categoria_external_id`, `centro_custo_external_id`, `valor`, `data_vencimento`, `data_pagamento`, `status` (em_aberto/pago/atrasado), `documento`, `observacoes`, `synced_at`.
-- **`ca_contas_receber`**: mesma estrutura, trocando fornecedor por `cliente_nome`.
-- **`ca_extrato`**: `id`, `external_id`, `conta_bancaria`, `data`, `descricao`, `valor`, `tipo` (credito/debito), `categoria_external_id`, `centro_custo_external_id`, `synced_at`.
-- **`ca_sync_log`**: `id`, `recurso`, `started_at`, `finished_at`, `status` (ok/erro), `mensagem`, `qtd_registros`.
-
-Índices em `external_id`, `data_vencimento`, `data`, `status`.
-
----
-
-## 3. Fluxo OAuth (server routes)
-
-Três arquivos em `src/routes/api/contaazul/`:
-
-- **`oauth.start.ts`** (`GET /api/contaazul/oauth/start`): exige usuário admin, gera `state` aleatório (salvo em cookie httpOnly), redireciona para a URL de autorização do Conta Azul com os scopes necessários (leitura financeira, contas a pagar/receber, plano de contas, centros de custo, extrato).
-- **`oauth.callback.ts`** (`GET /api/contaazul/oauth/callback`): valida `state`, troca o `code` pelos tokens, salva em `conta_azul_credentials`, redireciona para `/financeiro/conta-azul` com mensagem de sucesso.
-- **`oauth.disconnect.ts`** (`POST /api/contaazul/oauth/disconnect`): apaga a linha de credenciais.
-
----
-
-## 4. Cliente Conta Azul (helper server-only)
-
-`src/lib/conta-azul/client.server.ts`:
-
-- `getValidAccessToken()` — lê tokens do banco; se `expires_at` está perto, faz refresh chamando o token endpoint e atualiza a tabela.
-- `caFetch(path, options)` — wrapper de `fetch` para `https://api.contaazul.com/v1{path}` com o Bearer atualizado, paginação automática, retry em 401/429.
-- Funções específicas: `listPlanoContas()`, `listCentrosCusto()`, `listContasPagar(from, to)`, `listContasReceber(from, to)`, `listExtrato(from, to)`.
-
-Tudo lê `process.env.CONTA_AZUL_CLIENT_ID/SECRET` dentro do handler.
+### 6. Custos e Resumo
+- Sem mudanças funcionais (você confirmou que está bom). Apenas a correção dos campos numéricos para permitir apagar o 0.
 
 ---
 
-## 5. Server functions de sincronização
+### Arquivos que serão tocados
+- `src/lib/comercial/types.ts` — novos tipos (`Ambiente`, `ItemAmbiente`, `Descricao`, `Consultor`, período de datas, novos `TIPOS_EVENTO`).
+- `src/lib/comercial/store.ts` — consultores + migração leve do shape antigo.
+- `src/components/comercial/CardDialog.tsx` — período, consultor, fix de inputs numéricos.
+- `src/components/comercial/PropostaWizard.tsx` — pré-preenchimento, etapa Evento sem horário, nova etapa Itens hierárquica, upload de imagens por ambiente, fix de inputs numéricos.
+- `src/routes/comercial.index.tsx` — exibição do período no card.
+- `src/components/comercial/DetalhesDrawer.tsx` — ajustar para mostrar período/consultor (read-only).
+- `src/lib/comercial/pdf.ts` — atualizar geração de PDF para a nova estrutura Ambiente → Item → Descrição (mantendo o layout atual onde fizer sentido).
 
-`src/lib/conta-azul/sync.functions.ts` (todas com `requireSupabaseAuth`, exigem admin do módulo financeiro):
-
-- `getConnectionStatus()` — retorna `{ connected, connectedAt, lastSyncByResource }`.
-- `syncPlanoContas()`, `syncCentrosCusto()`, `syncContasPagar({ from, to })`, `syncContasReceber({ from, to })`, `syncExtrato({ from, to })` — fazem upsert por `external_id` nas tabelas locais e gravam em `ca_sync_log`.
-- `syncTudo({ from, to })` — orquestra todas as anteriores em sequência.
-
----
-
-## 6. UI no módulo Financeiro
-
-Nova sub-aba **"Conta Azul"** no AppSidebar (`/financeiro/conta-azul`) e nova rota `src/routes/financeiro.conta-azul.tsx`:
-
-- **Cartão de Conexão**:
-  - Se não conectado: botão **"Conectar Conta Azul"** (abre `/api/contaazul/oauth/start`).
-  - Se conectado: data da conexão, botão **"Desconectar"**, e botão **"Sincronizar agora"** (com filtro de período padrão últimos 90 dias).
-- **Tabela de logs** das últimas sincronizações (recurso, data, qtd, status).
-
-Nova sub-aba **"Dashboards Financeiros"** (`/financeiro/dashboards`) com cards/gráficos (Recharts) consumindo as tabelas `ca_*`:
-
-- KPIs: total a pagar em aberto, total a receber em aberto, saldo previsto do mês, atrasados.
-- Gráfico **fluxo de caixa** (linha): pagamentos vs recebimentos por mês.
-- **Top categorias de despesa** (barras, agrupando por `plano_contas.nome`).
-- **Despesas por centro de custo** (barras).
-- **Extrato consolidado** (tabela paginada com filtro de período).
-
-Esses dashboards substituem progressivamente o Power BI.
-
----
-
-## 7. Sincronização automática (opcional, segunda etapa)
-
-Inicialmente o sync é **manual** (botão na UI). Em uma segunda iteração podemos agendar via `pg_cron` chamando uma rota `/api/public/contaazul/cron-sync` protegida por header secreto. Fica fora deste primeiro plano para reduzir escopo.
-
----
-
-## 8. Sidebar e permissões
-
-- Em `src/components/AppSidebar.tsx`, adicionar 2 itens no grupo **Financeiro**:
-  - "Dashboards" (`/financeiro/dashboards`)
-  - "Conta Azul" (`/financeiro/conta-azul`)
-- Ambos restritos ao módulo `financeiro`. O botão **Conectar/Desconectar** só aparece para `isModuleAdmin("financeiro")`.
-
----
-
-## Detalhes técnicos
-
-- **Endpoints do Conta Azul** que vamos consumir (confirmados na doc pública `developers.contaazul.com`):
-  - `GET /v1/plan-of-accounts`
-  - `GET /v1/cost-centers`
-  - `GET /v1/financial-events?type=PAYABLE&due_date_from=...&due_date_to=...`
-  - `GET /v1/financial-events?type=RECEIVABLE&...`
-  - `GET /v1/bank-statements?from=...&to=...`
-  - OAuth: `https://api.contaazul.com/auth/authorize` + `https://api.contaazul.com/oauth2/token`
-- Os tokens do Conta Azul têm validade curta (~1h) e refresh token longo — o helper trata refresh automaticamente.
-- Toda chamada a `caFetch` é feita em server functions; o `access_token` **nunca** vai pro browser.
-- Os dashboards leem do Postgres local (rápido e disponível mesmo se o Conta Azul cair).
-
----
-
-## Próximos passos imediatos (após você aprovar este plano)
-
-1. Você confirma que **cadastrou as Redirect URIs** acima no app do Conta Azul.
-2. Eu peço os secrets `CONTA_AZUL_CLIENT_ID` e `CONTA_AZUL_CLIENT_SECRET`.
-3. Crio a migration, o cliente OAuth, os server fns, a tela de conexão e o primeiro dashboard.
-4. Você clica em **Conectar Conta Azul**, autoriza no Conta Azul, volta pro app, clica em **Sincronizar agora**, e os dashboards são populados.
+### Pontos a confirmar antes de eu implementar
+1. **Imagens em base64 (localStorage)** está ok para começar? Funciona perfeito para poucas imagens por proposta, mas pode ficar pesado se forem muitas/grandes. Alternativa é usar Supabase Storage (criamos bucket dedicado).
+2. Os cards existentes com `eventoData` único — posso assumir como `dataInicio = dataFim = valor antigo` na migração?

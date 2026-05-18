@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CARD_STATUSES, type CardStatus, type ComercialCard } from "@/lib/comercial/types";
-import { createCard, updateCard, deleteCard, upsertCliente } from "@/lib/comercial/store";
+import { createCard, updateCard, deleteCard, upsertCliente, addConsultor, useComercial } from "@/lib/comercial/store";
+import { NumberInput } from "@/components/comercial/NumberInput";
 import { toast } from "sonner";
 
 type Props = {
@@ -16,12 +17,15 @@ type Props = {
   defaultStatus?: CardStatus;
 };
 
+const NEW_CONSULTOR = "__novo__";
+
 const empty = {
   clienteNome: "",
   clienteTelefone: "",
   clienteEmail: "",
   eventoNome: "",
-  eventoData: "",
+  eventoDataInicio: "",
+  eventoDataFim: "",
   valorEstimado: 0,
   responsavel: "",
   observacoes: "",
@@ -29,7 +33,10 @@ const empty = {
 };
 
 export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
+  const { consultores } = useComercial();
   const [form, setForm] = useState(empty);
+  const [novoConsultorOpen, setNovoConsultorOpen] = useState(false);
+  const [novoConsultor, setNovoConsultor] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -39,7 +46,8 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
           clienteTelefone: "",
           clienteEmail: "",
           eventoNome: card.eventoNome,
-          eventoData: card.eventoData,
+          eventoDataInicio: card.eventoDataInicio ?? "",
+          eventoDataFim: card.eventoDataFim ?? "",
           valorEstimado: card.valorEstimado,
           responsavel: card.responsavel,
           observacoes: card.observacoes,
@@ -56,16 +64,23 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
       toast.error("Informe o nome do cliente");
       return;
     }
+    if (form.eventoDataInicio && form.eventoDataFim && form.eventoDataFim < form.eventoDataInicio) {
+      toast.error("A data final não pode ser anterior à data inicial");
+      return;
+    }
+    const payload = {
+      clienteNome: form.clienteNome,
+      eventoNome: form.eventoNome,
+      eventoDataInicio: form.eventoDataInicio,
+      eventoDataFim: form.eventoDataFim || form.eventoDataInicio,
+      valorEstimado: Number(form.valorEstimado) || 0,
+      responsavel: form.responsavel,
+      observacoes: form.observacoes,
+      status: form.status,
+    };
+
     if (card) {
-      updateCard(card.id, {
-        clienteNome: form.clienteNome,
-        eventoNome: form.eventoNome,
-        eventoData: form.eventoData,
-        valorEstimado: Number(form.valorEstimado) || 0,
-        responsavel: form.responsavel,
-        observacoes: form.observacoes,
-        status: form.status,
-      });
+      updateCard(card.id, payload);
       toast.success("Card atualizado");
     } else {
       let clienteId: string | null = null;
@@ -77,16 +92,7 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
         });
         clienteId = c.id;
       }
-      createCard({
-        clienteId,
-        clienteNome: form.clienteNome,
-        eventoNome: form.eventoNome,
-        eventoData: form.eventoData,
-        valorEstimado: Number(form.valorEstimado) || 0,
-        responsavel: form.responsavel,
-        observacoes: form.observacoes,
-        status: form.status,
-      });
+      createCard({ clienteId, ...payload });
       toast.success("Lead criado");
     }
     onOpenChange(false);
@@ -100,78 +106,137 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
     onOpenChange(false);
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{card ? "Editar card" : "Novo lead"}</DialogTitle>
-        </DialogHeader>
+  function onConsultorChange(v: string) {
+    if (v === NEW_CONSULTOR) {
+      setNovoConsultor("");
+      setNovoConsultorOpen(true);
+      return;
+    }
+    setForm({ ...form, responsavel: v });
+  }
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Label>Nome do cliente *</Label>
-            <Input value={form.clienteNome} onChange={(e) => setForm({ ...form, clienteNome: e.target.value })} />
+  function confirmarNovoConsultor() {
+    const n = novoConsultor.trim();
+    if (!n) return;
+    addConsultor(n);
+    setForm({ ...form, responsavel: n });
+    setNovoConsultorOpen(false);
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{card ? "Editar card" : "Novo lead"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label>Nome do cliente *</Label>
+              <Input value={form.clienteNome} onChange={(e) => setForm({ ...form, clienteNome: e.target.value })} />
+            </div>
+            {!card && (
+              <>
+                <div>
+                  <Label>Telefone do cliente</Label>
+                  <Input value={form.clienteTelefone} onChange={(e) => setForm({ ...form, clienteTelefone: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Email do cliente</Label>
+                  <Input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} />
+                </div>
+              </>
+            )}
+            <div className="sm:col-span-2">
+              <Label>Nome do evento</Label>
+              <Input value={form.eventoNome} onChange={(e) => setForm({ ...form, eventoNome: e.target.value })} />
+            </div>
+            <div>
+              <Label>Data início</Label>
+              <Input
+                type="date"
+                value={form.eventoDataInicio}
+                onChange={(e) => setForm({ ...form, eventoDataInicio: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Data fim</Label>
+              <Input
+                type="date"
+                value={form.eventoDataFim}
+                onChange={(e) => setForm({ ...form, eventoDataFim: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Valor estimado (R$)</Label>
+              <NumberInput
+                step="0.01"
+                value={form.valorEstimado}
+                onChange={(n) => setForm({ ...form, valorEstimado: n })}
+              />
+            </div>
+            <div>
+              <Label>Consultor(a)</Label>
+              <Select value={form.responsavel || undefined} onValueChange={onConsultorChange}>
+                <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                <SelectContent>
+                  {consultores.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                  <SelectItem value={NEW_CONSULTOR}>+ Adicionar consultor(a)…</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as CardStatus })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CARD_STATUSES.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Observações rápidas</Label>
+              <Textarea rows={3} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
+            </div>
           </div>
-          {!card && (
-            <>
-              <div>
-                <Label>Telefone do cliente</Label>
-                <Input value={form.clienteTelefone} onChange={(e) => setForm({ ...form, clienteTelefone: e.target.value })} />
-              </div>
-              <div>
-                <Label>Email do cliente</Label>
-                <Input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} />
-              </div>
-            </>
-          )}
+
+          <DialogFooter className="gap-2">
+            {card && (
+              <Button variant="destructive" onClick={handleDelete} className="mr-auto">
+                Excluir
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button onClick={save}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={novoConsultorOpen} onOpenChange={setNovoConsultorOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Novo consultor(a)</DialogTitle>
+          </DialogHeader>
           <div>
-            <Label>Nome do evento</Label>
-            <Input value={form.eventoNome} onChange={(e) => setForm({ ...form, eventoNome: e.target.value })} />
-          </div>
-          <div>
-            <Label>Data do evento</Label>
-            <Input type="date" value={form.eventoData} onChange={(e) => setForm({ ...form, eventoData: e.target.value })} />
-          </div>
-          <div>
-            <Label>Valor estimado (R$)</Label>
+            <Label>Nome</Label>
             <Input
-              type="number"
-              step="0.01"
-              value={form.valorEstimado}
-              onChange={(e) => setForm({ ...form, valorEstimado: Number(e.target.value) })}
+              value={novoConsultor}
+              onChange={(e) => setNovoConsultor(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") confirmarNovoConsultor(); }}
             />
           </div>
-          <div>
-            <Label>Responsável</Label>
-            <Input value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Status</Label>
-            <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as CardStatus })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CARD_STATUSES.map((s) => (
-                  <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Observações rápidas</Label>
-            <Textarea rows={3} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          {card && (
-            <Button variant="destructive" onClick={handleDelete} className="mr-auto">
-              Excluir
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={save}>Salvar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovoConsultorOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmarNovoConsultor} disabled={!novoConsultor.trim()}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

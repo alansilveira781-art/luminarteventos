@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useComercial, aprovarProposta, reprovarProposta } from "@/lib/comercial/store";
-import { PROPOSTA_STATUS_LABEL, type Proposta } from "@/lib/comercial/types";
+import { PROPOSTA_STATUS_LABEL, type Proposta, propostaTotal, ambienteSubtotal } from "@/lib/comercial/types";
 import { PropostaWizard } from "@/components/comercial/PropostaWizard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -23,10 +23,7 @@ const fmt = (d: string) => {
 };
 
 function totalProposta(p: Proposta) {
-  const sub = p.itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0);
-  const cust = (p.custos.frete || 0) + (p.custos.montagem || 0) + (p.custos.desmontagem || 0) +
-    (p.custos.outros || []).reduce((s, c) => s + c.valor, 0);
-  return sub + cust;
+  return propostaTotal(p);
 }
 
 function Validacoes() {
@@ -60,7 +57,7 @@ function Validacoes() {
                   #{p.numero} — {p.cliente.nome}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {p.evento.tipo || "Evento"} • {fmt(p.evento.data)} • {p.evento.local || "—"}
+                  {p.evento.tipo || "Evento"} • {fmt(p.evento.dataInicio)}{p.evento.dataFim && p.evento.dataFim !== p.evento.dataInicio ? ` – ${fmt(p.evento.dataFim)}` : ""} • {p.evento.local || "—"}
                 </div>
               </div>
               <div className="text-right">
@@ -87,20 +84,34 @@ function Validacoes() {
                 <table className="w-full text-xs">
                   <thead className="bg-muted/40">
                     <tr>
-                      <th className="text-left p-2">Item</th>
-                      <th className="text-right p-2 w-20">Qtd</th>
-                      <th className="text-right p-2 w-28">Valor unit.</th>
+                      <th className="text-left p-2">Ambiente / Item / Descrição</th>
                       <th className="text-right p-2 w-28">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {p.itens.map((it) => (
-                      <tr key={it.id} className="border-t border-border">
-                        <td className="p-2">{it.nome}</td>
-                        <td className="p-2 text-right">{it.quantidade} {it.unidade}</td>
-                        <td className="p-2 text-right">{brl(it.valorUnitario)}</td>
-                        <td className="p-2 text-right font-medium">{brl(it.quantidade * it.valorUnitario)}</td>
-                      </tr>
+                    {(p.ambientes || []).map((amb) => (
+                      <>
+                        <tr key={amb.id} className="border-t border-border bg-muted/20">
+                          <td className="p-2 font-semibold">{amb.nome || "Ambiente"}</td>
+                          <td className="p-2 text-right font-semibold">{brl(ambienteSubtotal(amb))}</td>
+                        </tr>
+                        {amb.itens.map((it) => (
+                          <>
+                            <tr key={it.id} className="border-t border-border">
+                              <td className="p-2 pl-6 font-medium">{it.nome || "Item"}</td>
+                              <td className="p-2"></td>
+                            </tr>
+                            {it.descricoes.map((d) => (
+                              <tr key={d.id} className="border-t border-border">
+                                <td className="p-2 pl-10 text-muted-foreground">
+                                  {d.descricao || "—"} <span className="text-[10px]">({d.quantidade} {d.unidade} × {brl(d.valorUnitario)})</span>
+                                </td>
+                                <td className="p-2 text-right">{brl(d.quantidade * d.valorUnitario)}</td>
+                              </tr>
+                            ))}
+                          </>
+                        ))}
+                      </>
                     ))}
                   </tbody>
                 </table>

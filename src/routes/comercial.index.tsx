@@ -26,6 +26,11 @@ const fmt = (d: string) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
+const fmtPeriodo = (ini: string, fim: string) => {
+  if (!ini && !fim) return "";
+  if (!fim || ini === fim) return fmt(ini);
+  return `${fmt(ini)} – ${fmt(fim)}`;
+};
 
 function QuadroVendas() {
   const { cards } = useComercial();
@@ -114,7 +119,15 @@ function QuadroVendas() {
         cardId={wizardCardId}
         defaults={(() => {
           const c = cards.find((x) => x.id === wizardCardId);
-          return c ? { clienteNome: c.clienteNome, eventoNome: c.eventoNome, eventoData: c.eventoData } : undefined;
+          if (!c) return undefined;
+          const cli = c.clienteId ? null : null;
+          return {
+            clienteNome: c.clienteNome,
+            eventoNome: c.eventoNome,
+            eventoDataInicio: c.eventoDataInicio,
+            eventoDataFim: c.eventoDataFim,
+            responsavel: c.responsavel,
+          };
         })()}
       />
     </>
@@ -169,8 +182,8 @@ function KanbanCard({
           <div className="font-medium text-sm truncate text-foreground">{card.clienteNome}</div>
           {card.eventoNome && <div className="text-[11px] text-muted-foreground truncate">{card.eventoNome}</div>}
           <div className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
-            {card.eventoData && <div>Data: {fmt(card.eventoData)}</div>}
-            {card.responsavel && <div>Resp.: {card.responsavel}</div>}
+            {(card.eventoDataInicio || card.eventoDataFim) && <div>Data: {fmtPeriodo(card.eventoDataInicio, card.eventoDataFim)}</div>}
+            {card.responsavel && <div>Consultor(a): {card.responsavel}</div>}
             {card.valorEstimado > 0 && (
               <div className="font-medium text-foreground">{brl(card.valorEstimado)}</div>
             )}

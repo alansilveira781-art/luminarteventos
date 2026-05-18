@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileDown, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useComercial, updatePropostaStatus, updateCard } from "@/lib/comercial/store";
-import { PROPOSTA_STATUS_LABEL, type Proposta, type PropostaStatus } from "@/lib/comercial/types";
+import { PROPOSTA_STATUS_LABEL, type Proposta, type PropostaStatus, propostaTotal } from "@/lib/comercial/types";
 import { gerarPropostaPDF } from "@/lib/comercial/pdf";
 
 export const Route = createFileRoute("/comercial/propostas")({
@@ -22,9 +22,7 @@ const fmt = (d: string) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
 function total(p: Proposta) {
-  return p.itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0) +
-    (p.custos.frete || 0) + (p.custos.montagem || 0) + (p.custos.desmontagem || 0) +
-    (p.custos.outros || []).reduce((s, c) => s + c.valor, 0);
+  return propostaTotal(p);
 }
 
 const STATUS_OPTS: PropostaStatus[] = ["enviado", "em_negociacao", "fechado", "perdido"];
@@ -79,7 +77,7 @@ function Propostas() {
                 <td className="p-3 font-mono text-xs text-muted-foreground">#{p.numero}</td>
                 <td className="p-3">{p.cliente.nome}</td>
                 <td className="p-3">{p.evento.tipo || "—"}</td>
-                <td className="p-3">{fmt(p.evento.data)}</td>
+                <td className="p-3">{fmt(p.evento.dataInicio)}</td>
                 <td className="p-3 text-right font-medium">{brl(total(p))}</td>
                 <td className="p-3">
                   <Select value={p.status} onValueChange={(v) => changeStatus(p, v as PropostaStatus)}>
