@@ -39,6 +39,7 @@ import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminModulosRouteImport } from './routes/admin.modulos'
 import { Route as AdminDadosRouteImport } from './routes/admin.dados'
 import { Route as ApiPublicSolicitarRouteImport } from './routes/api/public/solicitar'
+import { Route as ApiContaazulStatusRouteImport } from './routes/api/contaazul/status'
 import { Route as ApiContaazulOauthPrepareRouteImport } from './routes/api/contaazul/oauth.prepare'
 import { Route as ApiContaazulOauthCallbackRouteImport } from './routes/api/contaazul/oauth.callback'
 
@@ -192,6 +193,11 @@ const ApiPublicSolicitarRoute = ApiPublicSolicitarRouteImport.update({
   path: '/api/public/solicitar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiContaazulStatusRoute = ApiContaazulStatusRouteImport.update({
+  id: '/api/contaazul/status',
+  path: '/api/contaazul/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiContaazulOauthPrepareRoute =
   ApiContaazulOauthPrepareRouteImport.update({
     id: '/api/contaazul/oauth/prepare',
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
+  '/api/contaazul/status': typeof ApiContaazulStatusRoute
   '/api/public/solicitar': typeof ApiPublicSolicitarRoute
   '/api/contaazul/oauth/callback': typeof ApiContaazulOauthCallbackRoute
   '/api/contaazul/oauth/prepare': typeof ApiContaazulOauthPrepareRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/compras': typeof ComprasIndexRoute
   '/estoque': typeof EstoqueIndexRoute
   '/financeiro': typeof FinanceiroIndexRoute
+  '/api/contaazul/status': typeof ApiContaazulStatusRoute
   '/api/public/solicitar': typeof ApiPublicSolicitarRoute
   '/api/contaazul/oauth/callback': typeof ApiContaazulOauthCallbackRoute
   '/api/contaazul/oauth/prepare': typeof ApiContaazulOauthPrepareRoute
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/compras/': typeof ComprasIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
+  '/api/contaazul/status': typeof ApiContaazulStatusRoute
   '/api/public/solicitar': typeof ApiPublicSolicitarRoute
   '/api/contaazul/oauth/callback': typeof ApiContaazulOauthCallbackRoute
   '/api/contaazul/oauth/prepare': typeof ApiContaazulOauthPrepareRoute
@@ -336,6 +345,7 @@ export interface FileRouteTypes {
     | '/compras/'
     | '/estoque/'
     | '/financeiro/'
+    | '/api/contaazul/status'
     | '/api/public/solicitar'
     | '/api/contaazul/oauth/callback'
     | '/api/contaazul/oauth/prepare'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/compras'
     | '/estoque'
     | '/financeiro'
+    | '/api/contaazul/status'
     | '/api/public/solicitar'
     | '/api/contaazul/oauth/callback'
     | '/api/contaazul/oauth/prepare'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/compras/'
     | '/estoque/'
     | '/financeiro/'
+    | '/api/contaazul/status'
     | '/api/public/solicitar'
     | '/api/contaazul/oauth/callback'
     | '/api/contaazul/oauth/prepare'
@@ -423,6 +435,7 @@ export interface RootRouteChildren {
   EstoqueItemIdRoute: typeof EstoqueItemIdRoute
   EstoqueAReceberRoute: typeof EstoqueAReceberRoute
   EstoqueIndexRoute: typeof EstoqueIndexRoute
+  ApiContaazulStatusRoute: typeof ApiContaazulStatusRoute
   ApiPublicSolicitarRoute: typeof ApiPublicSolicitarRoute
   ApiContaazulOauthCallbackRoute: typeof ApiContaazulOauthCallbackRoute
   ApiContaazulOauthPrepareRoute: typeof ApiContaazulOauthPrepareRoute
@@ -640,6 +653,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSolicitarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/contaazul/status': {
+      id: '/api/contaazul/status'
+      path: '/api/contaazul/status'
+      fullPath: '/api/contaazul/status'
+      preLoaderRoute: typeof ApiContaazulStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/contaazul/oauth/prepare': {
       id: '/api/contaazul/oauth/prepare'
       path: '/api/contaazul/oauth/prepare'
@@ -736,6 +756,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueItemIdRoute: EstoqueItemIdRoute,
   EstoqueAReceberRoute: EstoqueAReceberRoute,
   EstoqueIndexRoute: EstoqueIndexRoute,
+  ApiContaazulStatusRoute: ApiContaazulStatusRoute,
   ApiPublicSolicitarRoute: ApiPublicSolicitarRoute,
   ApiContaazulOauthCallbackRoute: ApiContaazulOauthCallbackRoute,
   ApiContaazulOauthPrepareRoute: ApiContaazulOauthPrepareRoute,
