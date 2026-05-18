@@ -182,8 +182,8 @@ function KanbanCard({
           <div className="font-medium text-sm truncate text-foreground">{card.clienteNome}</div>
           {card.eventoNome && <div className="text-[11px] text-muted-foreground truncate">{card.eventoNome}</div>}
           <div className="mt-1.5 space-y-0.5 text-[11px] text-muted-foreground">
-            {card.eventoData && <div>Data: {fmt(card.eventoData)}</div>}
-            {card.responsavel && <div>Resp.: {card.responsavel}</div>}
+            {(card.eventoDataInicio || card.eventoDataFim) && <div>Data: {fmtPeriodo(card.eventoDataInicio, card.eventoDataFim)}</div>}
+            {card.responsavel && <div>Consultor(a): {card.responsavel}</div>}
             {card.valorEstimado > 0 && (
               <div className="font-medium text-foreground">{brl(card.valorEstimado)}</div>
             )}
