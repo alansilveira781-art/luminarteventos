@@ -590,6 +590,7 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
       ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
       : new Date().toISOString().slice(0, 16),
     saida_tipo: prefill?.saida_tipo ?? "evento",
+    empresa: prefill?.empresa ?? "",
     solicitante_id: prefill?.solicitante_id ?? "",
     evento_projeto: prefill?.evento_projeto ?? "",
     finalidade: prefill?.finalidade ?? "",
