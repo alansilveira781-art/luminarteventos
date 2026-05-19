@@ -688,6 +688,15 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
             <SelectContent>{Object.entries(saidaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
           </Select>
         </FormField>
+        <FormField label="Empresa*">
+          <Select value={meta.empresa} onValueChange={(v) => setM("empresa", v)}>
+            <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+            <SelectContent>
+              {EMPRESAS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </FormField>
+
 
         {isEvento && (
           <FormField label="Evento / Projeto*" wide>
