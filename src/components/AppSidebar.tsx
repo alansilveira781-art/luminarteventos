@@ -64,15 +64,24 @@ const allItems: NavItem[] = [
   { title: "Validações", url: "/comercial/validacoes", icon: ClipboardCheck, group: "Comercial", module: "comercial" },
   { title: "Clientes", url: "/comercial/clientes", icon: Users2, group: "Comercial", module: "comercial" },
   { title: "Catálogo", url: "/comercial/catalogo", icon: BookOpen, group: "Comercial", module: "comercial" },
+  { title: "Dashboard", url: "/contabil", icon: BarChart3, group: "Contábil", module: "contabil" },
+  { title: "Notas fiscais", url: "/contabil/notas", icon: FileText, group: "Contábil", module: "contabil" },
+  { title: "Consulta de impostos", url: "/contabil/consultas", icon: Search, group: "Contábil", module: "contabil" },
+  { title: "Configuração", url: "/contabil/configuracao", icon: Settings, group: "Contábil", module: "contabil" },
+  { title: "Contratos", url: "/juridico", icon: Scale, group: "Jurídico", module: "juridico" },
+  { title: "Recrutamento", url: "/rh", icon: UserPlus, group: "Recursos Humanos", module: "rh" },
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Administração"];
+const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Recursos Humanos", "Administração"];
 
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 const COMPRAS_ROUTES = ["/compras"];
 const FINANCEIRO_ROUTES = ["/financeiro"];
 const COMERCIAL_ROUTES = ["/comercial"];
+const CONTABIL_ROUTES = ["/contabil"];
+const JURIDICO_ROUTES = ["/juridico"];
+const RH_ROUTES = ["/rh"];
 
 function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   if (url === "/") return pathname === "/";
