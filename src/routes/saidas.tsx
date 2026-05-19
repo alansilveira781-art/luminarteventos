@@ -249,6 +249,7 @@ function SaidasPage() {
       if (!itemHay.includes(normalize(filterItemQ))) return false;
     }
     if (filterEvento !== "__all" && (m.evento_projeto ?? "") !== filterEvento) return false;
+    if (filterEmpresa !== "__all" && (m.empresa ?? "") !== filterEmpresa) return false;
     if (!sBusca) return true;
     const hay = normalize([
       m.item?.nome, m.item?.codigo, m.evento_projeto, m.solicitante?.nome,
