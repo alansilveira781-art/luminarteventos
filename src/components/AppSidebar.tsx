@@ -29,6 +29,11 @@ import {
   FileText,
   Link2,
   BookOpen,
+  Calculator,
+  Settings,
+  Search,
+  Scale,
+  UserPlus,
 } from "lucide-react";
 import logo from "@/assets/luminart-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,15 +64,24 @@ const allItems: NavItem[] = [
   { title: "Validações", url: "/comercial/validacoes", icon: ClipboardCheck, group: "Comercial", module: "comercial" },
   { title: "Clientes", url: "/comercial/clientes", icon: Users2, group: "Comercial", module: "comercial" },
   { title: "Catálogo", url: "/comercial/catalogo", icon: BookOpen, group: "Comercial", module: "comercial" },
+  { title: "Dashboard", url: "/contabil", icon: BarChart3, group: "Contábil", module: "contabil" },
+  { title: "Notas fiscais", url: "/contabil/notas", icon: FileText, group: "Contábil", module: "contabil" },
+  { title: "Consulta de impostos", url: "/contabil/consultas", icon: Search, group: "Contábil", module: "contabil" },
+  { title: "Configuração", url: "/contabil/configuracao", icon: Settings, group: "Contábil", module: "contabil" },
+  { title: "Contratos", url: "/juridico", icon: Scale, group: "Jurídico", module: "juridico" },
+  { title: "Recrutamento", url: "/rh", icon: UserPlus, group: "Recursos Humanos", module: "rh" },
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Administração"];
+const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Recursos Humanos", "Administração"];
 
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 const COMPRAS_ROUTES = ["/compras"];
 const FINANCEIRO_ROUTES = ["/financeiro"];
 const COMERCIAL_ROUTES = ["/comercial"];
+const CONTABIL_ROUTES = ["/contabil"];
+const JURIDICO_ROUTES = ["/juridico"];
+const RH_ROUTES = ["/rh"];
 
 function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   if (url === "/") return pathname === "/";
@@ -80,8 +94,11 @@ function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   return pathname.startsWith(url + "/");
 }
 
-function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "admin" {
+function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "contabil" | "juridico" | "rh" | "admin" {
   if (pathname.startsWith("/admin")) return "admin";
+  if (RH_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "rh";
+  if (JURIDICO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "juridico";
+  if (CONTABIL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "contabil";
   if (COMERCIAL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "comercial";
   if (FINANCEIRO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "financeiro";
   if (COMPRAS_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "compras";
@@ -99,6 +116,9 @@ function useNavItems(pathname: string) {
     if (i.module === "compras") return ctx === "compras" && (isAdmin || hasModule("compras"));
     if (i.module === "financeiro") return ctx === "financeiro" && (isAdmin || hasModule("financeiro"));
     if (i.module === "comercial") return ctx === "comercial" && (isAdmin || hasModule("comercial"));
+    if (i.module === "contabil") return ctx === "contabil" && (isAdmin || hasModule("contabil"));
+    if (i.module === "juridico") return ctx === "juridico" && (isAdmin || hasModule("juridico"));
+    if (i.module === "rh") return ctx === "rh" && (isAdmin || hasModule("rh"));
     return true;
   });
 }
