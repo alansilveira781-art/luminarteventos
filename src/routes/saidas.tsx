@@ -444,6 +444,7 @@ function SaidasPage() {
                         {g.numero != null ? `REQ-${String(g.numero).padStart(4, "0")}` : "—"}
                       </td>
                       <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(g.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{g.empresa ?? "—"}</td>
                       <td className="px-4 py-3 text-foreground">{g.evento_projeto ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{g.solicitante?.nome ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{g.saida_tipo ? saidaTipoLabels[g.saida_tipo] : "—"}</td>
