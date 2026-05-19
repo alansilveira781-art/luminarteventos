@@ -94,8 +94,11 @@ function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   return pathname.startsWith(url + "/");
 }
 
-function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "admin" {
+function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "contabil" | "juridico" | "rh" | "admin" {
   if (pathname.startsWith("/admin")) return "admin";
+  if (RH_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "rh";
+  if (JURIDICO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "juridico";
+  if (CONTABIL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "contabil";
   if (COMERCIAL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "comercial";
   if (FINANCEIRO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "financeiro";
   if (COMPRAS_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "compras";
@@ -113,6 +116,9 @@ function useNavItems(pathname: string) {
     if (i.module === "compras") return ctx === "compras" && (isAdmin || hasModule("compras"));
     if (i.module === "financeiro") return ctx === "financeiro" && (isAdmin || hasModule("financeiro"));
     if (i.module === "comercial") return ctx === "comercial" && (isAdmin || hasModule("comercial"));
+    if (i.module === "contabil") return ctx === "contabil" && (isAdmin || hasModule("contabil"));
+    if (i.module === "juridico") return ctx === "juridico" && (isAdmin || hasModule("juridico"));
+    if (i.module === "rh") return ctx === "rh" && (isAdmin || hasModule("rh"));
     return true;
   });
 }
