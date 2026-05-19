@@ -411,6 +411,7 @@ function SaidasPage() {
                 <th className="px-3 py-3 w-8"></th>
                 <SortableTh sort={sort} onToggle={toggleSort} k="numero" label="REQ" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="data_movimento" label="Data" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="empresa" label="Empresa" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="evento_projeto" label="Evento/Projeto" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="solicitante" label="Solicitante" />
                 <SortableTh sort={sort} onToggle={toggleSort} k="saida_tipo" label="Tipo" />
@@ -424,7 +425,7 @@ function SaidasPage() {
             <tbody>
               {grupos.length ? grupos.map((g: any) => {
                 const isOpen = !!expandido[g.id];
-                const colCount = (isAdmin ? 1 : 0) + 1 + 9 + (isAdmin ? 1 : 0);
+                const colCount = (isAdmin ? 1 : 0) + 1 + 10 + (isAdmin ? 1 : 0);
                 return (
                   <>
                     <tr key={g.id} className="border-t border-border hover:bg-muted/30">
