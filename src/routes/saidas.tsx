@@ -45,6 +45,7 @@ function SaidasPage() {
   const [q, setQ] = useState("");
   const [filterItemQ, setFilterItemQ] = useState<string>("");
   const [filterEvento, setFilterEvento] = useState<string>("__all");
+  const [filterEmpresa, setFilterEmpresa] = useState<string>("__all");
   const { sort, toggleSort, applySort } = useSort();
 
   const editMut = useMutation({
