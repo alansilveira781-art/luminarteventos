@@ -377,8 +377,15 @@ function SaidasPage() {
               ))}
             </SelectContent>
           </Select>
-          {(filterItemQ || filterEvento !== "__all" || q) && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemQ(""); setFilterEvento("__all"); setQ(""); }}>
+          <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar por empresa" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todas empresas</SelectItem>
+              {EMPRESAS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(filterItemQ || filterEvento !== "__all" || filterEmpresa !== "__all" || q) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setFilterItemQ(""); setFilterEvento("__all"); setFilterEmpresa("__all"); setQ(""); }}>
               <X className="h-3 w-3 mr-1" /> Limpar
             </Button>
           )}
