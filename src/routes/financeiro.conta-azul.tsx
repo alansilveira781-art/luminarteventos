@@ -244,6 +244,11 @@ function ContaAzulPage() {
               {busy === "sync" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
               Sincronizar agora
             </Button>
+            {busy === "sync" && progress.current && (
+              <p className="text-xs text-muted-foreground">
+                Sincronizando {RECURSOS.find((r) => r.key === progress.current)?.label} ({progress.done + 1}/{RECURSOS.length})…
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Puxa Plano de Contas, Centros de Custo, Contas a Pagar, Contas a Receber e Extrato no período selecionado.
             </p>
