@@ -277,6 +277,7 @@ function SaidasPage() {
           evento_projeto: m.evento_projeto,
           saida_tipo: m.saida_tipo,
           saida_status: m.saida_status,
+          empresa: m.empresa,
           data_prevista_devolucao: m.data_prevista_devolucao,
           observacoes: m.observacoes,
           finalidade: m.finalidade,
