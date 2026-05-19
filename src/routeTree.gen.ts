@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SolicitarRouteImport } from './routes/solicitar'
 import { Route as SolicitantesRouteImport } from './routes/solicitantes'
 import { Route as SaidasRouteImport } from './routes/saidas'
+import { Route as RhRouteImport } from './routes/rh'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as JuridicoRouteImport } from './routes/juridico'
 import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EntradasRouteImport } from './routes/entradas'
@@ -67,9 +69,19 @@ const SaidasRoute = SaidasRouteImport.update({
   path: '/saidas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RhRoute = RhRouteImport.update({
+  id: '/rh',
+  path: '/rh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JuridicoRoute = JuridicoRouteImport.update({
+  id: '/juridico',
+  path: '/juridico',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FornecedoresRoute = FornecedoresRouteImport.update({
@@ -277,7 +289,9 @@ export interface FileRoutesByFullPath {
   '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
+  '/juridico': typeof JuridicoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/rh': typeof RhRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
   '/solicitar': typeof SolicitarRoute
@@ -316,7 +330,9 @@ export interface FileRoutesByTo {
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/fornecedores': typeof FornecedoresRoute
+  '/juridico': typeof JuridicoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/rh': typeof RhRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
   '/solicitar': typeof SolicitarRoute
@@ -361,7 +377,9 @@ export interface FileRoutesById {
   '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
+  '/juridico': typeof JuridicoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/rh': typeof RhRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
   '/solicitar': typeof SolicitarRoute
@@ -407,7 +425,9 @@ export interface FileRouteTypes {
     | '/entradas'
     | '/financeiro'
     | '/fornecedores'
+    | '/juridico'
     | '/relatorios'
+    | '/rh'
     | '/saidas'
     | '/solicitantes'
     | '/solicitar'
@@ -446,7 +466,9 @@ export interface FileRouteTypes {
     | '/devolucoes'
     | '/entradas'
     | '/fornecedores'
+    | '/juridico'
     | '/relatorios'
+    | '/rh'
     | '/saidas'
     | '/solicitantes'
     | '/solicitar'
@@ -490,7 +512,9 @@ export interface FileRouteTypes {
     | '/entradas'
     | '/financeiro'
     | '/fornecedores'
+    | '/juridico'
     | '/relatorios'
+    | '/rh'
     | '/saidas'
     | '/solicitantes'
     | '/solicitar'
@@ -535,7 +559,9 @@ export interface RootRouteChildren {
   EntradasRoute: typeof EntradasRoute
   FinanceiroRoute: typeof FinanceiroRouteWithChildren
   FornecedoresRoute: typeof FornecedoresRoute
+  JuridicoRoute: typeof JuridicoRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  RhRoute: typeof RhRoute
   SaidasRoute: typeof SaidasRoute
   SolicitantesRoute: typeof SolicitantesRoute
   SolicitarRoute: typeof SolicitarRoute
@@ -572,11 +598,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SaidasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rh': {
+      id: '/rh'
+      path: '/rh'
+      fullPath: '/rh'
+      preLoaderRoute: typeof RhRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/juridico': {
+      id: '/juridico'
+      path: '/juridico'
+      fullPath: '/juridico'
+      preLoaderRoute: typeof JuridicoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fornecedores': {
@@ -945,7 +985,9 @@ const rootRouteChildren: RootRouteChildren = {
   EntradasRoute: EntradasRoute,
   FinanceiroRoute: FinanceiroRouteWithChildren,
   FornecedoresRoute: FornecedoresRoute,
+  JuridicoRoute: JuridicoRoute,
   RelatoriosRoute: RelatoriosRoute,
+  RhRoute: RhRoute,
   SaidasRoute: SaidasRoute,
   SolicitantesRoute: SolicitantesRoute,
   SolicitarRoute: SolicitarRoute,
