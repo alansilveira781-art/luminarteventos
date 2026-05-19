@@ -30,6 +30,9 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { NotasSefaz } from "@/components/estoque/NotasSefaz";
+import { EMPRESAS } from "@/lib/empresas";
 
 export const Route = createFileRoute("/entradas")({
   component: EntradasPage,
@@ -329,6 +332,14 @@ function EntradasPage() {
         }
       />
 
+      <Tabs defaultValue="entradas" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="entradas">Entradas</TabsTrigger>
+          <TabsTrigger value="sefaz">Notas emitidas (SEFAZ)</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="entradas" className="space-y-4 mt-0">
+
       <Card className="p-4 mb-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[260px] max-w-md">
@@ -589,6 +600,7 @@ function EntradasPage() {
             const { error } = await supabase.from("movimentacoes").insert({
               tipo: "entrada", entrada_tipo: "compra", item_id, fornecedor_id,
               quantidade: qtd, valor_unitario: r.valor_unitario ? Number(r.valor_unitario) : null,
+              empresa: r.empresa ? String(r.empresa).trim() : null,
               nota_fiscal: r.nota_fiscal || null, data_movimento,
               responsavel_lancamento: r.responsavel_lancamento || null, observacoes: r.observacoes || null,
             });
@@ -606,6 +618,13 @@ function EntradasPage() {
         qc.invalidateQueries({ queryKey: ["itens"] });
         qc.invalidateQueries({ queryKey: ["fornecedores"] });
       }} />
+
+        </TabsContent>
+
+        <TabsContent value="sefaz" className="mt-0">
+          <NotasSefaz />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }
@@ -726,6 +745,7 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
       ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
       : new Date().toISOString().slice(0, 16),
     entrada_tipo: prefill?.entrada_tipo ?? "compra",
+    empresa: prefill?.empresa ?? "",
     fornecedor_id: prefill?.fornecedor_id ?? "",
     nota_fiscal: prefill?.nota_fiscal ?? "",
     observacoes: prefill?.observacoes ?? "",
@@ -815,6 +835,7 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
           data_movimento: new Date(meta.data_movimento).toISOString(),
           entrada_tipo: meta.entrada_tipo,
           fornecedor_id: meta.fornecedor_id || null,
+          empresa: meta.empresa || null,
           nota_fiscal: meta.nota_fiscal || null,
           observacoes: meta.observacoes || null,
         },
@@ -847,6 +868,14 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
           <Select value={meta.entrada_tipo} onValueChange={(v) => setM("entrada_tipo", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(entradaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Empresa*">
+          <Select value={meta.empresa} onValueChange={(v) => setM("empresa", v)}>
+            <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+            <SelectContent>
+              {EMPRESAS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
           </Select>
         </FormField>
         <FormField label="Fornecedor">

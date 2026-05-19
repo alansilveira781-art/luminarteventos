@@ -28,6 +28,7 @@ import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
 import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as ComercialIndexRouteImport } from './routes/comercial.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as FinanceiroRotinasRouteImport } from './routes/financeiro.rotinas'
 import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.dashboard'
 import { Route as FinanceiroContaAzulRouteImport } from './routes/financeiro.conta-azul'
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
@@ -140,6 +141,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const FinanceiroRotinasRoute = FinanceiroRotinasRouteImport.update({
+  id: '/rotinas',
+  path: '/rotinas',
+  getParentRoute: () => FinanceiroRoute,
 } as any)
 const FinanceiroDashboardRoute = FinanceiroDashboardRouteImport.update({
   id: '/dashboard',
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
+  '/financeiro/rotinas': typeof FinanceiroRotinasRoute
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
+  '/financeiro/rotinas': typeof FinanceiroRotinasRoute
   '/admin': typeof AdminIndexRoute
   '/comercial': typeof ComercialIndexRoute
   '/compras': typeof ComprasIndexRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
   '/financeiro/dashboard': typeof FinanceiroDashboardRoute
+  '/financeiro/rotinas': typeof FinanceiroRotinasRoute
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
@@ -369,6 +378,7 @@ export interface FileRouteTypes {
     | '/estoque/a-receber'
     | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
+    | '/financeiro/rotinas'
     | '/admin/'
     | '/comercial/'
     | '/compras/'
@@ -403,6 +413,7 @@ export interface FileRouteTypes {
     | '/estoque/a-receber'
     | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
+    | '/financeiro/rotinas'
     | '/admin'
     | '/comercial'
     | '/compras'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/estoque/a-receber'
     | '/financeiro/conta-azul'
     | '/financeiro/dashboard'
+    | '/financeiro/rotinas'
     | '/admin/'
     | '/comercial/'
     | '/compras/'
@@ -612,6 +624,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/financeiro/rotinas': {
+      id: '/financeiro/rotinas'
+      path: '/rotinas'
+      fullPath: '/financeiro/rotinas'
+      preLoaderRoute: typeof FinanceiroRotinasRouteImport
+      parentRoute: typeof FinanceiroRoute
     }
     '/financeiro/dashboard': {
       id: '/financeiro/dashboard'
@@ -787,12 +806,14 @@ const ComprasRouteWithChildren =
 interface FinanceiroRouteChildren {
   FinanceiroContaAzulRoute: typeof FinanceiroContaAzulRoute
   FinanceiroDashboardRoute: typeof FinanceiroDashboardRoute
+  FinanceiroRotinasRoute: typeof FinanceiroRotinasRoute
   FinanceiroIndexRoute: typeof FinanceiroIndexRoute
 }
 
 const FinanceiroRouteChildren: FinanceiroRouteChildren = {
   FinanceiroContaAzulRoute: FinanceiroContaAzulRoute,
   FinanceiroDashboardRoute: FinanceiroDashboardRoute,
+  FinanceiroRotinasRoute: FinanceiroRotinasRoute,
   FinanceiroIndexRoute: FinanceiroIndexRoute,
 }
 
