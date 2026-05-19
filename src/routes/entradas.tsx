@@ -834,6 +834,7 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
           data_movimento: new Date(meta.data_movimento).toISOString(),
           entrada_tipo: meta.entrada_tipo,
           fornecedor_id: meta.fornecedor_id || null,
+          empresa: meta.empresa || null,
           nota_fiscal: meta.nota_fiscal || null,
           observacoes: meta.observacoes || null,
         },
@@ -866,6 +867,14 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
           <Select value={meta.entrada_tipo} onValueChange={(v) => setM("entrada_tipo", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(entradaTipoLabels).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Empresa*">
+          <Select value={meta.empresa} onValueChange={(v) => setM("empresa", v)}>
+            <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+            <SelectContent>
+              {EMPRESAS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
           </Select>
         </FormField>
         <FormField label="Fornecedor">
