@@ -744,6 +744,7 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
       ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
       : new Date().toISOString().slice(0, 16),
     entrada_tipo: prefill?.entrada_tipo ?? "compra",
+    empresa: prefill?.empresa ?? "",
     fornecedor_id: prefill?.fornecedor_id ?? "",
     nota_fiscal: prefill?.nota_fiscal ?? "",
     observacoes: prefill?.observacoes ?? "",
