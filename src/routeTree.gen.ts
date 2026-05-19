@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SolicitarRouteImport } from './routes/solicitar'
 import { Route as SolicitantesRouteImport } from './routes/solicitantes'
 import { Route as SaidasRouteImport } from './routes/saidas'
+import { Route as RhRouteImport } from './routes/rh'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as JuridicoRouteImport } from './routes/juridico'
 import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as DevolucoesRouteImport } from './routes/devolucoes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ContabilRouteImport } from './routes/contabil'
 import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as ComercialRouteImport } from './routes/comercial'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -25,6 +28,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FinanceiroIndexRouteImport } from './routes/financeiro.index'
 import { Route as EstoqueIndexRouteImport } from './routes/estoque.index'
+import { Route as ContabilIndexRouteImport } from './routes/contabil.index'
 import { Route as ComprasIndexRouteImport } from './routes/compras.index'
 import { Route as ComercialIndexRouteImport } from './routes/comercial.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -33,6 +37,9 @@ import { Route as FinanceiroDashboardRouteImport } from './routes/financeiro.das
 import { Route as FinanceiroContaAzulRouteImport } from './routes/financeiro.conta-azul'
 import { Route as EstoqueAReceberRouteImport } from './routes/estoque.a-receber'
 import { Route as EstoqueItemIdRouteImport } from './routes/estoque.$itemId'
+import { Route as ContabilNotasRouteImport } from './routes/contabil.notas'
+import { Route as ContabilConsultasRouteImport } from './routes/contabil.consultas'
+import { Route as ContabilConfiguracaoRouteImport } from './routes/contabil.configuracao'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
 import { Route as ComercialValidacoesRouteImport } from './routes/comercial.validacoes'
 import { Route as ComercialPropostasRouteImport } from './routes/comercial.propostas'
@@ -62,9 +69,19 @@ const SaidasRoute = SaidasRouteImport.update({
   path: '/saidas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RhRoute = RhRouteImport.update({
+  id: '/rh',
+  path: '/rh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JuridicoRoute = JuridicoRouteImport.update({
+  id: '/juridico',
+  path: '/juridico',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FornecedoresRoute = FornecedoresRouteImport.update({
@@ -90,6 +107,11 @@ const DevolucoesRoute = DevolucoesRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContabilRoute = ContabilRouteImport.update({
+  id: '/contabil',
+  path: '/contabil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ComprasRoute = ComprasRouteImport.update({
@@ -126,6 +148,11 @@ const EstoqueIndexRoute = EstoqueIndexRouteImport.update({
   id: '/estoque/',
   path: '/estoque/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ContabilIndexRoute = ContabilIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ContabilRoute,
 } as any)
 const ComprasIndexRoute = ComprasIndexRouteImport.update({
   id: '/',
@@ -166,6 +193,21 @@ const EstoqueItemIdRoute = EstoqueItemIdRouteImport.update({
   id: '/estoque/$itemId',
   path: '/estoque/$itemId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ContabilNotasRoute = ContabilNotasRouteImport.update({
+  id: '/notas',
+  path: '/notas',
+  getParentRoute: () => ContabilRoute,
+} as any)
+const ContabilConsultasRoute = ContabilConsultasRouteImport.update({
+  id: '/consultas',
+  path: '/consultas',
+  getParentRoute: () => ContabilRoute,
+} as any)
+const ContabilConfiguracaoRoute = ContabilConfiguracaoRouteImport.update({
+  id: '/configuracao',
+  path: '/configuracao',
+  getParentRoute: () => ContabilRoute,
 } as any)
 const ComprasDashboardRoute = ComprasDashboardRouteImport.update({
   id: '/dashboard',
@@ -241,12 +283,15 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/comercial': typeof ComercialRouteWithChildren
   '/compras': typeof ComprasRouteWithChildren
+  '/contabil': typeof ContabilRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
+  '/juridico': typeof JuridicoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/rh': typeof RhRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
   '/solicitar': typeof SolicitarRoute
@@ -258,6 +303,9 @@ export interface FileRoutesByFullPath {
   '/comercial/propostas': typeof ComercialPropostasRoute
   '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
+  '/contabil/configuracao': typeof ContabilConfiguracaoRoute
+  '/contabil/consultas': typeof ContabilConsultasRoute
+  '/contabil/notas': typeof ContabilNotasRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
@@ -266,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
+  '/contabil/': typeof ContabilIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
   '/api/contaazul/status': typeof ApiContaazulStatusRoute
@@ -281,7 +330,9 @@ export interface FileRoutesByTo {
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/fornecedores': typeof FornecedoresRoute
+  '/juridico': typeof JuridicoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/rh': typeof RhRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
   '/solicitar': typeof SolicitarRoute
@@ -293,6 +344,9 @@ export interface FileRoutesByTo {
   '/comercial/propostas': typeof ComercialPropostasRoute
   '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
+  '/contabil/configuracao': typeof ContabilConfiguracaoRoute
+  '/contabil/consultas': typeof ContabilConsultasRoute
+  '/contabil/notas': typeof ContabilNotasRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
@@ -301,6 +355,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/comercial': typeof ComercialIndexRoute
   '/compras': typeof ComprasIndexRoute
+  '/contabil': typeof ContabilIndexRoute
   '/estoque': typeof EstoqueIndexRoute
   '/financeiro': typeof FinanceiroIndexRoute
   '/api/contaazul/status': typeof ApiContaazulStatusRoute
@@ -316,12 +371,15 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/comercial': typeof ComercialRouteWithChildren
   '/compras': typeof ComprasRouteWithChildren
+  '/contabil': typeof ContabilRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
+  '/juridico': typeof JuridicoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/rh': typeof RhRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
   '/solicitar': typeof SolicitarRoute
@@ -333,6 +391,9 @@ export interface FileRoutesById {
   '/comercial/propostas': typeof ComercialPropostasRoute
   '/comercial/validacoes': typeof ComercialValidacoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
+  '/contabil/configuracao': typeof ContabilConfiguracaoRoute
+  '/contabil/consultas': typeof ContabilConsultasRoute
+  '/contabil/notas': typeof ContabilNotasRoute
   '/estoque/$itemId': typeof EstoqueItemIdRoute
   '/estoque/a-receber': typeof EstoqueAReceberRoute
   '/financeiro/conta-azul': typeof FinanceiroContaAzulRoute
@@ -341,6 +402,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/comercial/': typeof ComercialIndexRoute
   '/compras/': typeof ComprasIndexRoute
+  '/contabil/': typeof ContabilIndexRoute
   '/estoque/': typeof EstoqueIndexRoute
   '/financeiro/': typeof FinanceiroIndexRoute
   '/api/contaazul/status': typeof ApiContaazulStatusRoute
@@ -357,12 +419,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/comercial'
     | '/compras'
+    | '/contabil'
     | '/dashboard'
     | '/devolucoes'
     | '/entradas'
     | '/financeiro'
     | '/fornecedores'
+    | '/juridico'
     | '/relatorios'
+    | '/rh'
     | '/saidas'
     | '/solicitantes'
     | '/solicitar'
@@ -374,6 +439,9 @@ export interface FileRouteTypes {
     | '/comercial/propostas'
     | '/comercial/validacoes'
     | '/compras/dashboard'
+    | '/contabil/configuracao'
+    | '/contabil/consultas'
+    | '/contabil/notas'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
     | '/financeiro/conta-azul'
@@ -382,6 +450,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/comercial/'
     | '/compras/'
+    | '/contabil/'
     | '/estoque/'
     | '/financeiro/'
     | '/api/contaazul/status'
@@ -397,7 +466,9 @@ export interface FileRouteTypes {
     | '/devolucoes'
     | '/entradas'
     | '/fornecedores'
+    | '/juridico'
     | '/relatorios'
+    | '/rh'
     | '/saidas'
     | '/solicitantes'
     | '/solicitar'
@@ -409,6 +480,9 @@ export interface FileRouteTypes {
     | '/comercial/propostas'
     | '/comercial/validacoes'
     | '/compras/dashboard'
+    | '/contabil/configuracao'
+    | '/contabil/consultas'
+    | '/contabil/notas'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
     | '/financeiro/conta-azul'
@@ -417,6 +491,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/comercial'
     | '/compras'
+    | '/contabil'
     | '/estoque'
     | '/financeiro'
     | '/api/contaazul/status'
@@ -431,12 +506,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/comercial'
     | '/compras'
+    | '/contabil'
     | '/dashboard'
     | '/devolucoes'
     | '/entradas'
     | '/financeiro'
     | '/fornecedores'
+    | '/juridico'
     | '/relatorios'
+    | '/rh'
     | '/saidas'
     | '/solicitantes'
     | '/solicitar'
@@ -448,6 +526,9 @@ export interface FileRouteTypes {
     | '/comercial/propostas'
     | '/comercial/validacoes'
     | '/compras/dashboard'
+    | '/contabil/configuracao'
+    | '/contabil/consultas'
+    | '/contabil/notas'
     | '/estoque/$itemId'
     | '/estoque/a-receber'
     | '/financeiro/conta-azul'
@@ -456,6 +537,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/comercial/'
     | '/compras/'
+    | '/contabil/'
     | '/estoque/'
     | '/financeiro/'
     | '/api/contaazul/status'
@@ -471,12 +553,15 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ComercialRoute: typeof ComercialRouteWithChildren
   ComprasRoute: typeof ComprasRouteWithChildren
+  ContabilRoute: typeof ContabilRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   DevolucoesRoute: typeof DevolucoesRoute
   EntradasRoute: typeof EntradasRoute
   FinanceiroRoute: typeof FinanceiroRouteWithChildren
   FornecedoresRoute: typeof FornecedoresRoute
+  JuridicoRoute: typeof JuridicoRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  RhRoute: typeof RhRoute
   SaidasRoute: typeof SaidasRoute
   SolicitantesRoute: typeof SolicitantesRoute
   SolicitarRoute: typeof SolicitarRoute
@@ -513,11 +598,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SaidasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rh': {
+      id: '/rh'
+      path: '/rh'
+      fullPath: '/rh'
+      preLoaderRoute: typeof RhRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/juridico': {
+      id: '/juridico'
+      path: '/juridico'
+      fullPath: '/juridico'
+      preLoaderRoute: typeof JuridicoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fornecedores': {
@@ -553,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contabil': {
+      id: '/contabil'
+      path: '/contabil'
+      fullPath: '/contabil'
+      preLoaderRoute: typeof ContabilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compras': {
@@ -603,6 +709,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/estoque/'
       preLoaderRoute: typeof EstoqueIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/contabil/': {
+      id: '/contabil/'
+      path: '/'
+      fullPath: '/contabil/'
+      preLoaderRoute: typeof ContabilIndexRouteImport
+      parentRoute: typeof ContabilRoute
     }
     '/compras/': {
       id: '/compras/'
@@ -659,6 +772,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/estoque/$itemId'
       preLoaderRoute: typeof EstoqueItemIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/contabil/notas': {
+      id: '/contabil/notas'
+      path: '/notas'
+      fullPath: '/contabil/notas'
+      preLoaderRoute: typeof ContabilNotasRouteImport
+      parentRoute: typeof ContabilRoute
+    }
+    '/contabil/consultas': {
+      id: '/contabil/consultas'
+      path: '/consultas'
+      fullPath: '/contabil/consultas'
+      preLoaderRoute: typeof ContabilConsultasRouteImport
+      parentRoute: typeof ContabilRoute
+    }
+    '/contabil/configuracao': {
+      id: '/contabil/configuracao'
+      path: '/configuracao'
+      fullPath: '/contabil/configuracao'
+      preLoaderRoute: typeof ContabilConfiguracaoRouteImport
+      parentRoute: typeof ContabilRoute
     }
     '/compras/dashboard': {
       id: '/compras/dashboard'
@@ -803,6 +937,24 @@ const ComprasRouteChildren: ComprasRouteChildren = {
 const ComprasRouteWithChildren =
   ComprasRoute._addFileChildren(ComprasRouteChildren)
 
+interface ContabilRouteChildren {
+  ContabilConfiguracaoRoute: typeof ContabilConfiguracaoRoute
+  ContabilConsultasRoute: typeof ContabilConsultasRoute
+  ContabilNotasRoute: typeof ContabilNotasRoute
+  ContabilIndexRoute: typeof ContabilIndexRoute
+}
+
+const ContabilRouteChildren: ContabilRouteChildren = {
+  ContabilConfiguracaoRoute: ContabilConfiguracaoRoute,
+  ContabilConsultasRoute: ContabilConsultasRoute,
+  ContabilNotasRoute: ContabilNotasRoute,
+  ContabilIndexRoute: ContabilIndexRoute,
+}
+
+const ContabilRouteWithChildren = ContabilRoute._addFileChildren(
+  ContabilRouteChildren,
+)
+
 interface FinanceiroRouteChildren {
   FinanceiroContaAzulRoute: typeof FinanceiroContaAzulRoute
   FinanceiroDashboardRoute: typeof FinanceiroDashboardRoute
@@ -827,12 +979,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ComercialRoute: ComercialRouteWithChildren,
   ComprasRoute: ComprasRouteWithChildren,
+  ContabilRoute: ContabilRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DevolucoesRoute: DevolucoesRoute,
   EntradasRoute: EntradasRoute,
   FinanceiroRoute: FinanceiroRouteWithChildren,
   FornecedoresRoute: FornecedoresRoute,
+  JuridicoRoute: JuridicoRoute,
   RelatoriosRoute: RelatoriosRoute,
+  RhRoute: RhRoute,
   SaidasRoute: SaidasRoute,
   SolicitantesRoute: SolicitantesRoute,
   SolicitarRoute: SolicitarRoute,
