@@ -10,6 +10,7 @@ import {
   PieChart, Pie, Cell, Legend, CartesianGrid,
 } from "recharts";
 import { COMPRA_STATUSES } from "@/lib/compras";
+import { AlertaEstoqueCard } from "@/components/compras/AlertaEstoqueCard";
 
 const sb = supabase as any;
 const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
@@ -127,6 +128,10 @@ function ComprasDashboard() {
   return (
     <>
       <PageHeader title="Dashboard de Compras" description="Indicadores e gráficos do período selecionado" />
+
+      <AlertaEstoqueCard />
+
+
 
       <div className="flex flex-wrap gap-3 mb-4 items-end">
         <div>

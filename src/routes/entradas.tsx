@@ -600,6 +600,7 @@ function EntradasPage() {
             const { error } = await supabase.from("movimentacoes").insert({
               tipo: "entrada", entrada_tipo: "compra", item_id, fornecedor_id,
               quantidade: qtd, valor_unitario: r.valor_unitario ? Number(r.valor_unitario) : null,
+              empresa: r.empresa ? String(r.empresa).trim() : null,
               nota_fiscal: r.nota_fiscal || null, data_movimento,
               responsavel_lancamento: r.responsavel_lancamento || null, observacoes: r.observacoes || null,
             });
