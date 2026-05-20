@@ -261,7 +261,7 @@ function DevolucoesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length ? filtered.map((m: any) => (
+              {pageItems.length ? pageItems.map((m: any) => (
                 <tr key={m.id} className="border-t border-border hover:bg-muted/30">
                   {isAdmin && (
                     <td className="px-3 py-3">
