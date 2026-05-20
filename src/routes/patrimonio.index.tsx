@@ -464,7 +464,7 @@ function ItemDialog({ open, onOpenChange, editing, itens, onSave }: {
               <SelectContent>{UNIDADES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={f.valor ?? 0} onChange={(e) => set("valor", Number(e.target.value))} /></div>
+          <div><Label>Valor (R$)</Label><NumberInput step="0.01" value={Number(f.valor ?? 0)} onChange={(n) => set("valor", n)} /></div>
           <div><Label>Estado</Label>
             <Select value={f.estado ?? "BOM"} onValueChange={(v) => set("estado", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
