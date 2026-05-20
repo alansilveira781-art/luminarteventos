@@ -126,6 +126,7 @@ function EstoquePage() {
       );
     }
     if (hideZero) arr = arr.filter((i) => Number(i.quantidade_atual) > 0);
+    arr = filterByPeriodo(arr, periodo, (i: any) => i.created_at);
     if (sort) {
       const { key, dir } = sort;
       arr = [...arr].sort((a, b) => {
