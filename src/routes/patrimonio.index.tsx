@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { normalize } from "@/lib/utils";
 import { SortableTh, useSort } from "@/components/SortableTh";
+import { NumberInput } from "@/components/comercial/NumberInput";
 
 export const Route = createFileRoute("/patrimonio/")({ component: PatrimonioInventario });
 
