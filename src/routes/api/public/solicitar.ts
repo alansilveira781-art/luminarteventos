@@ -26,6 +26,10 @@ const baseSchema = z.object({
   descricao: z.string().trim().max(4000).optional().or(z.literal("")),
   valor_total: z.number().nonnegative().max(100_000_000).optional().nullable(),
   itens: z.array(itemSchema).max(50).optional(),
+  pago: z.boolean().optional().nullable(),
+  parcelamento: z.string().trim().max(100).optional().or(z.literal("")),
+  condicao_pagamento: z.string().trim().max(100).optional().or(z.literal("")),
+  data_compra: z.string().trim().max(20).optional().or(z.literal("")),
 });
 
 // In-memory IP rate limiter (best-effort; works per worker instance).
@@ -167,19 +171,27 @@ export const Route = createFileRoute("/api/public/solicitar")({
         }
 
         // Demanda
+        const tiposPagaveis = ["alimentacao", "estacionamento", "manutencao_galpao"];
+        const aceitaPgto = d.subtipo ? tiposPagaveis.includes(d.subtipo) : false;
+        const demandaInsert: any = {
+          status: "solicitacao",
+          titulo: d.titulo,
+          solicitante: d.solicitante_nome,
+          fornecedor: d.fornecedor || null,
+          descritivo: d.descricao || null,
+          observacoes,
+          valor_total: d.valor_total ?? null,
+          data_solicitacao: new Date().toISOString().slice(0, 10),
+          tipo_demanda: d.subtipo || null,
+        };
+        if (aceitaPgto && d.pago === true) {
+          demandaInsert.parcelamento = d.parcelamento || null;
+          demandaInsert.condicao_pagamento = d.condicao_pagamento || null;
+          demandaInsert.data_compra = d.data_compra || null;
+        }
         const { data: demanda, error } = await (supabaseAdmin as any)
           .from("demandas")
-          .insert({
-            status: "solicitacao",
-            titulo: d.titulo,
-            solicitante: d.solicitante_nome,
-            fornecedor: d.fornecedor || null,
-            descritivo: d.descricao || null,
-            observacoes,
-            valor_total: d.valor_total ?? null,
-            data_solicitacao: new Date().toISOString().slice(0, 10),
-            tipo_demanda: d.subtipo || null,
-          })
+          .insert(demandaInsert)
           .select("id, numero")
           .single();
 

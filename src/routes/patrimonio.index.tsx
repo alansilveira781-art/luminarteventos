@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { normalize } from "@/lib/utils";
+import { SortableTh, useSort } from "@/components/SortableTh";
 
 export const Route = createFileRoute("/patrimonio/")({ component: PatrimonioInventario });
 
@@ -73,9 +74,11 @@ function PatrimonioInventario() {
     return Array.from(s).sort();
   }, [itens]);
 
+  const { sort, toggleSort, applySort } = useSort();
+
   const filtered = useMemo(() => {
     const nq = normalize(q);
-    return (itens ?? []).filter((i) => {
+    const base = (itens ?? []).filter((i) => {
       if (filterCat !== "__all" && i.categoria !== filterCat) return false;
       if (filterEstado !== "__all" && i.estado !== filterEstado) return false;
       if (filterLoc !== "__all" && i.localizacao !== filterLoc) return false;
@@ -83,7 +86,8 @@ function PatrimonioInventario() {
       return [i.nome, i.id_item, i.especificacao, i.localizacao, i.subcategoria]
         .some((v) => normalize(String(v ?? "")).includes(nq));
     });
-  }, [itens, q, filterCat, filterEstado, filterLoc]);
+    return applySort(base);
+  }, [itens, q, filterCat, filterEstado, filterLoc, sort]);
 
   const totals = useMemo(() => {
     const t = { count: filtered.length, valor: 0, qtd: 0 };
@@ -186,18 +190,18 @@ function PatrimonioInventario() {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="text-left">
-                <th className="px-2 py-2 w-14">Foto</th>
-                <th className="px-2 py-2 w-16">COD</th>
-                <th className="px-2 py-2 w-24">ID</th>
-                <th className="px-2 py-2">Categoria</th>
-                <th className="px-2 py-2">Subcategoria</th>
-                <th className="px-2 py-2">Item</th>
-                <th className="px-2 py-2">Dimensões</th>
-                <th className="px-2 py-2 text-right w-16">Qtde</th>
-                <th className="px-2 py-2 text-right w-24">Valor</th>
-                <th className="px-2 py-2 w-32">Estado</th>
-                <th className="px-2 py-2">Local</th>
-                <th className="px-2 py-2 w-20"></th>
+                <th className="px-2 py-2 w-14 bg-card">Foto</th>
+                <SortableTh sort={sort} onToggle={toggleSort} k="cod" label="COD" className="bg-card w-16" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="id_item" label="ID" className="bg-card w-24" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="categoria" label="Categoria" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="subcategoria" label="Subcategoria" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="nome" label="Item" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="dimensoes" label="Dimensões" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="quantidade" label="Qtde" align="right" className="bg-card w-16" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="valor" label="Valor" align="right" className="bg-card w-24" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="estado" label="Estado" className="bg-card w-32" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="localizacao" label="Local" className="bg-card" />
+                <th className="px-2 py-2 w-20 bg-card"></th>
               </tr>
             </thead>
             <tbody>
