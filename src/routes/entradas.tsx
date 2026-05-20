@@ -151,7 +151,7 @@ function EntradasPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimentacoes")
-        .select("*, item:itens(nome,codigo,unidade), fornecedor:fornecedores(nome)")
+        .select("*, item:itens(nome,codigo,unidade), fornecedor:fornecedores(nome,documento)")
         .eq("tipo", "entrada")
         .order("data_movimento", { ascending: false })
         .limit(500);
@@ -238,7 +238,7 @@ function EntradasPage() {
     if (!sBusca) return true;
     const hay = normalize(
       [
-        m.item?.nome, m.item?.codigo, m.fornecedor?.nome,
+        m.item?.nome, m.item?.codigo, m.fornecedor?.nome, m.fornecedor?.documento,
         m.entrada_tipo, m.nota_fiscal, m.responsavel_lancamento, m.observacoes,
         m.requisicao_numero ? `req-${String(m.requisicao_numero).padStart(4, "0")}` : "",
       ].join(" "),

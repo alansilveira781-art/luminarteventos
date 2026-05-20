@@ -70,6 +70,9 @@ export function EntitySearchSelect({
           {selected ? (
             <>
               {selected.nome}
+              {(selected as any).documento && (
+                <span className="text-xs font-mono text-muted-foreground ml-2">{(selected as any).documento}</span>
+              )}
               {selected.apelido && (
                 <span className="text-xs text-muted-foreground ml-2">({selected.apelido})</span>
               )}
