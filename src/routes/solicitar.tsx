@@ -276,8 +276,79 @@ function SolicitarPage() {
                 placeholder="Opcional"
               />
             </Field>
-          </div>
-        </Step>
+
+            {!isCompra && TIPOS_DEMANDA_PAGAVEIS.includes(form.subtipo) && (
+              <div className="space-y-3 rounded-lg border border-border p-3 bg-muted/20">
+                <Field label="Foi pago?">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => update({ pago: true })}
+                      className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                        form.pago === true
+                          ? "border-primary ring-2 ring-primary/30 bg-primary/5 text-primary"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      Sim
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => update({ pago: false, parcelamento: "", condicao_pagamento: "", data_compra: "" })}
+                      className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                        form.pago === false
+                          ? "border-primary ring-2 ring-primary/30 bg-primary/5 text-primary"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      Não
+                    </button>
+                  </div>
+                </Field>
+
+                {form.pago === true && (
+                  <div className="space-y-3">
+                    <Field label="Parcelamento">
+                      <Select
+                        value={form.parcelamento || undefined}
+                        onValueChange={(v) => update({ parcelamento: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {opcoes.parcelamentos.map((p) => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Condição de pagamento">
+                      <Select
+                        value={form.condicao_pagamento || undefined}
+                        onValueChange={(v) => update({ condicao_pagamento: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {opcoes.condicoes_pagamento.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Data da compra">
+                      <Input
+                        type="date"
+                        value={form.data_compra}
+                        onChange={(e) => update({ data_compra: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                )}
+              </div>
+            )}
       )}
 
       {step === 2 && (
