@@ -145,7 +145,7 @@ function SolicitarPage() {
           descricao: form.descricao.trim(),
           valor_total: form.valor_total ? Number(form.valor_total) : null,
           itens: itensValidos,
-          pago: form.tipo === "demanda" && TIPOS_DEMANDA_PAGAVEIS.includes(form.subtipo) ? form.pago : null,
+          pago: form.tipo === "demanda" ? form.pago : null,
           parcelamento: form.parcelamento || "",
           condicao_pagamento: form.condicao_pagamento || "",
           data_compra: form.data_compra || "",
@@ -277,7 +277,7 @@ function SolicitarPage() {
               />
             </Field>
 
-            {!isCompra && TIPOS_DEMANDA_PAGAVEIS.includes(form.subtipo) && (
+            {!isCompra && (
               <div className="space-y-3 rounded-lg border border-border p-3 bg-muted/20">
                 <Field label="Foi pago?">
                   <div className="grid grid-cols-2 gap-2">
