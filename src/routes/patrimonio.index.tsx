@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { normalize } from "@/lib/utils";
 import { SortableTh, useSort } from "@/components/SortableTh";
 import { NumberInput } from "@/components/comercial/NumberInput";
+import { PeriodoFilter, filterByPeriodo, periodoFromPreset, type Periodo, type PeriodoPreset } from "@/components/PeriodoFilter";
+import { TablePagination } from "@/components/TablePagination";
 
 export const Route = createFileRoute("/patrimonio/")({ component: PatrimonioInventario });
 
@@ -31,6 +33,7 @@ type Pat = {
   nome: string; especificacao: string | null; dimensoes: string | null;
   quantidade: number; valor: number; estado: string; unidade: string;
   localizacao: string | null; imagem_url: string | null; observacoes: string | null;
+  created_at?: string | null;
 };
 
 const brl = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -47,6 +50,10 @@ function PatrimonioInventario() {
   const [open, setOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [bulkPhotosOpen, setBulkPhotosOpen] = useState(false);
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("todos");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("todos"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
 
   const { data: itens, isLoading } = useQuery({
     queryKey: ["pat_itens"],
@@ -85,21 +92,40 @@ function PatrimonioInventario() {
       if (filterEstado !== "__all" && i.estado !== filterEstado) return false;
       if (filterLoc !== "__all" && i.localizacao !== filterLoc) return false;
       if (!nq) return true;
-      return [i.nome, i.id_item, i.especificacao, i.localizacao, i.subcategoria]
+      return [i.nome, i.id_item, i.especificacao, i.localizacao, i.subcategoria, i.cod != null ? String(i.cod) : ""]
         .some((v) => normalize(String(v ?? "")).includes(nq));
     });
     return applySort(base);
   }, [itens, q, filterCat, filterEstado, filterLoc, sort]);
 
+  const filteredPeriodo = useMemo(
+    () => filterByPeriodo(filtered, periodo, (i: Pat) => i.created_at ?? null),
+    [filtered, periodo],
+  );
+  useMemo(() => { setPage(1); }, [q, filterCat, filterEstado, filterLoc, periodo, sort]);
+  const pageCount = Math.max(1, Math.ceil(filteredPeriodo.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => filteredPeriodo.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredPeriodo, page],
+  );
+
   const totals = useMemo(() => {
-    const t = { count: filtered.length, valor: 0, qtd: 0 };
-    filtered.forEach((i) => { t.valor += Number(i.valor || 0) * Number(i.quantidade || 1); t.qtd += Number(i.quantidade || 0); });
+    const t = { count: filteredPeriodo.length, valor: 0, qtd: 0 };
+    filteredPeriodo.forEach((i) => { t.valor += Number(i.valor || 0) * Number(i.quantidade || 1); t.qtd += Number(i.quantidade || 0); });
     return t;
-  }, [filtered]);
+  }, [filteredPeriodo]);
 
   const saveMut = useMutation({
     mutationFn: async (payload: any) => {
       const { id, ...rest } = payload;
+      // Validar COD único
+      if (rest.cod != null && rest.cod !== "") {
+        const codNum = Number(rest.cod);
+        let q = supabase.from("pat_itens").select("id").eq("cod", codNum);
+        if (id) q = q.neq("id", id);
+        const { data: dup } = await q.limit(1);
+        if (dup && dup.length) throw new Error(`Já existe um item com o COD ${codNum}.`);
+      }
       if (id) {
         const { error } = await supabase.from("pat_itens").update(rest).eq("id", id);
         if (error) throw error;
@@ -162,11 +188,11 @@ function PatrimonioInventario() {
         }
       />
 
-      <Card className="p-3 mb-3">
+      <Card className="p-3 mb-3 space-y-2">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
           <div className="relative md:col-span-2">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-8" placeholder="Buscar por nome, ID, local…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input className="pl-8" placeholder="Buscar por nome, ID, COD, local…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <Select value={filterCat} onValueChange={setFilterCat}>
             <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
@@ -189,6 +215,18 @@ function PatrimonioInventario() {
               {locs.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
+          />
+          <div className="text-xs text-muted-foreground ml-auto">
+            {filteredPeriodo.length === 0
+              ? "Nenhum item"
+              : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredPeriodo.length)} de ${filteredPeriodo.length} itens`}
+          </div>
         </div>
       </Card>
 
@@ -213,8 +251,8 @@ function PatrimonioInventario() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Carregando…</td></tr>}
-              {!isLoading && filtered.length === 0 && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Nenhum item.</td></tr>}
-              {filtered.slice(0, 500).map((i) => (
+              {!isLoading && filteredPeriodo.length === 0 && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Nenhum item.</td></tr>}
+              {pageItems.map((i) => (
                 <tr key={i.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-2 py-1.5">
                     {i.imagem_url ? (
@@ -252,14 +290,15 @@ function PatrimonioInventario() {
                   </td>
                 </tr>
               ))}
-              {filtered.length > 500 && <tr><td colSpan={12} className="p-2 text-center text-xs text-muted-foreground">Mostrando 500 de {filtered.length}. Refine os filtros para ver mais.</td></tr>}
             </tbody>
           </table>
         </div>
       </Card>
 
+      <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
+
       <ItemDialog open={open} onOpenChange={setOpen} editing={editing} itens={itens ?? []} onSave={(p) => saveMut.mutate(p)} />
-      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} all={itens ?? []} filtered={filtered} />
+      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} all={itens ?? []} filtered={filteredPeriodo} />
       <BulkPhotosDialog
         open={bulkPhotosOpen}
         onOpenChange={setBulkPhotosOpen}

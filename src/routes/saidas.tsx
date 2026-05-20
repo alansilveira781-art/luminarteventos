@@ -356,6 +356,22 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const lineStatusMut = useMutation({
+    mutationFn: async (p: { id: string; saida_status: "aberta" | "finalizada" }) => {
+      const { error } = await supabase
+        .from("movimentacoes")
+        .update({ saida_status: p.saida_status })
+        .eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saidas"] });
+      qc.invalidateQueries({ queryKey: ["saidas-abertas"] });
+      qc.invalidateQueries({ queryKey: ["devolucoes"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <>
       <PageHeader
@@ -509,17 +525,42 @@ function SaidasPage() {
                                 <th className="text-left py-1 font-medium">Código</th>
                                 <th className="text-right py-1 font-medium">Qtd</th>
                                 <th className="text-left py-1 font-medium pl-2">UN</th>
+                                <th className="text-left py-1 font-medium pl-2">Devolução</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {g.linhas.map((l: any) => (
+                              {g.linhas.map((l: any) => {
+                                const dispensada = l.saida_status === "finalizada";
+                                return (
                                 <tr key={l.id} className="border-t border-border/40">
                                   <td className="py-1 font-medium">{l.item?.nome}</td>
                                   <td className="py-1 font-mono text-muted-foreground">{l.item?.codigo}</td>
                                   <td className="py-1 text-right tabular-nums">{Number(l.quantidade)}</td>
                                   <td className="py-1 pl-2 text-muted-foreground">{l.item?.unidade}</td>
+                                  <td className="py-1 pl-2">
+                                    {isAdmin ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={dispensada ? "outline" : "ghost"}
+                                        className="h-6 text-[11px]"
+                                        disabled={lineStatusMut.isPending}
+                                        onClick={() => lineStatusMut.mutate({
+                                          id: l.id,
+                                          saida_status: dispensada ? "aberta" : "finalizada",
+                                        })}
+                                      >
+                                        {dispensada ? "Marcar como pendente" : "Não será devolvido"}
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground text-[11px]">
+                                        {dispensada ? "Dispensada" : (l.saida_status ?? "—")}
+                                      </span>
+                                    )}
+                                  </td>
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </tbody>
                           </table>
                         </td>
