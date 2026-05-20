@@ -494,3 +494,236 @@ function PatFotoUpload({ value, onChange }: { value: string; onChange: (url: str
     </div>
   );
 }
+
+type MatchRow = {
+  file: File;
+  relPath: string;
+  folder: string;
+  filename: string;
+  item: Pat | null;
+  ambiguous: boolean;
+};
+
+function BulkPhotosDialog({
+  open,
+  onOpenChange,
+  itens,
+  onDone,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  itens: Pat[];
+  onDone: () => void;
+}) {
+  const folderRef = useRef<HTMLInputElement>(null);
+  const [rows, setRows] = useState<MatchRow[]>([]);
+  const [overwrite, setOverwrite] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+
+  function reset() {
+    setRows([]);
+    setProgress({ done: 0, total: 0 });
+    if (folderRef.current) folderRef.current.value = "";
+  }
+
+  function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const isImg = (n: string) => /\.(jpe?g|png|webp|gif|bmp|heic)$/i.test(n);
+    const arr: MatchRow[] = [];
+
+    for (const f of Array.from(files)) {
+      // @ts-ignore — webkitRelativePath é padrão dos browsers
+      const rel: string = (f as any).webkitRelativePath || f.name;
+      if (!isImg(f.name)) continue;
+      const parts = rel.split("/");
+      const filename = parts[parts.length - 1].replace(/\.[^.]+$/, "");
+      const folder = parts.length >= 2 ? parts[parts.length - 2] : "";
+      const folderN = normalize(folder);
+      const fnameN = normalize(filename);
+
+      // Candidatos: na mesma categoria (se houver pasta) tentar match exato por id_item, cod ou nome.
+      const inCat = folder
+        ? itens.filter((i) => normalize(i.categoria ?? "") === folderN)
+        : itens;
+      const pool = inCat.length > 0 ? inCat : itens;
+
+      const matches = pool.filter((i) => {
+        const a = normalize(i.id_item ?? "");
+        const b = normalize(i.nome ?? "");
+        const c = String(i.cod ?? "");
+        return (a && a === fnameN) || (b && b === fnameN) || (c && c === filename.trim());
+      });
+
+      arr.push({
+        file: f,
+        relPath: rel,
+        folder,
+        filename,
+        item: matches[0] ?? null,
+        ambiguous: matches.length > 1,
+      });
+    }
+
+    arr.sort((a, b) => a.relPath.localeCompare(b.relPath));
+    setRows(arr);
+  }
+
+  async function runUpload() {
+    const toUpload = rows.filter((r) => r.item && (overwrite || !r.item.imagem_url));
+    if (toUpload.length === 0) {
+      toast.error("Nenhum item para enviar.");
+      return;
+    }
+    setUploading(true);
+    setProgress({ done: 0, total: toUpload.length });
+    let okCount = 0;
+    let failCount = 0;
+    for (const r of toUpload) {
+      try {
+        const item = r.item!;
+        const ext = r.file.name.split(".").pop() || "jpg";
+        const path = `${item.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("pat-photos")
+          .upload(path, r.file, { cacheControl: "3600", upsert: false });
+        if (upErr) throw upErr;
+        const { data } = supabase.storage.from("pat-photos").getPublicUrl(path);
+        const { error: updErr } = await supabase
+          .from("pat_itens")
+          .update({ imagem_url: data.publicUrl })
+          .eq("id", item.id);
+        if (updErr) throw updErr;
+        okCount++;
+      } catch (e: any) {
+        failCount++;
+        console.error("upload falhou", r.relPath, e);
+      } finally {
+        setProgress((p) => ({ ...p, done: p.done + 1 }));
+      }
+    }
+    setUploading(false);
+    toast.success(`${okCount} foto(s) enviada(s)${failCount ? ` · ${failCount} falha(s)` : ""}`);
+    onDone();
+    if (failCount === 0) {
+      reset();
+      onOpenChange(false);
+    }
+  }
+
+  const matched = rows.filter((r) => r.item).length;
+  const unmatched = rows.filter((r) => !r.item).length;
+  const willSkip = rows.filter((r) => r.item && r.item.imagem_url && !overwrite).length;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Importar fotos em lote</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">
+            <p className="font-medium">Como organizar:</p>
+            <p>1. Crie uma pasta com subpastas por <strong>categoria</strong> (ex.: <code>ACERVO</code>, <code>IMOBILIZADO</code>…).</p>
+            <p>2. Dentro de cada categoria, cada arquivo deve ter o nome igual ao <strong>ID</strong>, <strong>COD</strong> ou <strong>Nome</strong> do item (ex.: <code>ACE-0012.jpg</code> ou <code>Mesa redonda.jpg</code>).</p>
+            <p>3. Selecione a pasta principal abaixo — todos os arquivos serão importados.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={folderRef}
+              type="file"
+              multiple
+              // @ts-ignore — atributos não-padrão para seleção de pasta
+              webkitdirectory=""
+              // @ts-ignore
+              directory=""
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            <Button type="button" variant="outline" onClick={() => folderRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" /> Selecionar pasta
+            </Button>
+            {rows.length > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={reset}>
+                Limpar
+              </Button>
+            )}
+            <label className="ml-auto flex items-center gap-2 text-xs">
+              <Checkbox checked={overwrite} onCheckedChange={(v) => setOverwrite(!!v)} />
+              Sobrescrever fotos existentes
+            </label>
+          </div>
+
+          {rows.length > 0 && (
+            <>
+              <div className="text-xs text-muted-foreground">
+                {rows.length} arquivo(s) · <span className="text-emerald-600 font-medium">{matched} correspondência(s)</span>
+                {unmatched > 0 && <> · <span className="text-rose-600 font-medium">{unmatched} sem correspondência</span></>}
+                {willSkip > 0 && <> · {willSkip} já tem foto (será pulado)</>}
+              </div>
+              <div className="max-h-72 overflow-auto rounded border border-border">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/40 sticky top-0">
+                    <tr>
+                      <th className="text-left px-2 py-1">Arquivo</th>
+                      <th className="text-left px-2 py-1">Item</th>
+                      <th className="text-left px-2 py-1 w-32">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, idx) => {
+                      const status = !r.item
+                        ? { l: "sem match", c: "text-rose-600" }
+                        : r.ambiguous
+                        ? { l: "ambíguo (usará 1º)", c: "text-amber-600" }
+                        : r.item.imagem_url && !overwrite
+                        ? { l: "já tem foto", c: "text-muted-foreground" }
+                        : { l: "pronto", c: "text-emerald-600" };
+                      return (
+                        <tr key={idx} className="border-t border-border">
+                          <td className="px-2 py-1 font-mono">{r.relPath}</td>
+                          <td className="px-2 py-1">
+                            {r.item ? (
+                              <span>
+                                <span className="font-mono">{r.item.id_item}</span> · {r.item.nome}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className={`px-2 py-1 ${status.c}`}>{status.l}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {uploading && (
+            <div className="text-xs text-muted-foreground">
+              Enviando {progress.done} de {progress.total}…
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
+            Cancelar
+          </Button>
+          <Button onClick={runUpload} disabled={uploading || matched === 0}>
+            {uploading ? "Enviando…" : `Enviar ${matched - willSkip} foto(s)`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
