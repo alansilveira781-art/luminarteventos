@@ -35,6 +35,10 @@ function DevolucoesPage() {
   const [q, setQ] = useState("");
   const { sort, toggleSort, applySort } = useSort();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("mes");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("mes"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
 
   const { data: devolucoes } = useQuery({
     queryKey: ["devolucoes"],
