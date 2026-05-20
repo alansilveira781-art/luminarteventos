@@ -68,7 +68,7 @@ function SolicitantesPage() {
       const { error } = await supabase.from("solicitantes").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); toast.success("Removido"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); qc.invalidateQueries({ queryKey: ["solicitantes-select"] }); toast.success("Removido"); },
     onError: (e: any) => toast.error(e.message),
   });
 
