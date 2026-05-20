@@ -108,11 +108,10 @@ function PatrimonioDashboard() {
     <>
       <PageHeader title="Dashboard do Patrimônio" description="Visão geral do inventário e movimentações" />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <StatCard icon={Boxes} label="Itens cadastrados" value={stats.totalItens.toLocaleString("pt-BR")} color="text-blue-600" />
         <StatCard icon={Boxes} label="Quantidade total" value={stats.totalQtd.toLocaleString("pt-BR")} color="text-emerald-600" />
         <StatCard icon={DollarSign} label="Valor do patrimônio" value={brl(stats.totalValor)} color="text-violet-600" />
-        <StatCard icon={AlertTriangle} label="Em manutenção / danificados" value={stats.danificados.toLocaleString("pt-BR")} color="text-amber-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
