@@ -186,6 +186,7 @@ function PatrimonioInventario() {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="text-left">
+                <th className="px-2 py-2 w-14">Foto</th>
                 <th className="px-2 py-2 w-16">COD</th>
                 <th className="px-2 py-2 w-24">ID</th>
                 <th className="px-2 py-2">Categoria</th>
