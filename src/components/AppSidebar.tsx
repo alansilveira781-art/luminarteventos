@@ -34,6 +34,9 @@ import {
   Search,
   Scale,
   UserPlus,
+  Boxes,
+  FileSignature,
+
 } from "lucide-react";
 import logo from "@/assets/luminart-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
