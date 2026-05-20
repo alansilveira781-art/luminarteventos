@@ -72,11 +72,16 @@ const allItems: NavItem[] = [
   { title: "Consulta de impostos", url: "/contabil/consultas", icon: Search, group: "Contábil", module: "contabil" },
   { title: "Configuração", url: "/contabil/configuracao", icon: Settings, group: "Contábil", module: "contabil" },
   { title: "Contratos", url: "/juridico", icon: Scale, group: "Jurídico", module: "juridico" },
+  { title: "Modelos", url: "/juridico/modelos", icon: FileSignature, group: "Jurídico", module: "juridico" },
+  { title: "Inventário", url: "/patrimonio", icon: Boxes, group: "Patrimônio", module: "patrimonio" },
+  { title: "Entradas", url: "/patrimonio/entradas", icon: ArrowDownToLine, group: "Patrimônio", module: "patrimonio" },
+  { title: "Saídas", url: "/patrimonio/saidas", icon: ArrowUpFromLine, group: "Patrimônio", module: "patrimonio" },
   { title: "Recrutamento", url: "/rh", icon: UserPlus, group: "Recursos Humanos", module: "rh" },
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Recursos Humanos", "Administração"];
+const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Patrimônio", "Recursos Humanos", "Administração"];
+
 
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 const COMPRAS_ROUTES = ["/compras"];
