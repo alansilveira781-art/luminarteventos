@@ -34,6 +34,9 @@ import {
   Search,
   Scale,
   UserPlus,
+  Boxes,
+  FileSignature,
+
 } from "lucide-react";
 import logo from "@/assets/luminart-logo-white.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,11 +72,16 @@ const allItems: NavItem[] = [
   { title: "Consulta de impostos", url: "/contabil/consultas", icon: Search, group: "Contábil", module: "contabil" },
   { title: "Configuração", url: "/contabil/configuracao", icon: Settings, group: "Contábil", module: "contabil" },
   { title: "Contratos", url: "/juridico", icon: Scale, group: "Jurídico", module: "juridico" },
+  { title: "Modelos", url: "/juridico/modelos", icon: FileSignature, group: "Jurídico", module: "juridico" },
+  { title: "Inventário", url: "/patrimonio", icon: Boxes, group: "Patrimônio", module: "patrimonio" },
+  { title: "Entradas", url: "/patrimonio/entradas", icon: ArrowDownToLine, group: "Patrimônio", module: "patrimonio" },
+  { title: "Saídas", url: "/patrimonio/saidas", icon: ArrowUpFromLine, group: "Patrimônio", module: "patrimonio" },
   { title: "Recrutamento", url: "/rh", icon: UserPlus, group: "Recursos Humanos", module: "rh" },
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Recursos Humanos", "Administração"];
+const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Patrimônio", "Recursos Humanos", "Administração"];
+
 
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
 const COMPRAS_ROUTES = ["/compras"];
@@ -81,6 +89,7 @@ const FINANCEIRO_ROUTES = ["/financeiro"];
 const COMERCIAL_ROUTES = ["/comercial"];
 const CONTABIL_ROUTES = ["/contabil"];
 const JURIDICO_ROUTES = ["/juridico"];
+const PATRIMONIO_ROUTES = ["/patrimonio"];
 const RH_ROUTES = ["/rh"];
 
 function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
@@ -94,9 +103,10 @@ function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   return pathname.startsWith(url + "/");
 }
 
-function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "contabil" | "juridico" | "rh" | "admin" {
+function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "contabil" | "juridico" | "patrimonio" | "rh" | "admin" {
   if (pathname.startsWith("/admin")) return "admin";
   if (RH_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "rh";
+  if (PATRIMONIO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "patrimonio";
   if (JURIDICO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "juridico";
   if (CONTABIL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "contabil";
   if (COMERCIAL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "comercial";
@@ -118,10 +128,12 @@ function useNavItems(pathname: string) {
     if (i.module === "comercial") return ctx === "comercial" && (isAdmin || hasModule("comercial"));
     if (i.module === "contabil") return ctx === "contabil" && (isAdmin || hasModule("contabil"));
     if (i.module === "juridico") return ctx === "juridico" && (isAdmin || hasModule("juridico"));
+    if (i.module === "patrimonio") return ctx === "patrimonio" && (isAdmin || hasModule("patrimonio"));
     if (i.module === "rh") return ctx === "rh" && (isAdmin || hasModule("rh"));
     return true;
   });
 }
+
 
 function SidebarBody({
   pathname,
