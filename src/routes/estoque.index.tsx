@@ -143,9 +143,13 @@ function EstoquePage() {
       });
     }
     return arr;
-  }, [itens, q, hideZero, sort]);
+  }, [itens, q, hideZero, sort, periodo]);
 
-  const sel = useBulkSelection(filtered);
+  useMemo(() => { setPage(1); }, [q, hideZero, sort, periodo]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
+
+  const sel = useBulkSelection(pageItems);
   const [bulkOpen, setBulkOpen] = useState(false);
   const bulkMut = useMutation({
     mutationFn: async (patch: Record<string, any>) => {
