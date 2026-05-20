@@ -50,6 +50,10 @@ function EntradasPage() {
   const [importingXml, setImportingXml] = useState(false);
   const [q, setQ] = useState("");
   const [filterItemQ, setFilterItemQ] = useState<string>("");
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("mes");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("mes"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
   const [filterEvento, setFilterEvento] = useState<string>("__all");
   const { sort, toggleSort, applySort } = useSort();
 
