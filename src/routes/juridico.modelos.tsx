@@ -59,8 +59,9 @@ function ModelosPage() {
 
   const saveMut = useMutation({
     mutationFn: async (p: any) => {
-      const variaveis = extractVars(p.corpo_html ?? "");
-      const payload = { ...p, variaveis };
+      const safeHtml = sanitizeHtml(p.corpo_html ?? "");
+      const variaveis = extractVars(safeHtml);
+      const payload = { ...p, corpo_html: safeHtml, variaveis };
       const { id, ...rest } = payload;
       if (id) {
         const { error } = await supabase.from("juridico_modelos").update(rest).eq("id", id);
