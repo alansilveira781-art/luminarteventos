@@ -188,11 +188,11 @@ function PatrimonioInventario() {
         }
       />
 
-      <Card className="p-3 mb-3">
+      <Card className="p-3 mb-3 space-y-2">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
           <div className="relative md:col-span-2">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-8" placeholder="Buscar por nome, ID, local…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input className="pl-8" placeholder="Buscar por nome, ID, COD, local…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <Select value={filterCat} onValueChange={setFilterCat}>
             <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
@@ -215,6 +215,18 @@ function PatrimonioInventario() {
               {locs.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
+          />
+          <div className="text-xs text-muted-foreground ml-auto">
+            {filteredPeriodo.length === 0
+              ? "Nenhum item"
+              : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredPeriodo.length)} de ${filteredPeriodo.length} itens`}
+          </div>
         </div>
       </Card>
 
@@ -239,8 +251,8 @@ function PatrimonioInventario() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Carregando…</td></tr>}
-              {!isLoading && filtered.length === 0 && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Nenhum item.</td></tr>}
-              {filtered.slice(0, 500).map((i) => (
+              {!isLoading && filteredPeriodo.length === 0 && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Nenhum item.</td></tr>}
+              {pageItems.map((i) => (
                 <tr key={i.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-2 py-1.5">
                     {i.imagem_url ? (
@@ -278,11 +290,12 @@ function PatrimonioInventario() {
                   </td>
                 </tr>
               ))}
-              {filtered.length > 500 && <tr><td colSpan={12} className="p-2 text-center text-xs text-muted-foreground">Mostrando 500 de {filtered.length}. Refine os filtros para ver mais.</td></tr>}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
 
       <ItemDialog open={open} onOpenChange={setOpen} editing={editing} itens={itens ?? []} onSave={(p) => saveMut.mutate(p)} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} all={itens ?? []} filtered={filtered} />
