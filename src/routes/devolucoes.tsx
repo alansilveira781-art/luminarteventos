@@ -93,10 +93,22 @@ function DevolucoesPage() {
   });
 
   const mut = useMutation({
-    mutationFn: async (linhas: Array<any>) => {
-      if (linhas.length === 0) throw new Error("Informe a quantidade devolvida de pelo menos um item");
-      const { error } = await supabase.from("movimentacoes").insert(linhas);
-      if (error) throw error;
+    mutationFn: async (payload: { linhas: any[]; idsSemDevolucao: string[] }) => {
+      const { linhas, idsSemDevolucao } = payload;
+      if (linhas.length === 0 && idsSemDevolucao.length === 0) {
+        throw new Error("Informe a quantidade devolvida de pelo menos um item ou marque como sem devolução");
+      }
+      if (linhas.length) {
+        const { error } = await supabase.from("movimentacoes").insert(linhas);
+        if (error) throw error;
+      }
+      if (idsSemDevolucao.length) {
+        const { error } = await supabase
+          .from("movimentacoes")
+          .update({ saida_status: "finalizada" })
+          .in("id", idsSemDevolucao);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       invalidateAll(qc);
