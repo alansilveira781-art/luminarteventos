@@ -45,6 +45,7 @@ function PatrimonioInventario() {
   const [editing, setEditing] = useState<Pat | null>(null);
   const [open, setOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [bulkPhotosOpen, setBulkPhotosOpen] = useState(false);
 
   const { data: itens, isLoading } = useQuery({
     queryKey: ["pat_itens"],
