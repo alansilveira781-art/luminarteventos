@@ -53,6 +53,10 @@ function EstoquePage() {
   const [importing, setImporting] = useState(false);
   const [hideZero, setHideZero] = useState(false);
   const [sort, setSort] = useState<{ key: string; dir: "desc" | "asc" } | null>(null);
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("todos");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("todos"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
 
   const { data: itens, isLoading } = useQuery({
     queryKey: ["itens"],
