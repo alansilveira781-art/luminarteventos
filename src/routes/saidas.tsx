@@ -356,21 +356,6 @@ function SaidasPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const lineStatusMut = useMutation({
-    mutationFn: async (p: { id: string; saida_status: "aberta" | "finalizada" }) => {
-      const { error } = await supabase
-        .from("movimentacoes")
-        .update({ saida_status: p.saida_status })
-        .eq("id", p.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["saidas"] });
-      qc.invalidateQueries({ queryKey: ["saidas-abertas"] });
-      qc.invalidateQueries({ queryKey: ["devolucoes"] });
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
 
   return (
     <>
