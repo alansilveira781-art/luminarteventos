@@ -171,19 +171,27 @@ export const Route = createFileRoute("/api/public/solicitar")({
         }
 
         // Demanda
+        const tiposPagaveis = ["alimentacao", "estacionamento", "manutencao_galpao"];
+        const aceitaPgto = d.subtipo ? tiposPagaveis.includes(d.subtipo) : false;
+        const demandaInsert: any = {
+          status: "solicitacao",
+          titulo: d.titulo,
+          solicitante: d.solicitante_nome,
+          fornecedor: d.fornecedor || null,
+          descritivo: d.descricao || null,
+          observacoes,
+          valor_total: d.valor_total ?? null,
+          data_solicitacao: new Date().toISOString().slice(0, 10),
+          tipo_demanda: d.subtipo || null,
+        };
+        if (aceitaPgto && d.pago === true) {
+          demandaInsert.parcelamento = d.parcelamento || null;
+          demandaInsert.condicao_pagamento = d.condicao_pagamento || null;
+          demandaInsert.data_compra = d.data_compra || null;
+        }
         const { data: demanda, error } = await (supabaseAdmin as any)
           .from("demandas")
-          .insert({
-            status: "solicitacao",
-            titulo: d.titulo,
-            solicitante: d.solicitante_nome,
-            fornecedor: d.fornecedor || null,
-            descritivo: d.descricao || null,
-            observacoes,
-            valor_total: d.valor_total ?? null,
-            data_solicitacao: new Date().toISOString().slice(0, 10),
-            tipo_demanda: d.subtipo || null,
-          })
+          .insert(demandaInsert)
           .select("id, numero")
           .single();
 
