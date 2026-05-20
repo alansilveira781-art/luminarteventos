@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Download, Upload, ImagePlus, X } from "lucide-react";
+import { useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -185,6 +186,7 @@ function PatrimonioInventario() {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="text-left">
+                <th className="px-2 py-2 w-14">Foto</th>
                 <th className="px-2 py-2 w-16">COD</th>
                 <th className="px-2 py-2 w-24">ID</th>
                 <th className="px-2 py-2">Categoria</th>
@@ -199,10 +201,21 @@ function PatrimonioInventario() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={11} className="p-4 text-center text-muted-foreground">Carregando…</td></tr>}
-              {!isLoading && filtered.length === 0 && <tr><td colSpan={11} className="p-4 text-center text-muted-foreground">Nenhum item.</td></tr>}
+              {isLoading && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Carregando…</td></tr>}
+              {!isLoading && filtered.length === 0 && <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">Nenhum item.</td></tr>}
               {filtered.slice(0, 500).map((i) => (
                 <tr key={i.id} className="border-t border-border hover:bg-muted/30">
+                  <td className="px-2 py-1.5">
+                    {i.imagem_url ? (
+                      <a href={i.imagem_url} target="_blank" rel="noreferrer">
+                        <img src={i.imagem_url} alt={i.nome} className="h-9 w-9 rounded object-cover border border-border" />
+                      </a>
+                    ) : (
+                      <div className="h-9 w-9 rounded border border-dashed border-border flex items-center justify-center text-muted-foreground">
+                        <ImagePlus className="h-3.5 w-3.5" />
+                      </div>
+                    )}
+                  </td>
                   <td className="px-2 py-1.5">{i.cod}</td>
                   <td className="px-2 py-1.5 font-mono text-[11px]">{i.id_item}</td>
                   <td className="px-2 py-1.5">{i.categoria}</td>
@@ -228,7 +241,7 @@ function PatrimonioInventario() {
                   </td>
                 </tr>
               ))}
-              {filtered.length > 500 && <tr><td colSpan={11} className="p-2 text-center text-xs text-muted-foreground">Mostrando 500 de {filtered.length}. Refine os filtros para ver mais.</td></tr>}
+              {filtered.length > 500 && <tr><td colSpan={12} className="p-2 text-center text-xs text-muted-foreground">Mostrando 500 de {filtered.length}. Refine os filtros para ver mais.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -394,6 +407,10 @@ function ItemDialog({ open, onOpenChange, editing, onSave }: {
           </div>
           <div><Label>Data de compra</Label><Input type="date" value={f.data_compra ?? ""} onChange={(e) => set("data_compra", e.target.value || null)} /></div>
           <div className="col-span-2"><Label>Local</Label><Input value={f.localizacao ?? ""} onChange={(e) => set("localizacao", e.target.value)} /></div>
+          <div className="col-span-2">
+            <Label>Foto do item</Label>
+            <PatFotoUpload value={f.imagem_url ?? ""} onChange={(url) => set("imagem_url", url)} />
+          </div>
           <div className="col-span-2"><Label>Observações</Label><Textarea rows={2} value={f.observacoes ?? ""} onChange={(e) => set("observacoes", e.target.value)} /></div>
         </div>
         <DialogFooter>
@@ -402,5 +419,62 @@ function ItemDialog({ open, onOpenChange, editing, onSave }: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PatFotoUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) return toast.error("Selecione uma imagem.");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Imagem muito grande (máx. 5 MB).");
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("pat-photos").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("pat-photos").getPublicUrl(path);
+      onChange(data.publicUrl);
+      toast.success("Foto enviada");
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha ao enviar imagem");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        {value ? (
+          <img src={value} alt="Prévia" className="h-24 w-24 rounded-md object-cover border border-border" />
+        ) : (
+          <div className="h-24 w-24 rounded-md border border-dashed border-border flex items-center justify-center text-muted-foreground">
+            <ImagePlus className="h-6 w-6" />
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+            <Upload className="h-4 w-4 mr-1" />
+            {uploading ? "Enviando…" : value ? "Trocar imagem" : "Anexar imagem"}
+          </Button>
+          {value && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")}>
+              <X className="h-4 w-4 mr-1" /> Remover
+            </Button>
+          )}
+        </div>
+      </div>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="ou cole uma URL https://…" className="text-xs" />
+    </div>
   );
 }
