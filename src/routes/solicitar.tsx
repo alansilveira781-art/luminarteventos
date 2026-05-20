@@ -277,7 +277,7 @@ function SolicitarPage() {
               />
             </Field>
 
-            {!isCompra && TIPOS_DEMANDA_PAGAVEIS.includes(form.subtipo) && (
+            {!isCompra && (
               <div className="space-y-3 rounded-lg border border-border p-3 bg-muted/20">
                 <Field label="Foi pago?">
                   <div className="grid grid-cols-2 gap-2">
