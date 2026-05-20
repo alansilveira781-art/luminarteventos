@@ -14,6 +14,7 @@ import { Route as SolicitantesRouteImport } from './routes/solicitantes'
 import { Route as SaidasRouteImport } from './routes/saidas'
 import { Route as RhRouteImport } from './routes/rh'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as PatrimonioRouteImport } from './routes/patrimonio'
 import { Route as JuridicoRouteImport } from './routes/juridico'
 import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
@@ -79,6 +80,11 @@ const RhRoute = RhRouteImport.update({
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatrimonioRoute = PatrimonioRouteImport.update({
+  id: '/patrimonio',
+  path: '/patrimonio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JuridicoRoute = JuridicoRouteImport.update({
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
   '/juridico': typeof JuridicoRouteWithChildren
+  '/patrimonio': typeof PatrimonioRoute
   '/relatorios': typeof RelatoriosRoute
   '/rh': typeof RhRouteWithChildren
   '/saidas': typeof SaidasRoute
@@ -344,6 +351,7 @@ export interface FileRoutesByTo {
   '/devolucoes': typeof DevolucoesRoute
   '/entradas': typeof EntradasRoute
   '/fornecedores': typeof FornecedoresRoute
+  '/patrimonio': typeof PatrimonioRoute
   '/relatorios': typeof RelatoriosRoute
   '/saidas': typeof SaidasRoute
   '/solicitantes': typeof SolicitantesRoute
@@ -392,6 +400,7 @@ export interface FileRoutesById {
   '/financeiro': typeof FinanceiroRouteWithChildren
   '/fornecedores': typeof FornecedoresRoute
   '/juridico': typeof JuridicoRouteWithChildren
+  '/patrimonio': typeof PatrimonioRoute
   '/relatorios': typeof RelatoriosRoute
   '/rh': typeof RhRouteWithChildren
   '/saidas': typeof SaidasRoute
@@ -442,6 +451,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/fornecedores'
     | '/juridico'
+    | '/patrimonio'
     | '/relatorios'
     | '/rh'
     | '/saidas'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/devolucoes'
     | '/entradas'
     | '/fornecedores'
+    | '/patrimonio'
     | '/relatorios'
     | '/saidas'
     | '/solicitantes'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/fornecedores'
     | '/juridico'
+    | '/patrimonio'
     | '/relatorios'
     | '/rh'
     | '/saidas'
@@ -580,6 +592,7 @@ export interface RootRouteChildren {
   FinanceiroRoute: typeof FinanceiroRouteWithChildren
   FornecedoresRoute: typeof FornecedoresRoute
   JuridicoRoute: typeof JuridicoRouteWithChildren
+  PatrimonioRoute: typeof PatrimonioRoute
   RelatoriosRoute: typeof RelatoriosRoute
   RhRoute: typeof RhRouteWithChildren
   SaidasRoute: typeof SaidasRoute
@@ -630,6 +643,13 @@ declare module '@tanstack/react-router' {
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patrimonio': {
+      id: '/patrimonio'
+      path: '/patrimonio'
+      fullPath: '/patrimonio'
+      preLoaderRoute: typeof PatrimonioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/juridico': {
@@ -1042,6 +1062,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinanceiroRoute: FinanceiroRouteWithChildren,
   FornecedoresRoute: FornecedoresRoute,
   JuridicoRoute: JuridicoRouteWithChildren,
+  PatrimonioRoute: PatrimonioRoute,
   RelatoriosRoute: RelatoriosRoute,
   RhRoute: RhRouteWithChildren,
   SaidasRoute: SaidasRoute,
