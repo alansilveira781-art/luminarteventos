@@ -167,7 +167,7 @@ function EntradasPage() {
         orderBy: { column: "nome", ascending: true },
         pageSize: 1000,
       }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   });
   const { data: fornecedores } = useQuery({
     queryKey: ["fornecedores-select"],

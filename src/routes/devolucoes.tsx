@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { FormActions, FormField, FormSection } from "@/components/FormSection";
@@ -66,7 +66,7 @@ function DevolucoesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimentacoes")
-        .select("id, data_movimento, quantidade, item_id, solicitante_id, evento_projeto, saida_status, item:itens(nome,codigo,unidade), solicitante:solicitantes(nome)")
+        .select("id, data_movimento, quantidade, item_id, solicitante_id, evento_projeto, saida_status, requisicao_numero, item:itens(nome,codigo,unidade), solicitante:solicitantes(nome)")
         .eq("tipo", "saida")
         .in("saida_status", ["aberta", "parcialmente_devolvida"])
         .order("data_movimento", { ascending: false });
@@ -93,10 +93,22 @@ function DevolucoesPage() {
   });
 
   const mut = useMutation({
-    mutationFn: async (linhas: Array<any>) => {
-      if (linhas.length === 0) throw new Error("Informe a quantidade devolvida de pelo menos um item");
-      const { error } = await supabase.from("movimentacoes").insert(linhas);
-      if (error) throw error;
+    mutationFn: async (payload: { linhas: any[]; idsSemDevolucao: string[] }) => {
+      const { linhas, idsSemDevolucao } = payload;
+      if (linhas.length === 0 && idsSemDevolucao.length === 0) {
+        throw new Error("Informe a quantidade devolvida de pelo menos um item ou marque como sem devolução");
+      }
+      if (linhas.length) {
+        const { error } = await supabase.from("movimentacoes").insert(linhas);
+        if (error) throw error;
+      }
+      if (idsSemDevolucao.length) {
+        const { error } = await supabase
+          .from("movimentacoes")
+          .update({ saida_status: "finalizada" })
+          .in("id", idsSemDevolucao);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       invalidateAll(qc);
@@ -309,7 +321,7 @@ function DevolucoesPage() {
             saidas={saidasAbertas ?? []}
             devolvidoPorOrigem={devolvidoPorOrigem ?? new Map()}
             solicitantes={solicitantes ?? []}
-            onSubmit={(linhas: any) => mut.mutate(linhas)}
+            onSubmit={(payload: any) => mut.mutate(payload)}
             submitting={mut.isPending}
           />
         </DialogContent>
@@ -337,15 +349,22 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["dashboard-movs"] });
 }
 
-// Agrupa as saídas em "lotes" por (data_movimento + solicitante + evento)
+// Agrupa as saídas em "lotes" por requisicao_numero (ou data+solicitante+evento)
 function groupSaidas(saidas: any[]) {
-  const groups = new Map<string, { key: string; label: string; data: string; solicitante: any; evento: string | null; itens: any[] }>();
+  const groups = new Map<string, { key: string; numero: number | null; label: string; searchKey: string; data: string; solicitante: any; evento: string | null; itens: any[] }>();
   for (const s of saidas) {
-    const key = `${s.data_movimento}__${s.solicitante_id ?? "null"}__${s.evento_projeto ?? "null"}`;
+    const key = s.requisicao_numero != null
+      ? `req-${s.requisicao_numero}`
+      : `${s.data_movimento}__${s.solicitante_id ?? "null"}__${s.evento_projeto ?? "null"}`;
     if (!groups.has(key)) {
+      const numeroStr = s.requisicao_numero != null ? `#${String(s.requisicao_numero).padStart(4, "0")} · ` : "";
+      const dataStr = format(new Date(s.data_movimento), "dd/MM/yyyy HH:mm");
+      const solNome = s.solicitante?.nome ?? "s/ solicitante";
       groups.set(key, {
         key,
-        label: `${format(new Date(s.data_movimento), "dd/MM/yyyy HH:mm")} · ${s.solicitante?.nome ?? "s/ solicitante"}${s.evento_projeto ? " · " + s.evento_projeto : ""}`,
+        numero: s.requisicao_numero ?? null,
+        label: `${numeroStr}${dataStr} · ${solNome}${s.evento_projeto ? " · " + s.evento_projeto : ""}`,
+        searchKey: "",
         data: s.data_movimento,
         solicitante: s.solicitante,
         evento: s.evento_projeto,
@@ -354,7 +373,79 @@ function groupSaidas(saidas: any[]) {
     }
     groups.get(key)!.itens.push(s);
   }
-  return Array.from(groups.values()).sort((a, b) => b.data.localeCompare(a.data));
+  const arr = Array.from(groups.values());
+  for (const g of arr) {
+    g.searchKey = [
+      g.numero != null ? String(g.numero).padStart(4, "0") : "",
+      g.numero != null ? `#${String(g.numero).padStart(4, "0")}` : "",
+      g.numero != null ? `req-${g.numero}` : "",
+      format(new Date(g.data), "dd/MM/yyyy"),
+      format(new Date(g.data), "dd/MM/yyyy HH:mm"),
+      g.solicitante?.nome ?? "",
+      g.evento ?? "",
+      g.itens.map((i: any) => `${i.item?.codigo ?? ""} ${i.item?.nome ?? ""}`).join(" "),
+    ].join(" ");
+  }
+  return arr.sort((a, b) => b.data.localeCompare(a.data));
+}
+
+function SaidaCombobox({ grupos, value, onChange }: { grupos: any[]; value: string; onChange: (key: string) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const selected = grupos.find((g) => g.key === value);
+
+  const filtered = useMemo(() => {
+    const terms = normalize(search).split(/\s+/).filter(Boolean);
+    if (!terms.length) return grupos;
+    return grupos.filter((g) => {
+      const hay = normalize(g.searchKey);
+      return terms.every((t) => hay.includes(t));
+    });
+  }, [grupos, search]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Button type="button" variant="outline" role="combobox" aria-expanded={open}
+        className="w-full justify-between font-normal" onClick={() => setOpen((c) => !c)}>
+        <span className="truncate text-left">
+          {selected ? selected.label : <span className="text-muted-foreground">Escolha uma saída em aberto…</span>}
+        </span>
+        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[360px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <Input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+              placeholder="Buscar por nº, solicitante, data, item…"
+              className="h-10 border-0 bg-transparent px-0 py-3 shadow-none focus-visible:ring-0" />
+          </div>
+          <div className="max-h-[320px] overflow-y-auto p-1">
+            {filtered.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
+            ) : filtered.map((g) => (
+              <button key={g.key} type="button"
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                onPointerDown={(e) => { e.preventDefault(); onChange(g.key); setSearch(""); setOpen(false); }}>
+                <span className="truncate">{g.label} <span className="text-muted-foreground">({g.itens.length} item{g.itens.length > 1 ? "s" : ""})</span></span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, submitting }: any) {
@@ -367,6 +458,7 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
     observacoes: "",
   });
   const [qtds, setQtds] = useState<Record<string, string>>({});
+  const [semDevolucao, setSemDevolucao] = useState<Record<string, boolean>>({});
 
   const grupo = grupos.find((g) => g.key === grupoKey);
   const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
@@ -374,6 +466,7 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
   const handleSelectGrupo = (key: string) => {
     setGrupoKey(key);
     setQtds({});
+    setSemDevolucao({});
   };
 
   return (
@@ -382,7 +475,12 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
       if (!grupo) return toast.error("Selecione uma saída");
 
       const linhas: any[] = [];
+      const idsSemDevolucao: string[] = [];
       for (const s of grupo.itens) {
+        if (semDevolucao[s.id]) {
+          idsSemDevolucao.push(s.id);
+          continue;
+        }
         const qtd = Number(qtds[s.id] || 0);
         if (qtd <= 0) continue;
         const jaDev = devolvidoPorOrigem.get(s.id) ?? 0;
@@ -403,41 +501,26 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
           observacoes: meta.observacoes || null,
         });
       }
-      onSubmit(linhas);
+      if (linhas.length === 0 && idsSemDevolucao.length === 0) {
+        return toast.error("Informe a quantidade devolvida ou marque ao menos um item como sem devolução");
+      }
+      onSubmit({ linhas, idsSemDevolucao });
     }} className="space-y-4">
       <FormSection>
         <FormField label="Saída vinculada*" wide>
-          <Select value={grupoKey} onValueChange={handleSelectGrupo}>
-            <SelectTrigger><SelectValue placeholder="Escolha uma saída em aberto…" /></SelectTrigger>
-            <SelectContent>
-              {grupos.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma saída em aberto</div>}
-              {grupos.map((g) => (
-                <SelectItem key={g.key} value={g.key}>{g.label} ({g.itens.length} item{g.itens.length > 1 ? "s" : ""})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SaidaCombobox grupos={grupos} value={grupoKey} onChange={handleSelectGrupo} />
         </FormField>
         <FormField label="Data*"><Input required type="datetime-local" value={meta.data_movimento} onChange={(e) => setM("data_movimento", e.target.value)} /></FormField>
         <FormField label="Responsável pela devolução">
-          <Input
-            list="solicitantes-list"
-            value={meta.responsavel_lancamento}
-            onChange={(e) => setM("responsavel_lancamento", e.target.value)}
-            placeholder="Pesquise ou digite um nome…"
-          />
+          <Input list="solicitantes-list" value={meta.responsavel_lancamento}
+            onChange={(e) => setM("responsavel_lancamento", e.target.value)} placeholder="Pesquise ou digite um nome…" />
         </FormField>
         <FormField label="Responsável pelo recebimento">
-          <Input
-            list="solicitantes-list"
-            value={meta.responsavel_recebimento}
-            onChange={(e) => setM("responsavel_recebimento", e.target.value)}
-            placeholder="Pesquise ou digite um nome…"
-          />
+          <Input list="solicitantes-list" value={meta.responsavel_recebimento}
+            onChange={(e) => setM("responsavel_recebimento", e.target.value)} placeholder="Pesquise ou digite um nome…" />
         </FormField>
         <datalist id="solicitantes-list">
-          {(solicitantes ?? []).map((s: any) => (
-            <option key={s.id} value={s.nome} />
-          ))}
+          {(solicitantes ?? []).map((s: any) => (<option key={s.id} value={s.nome} />))}
         </datalist>
         <FormField label="Observações" wide><Textarea rows={2} value={meta.observacoes} onChange={(e) => setM("observacoes", e.target.value)} /></FormField>
       </FormSection>
@@ -454,6 +537,7 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
                   <col className="w-24" />
                   <col className="w-20" />
                   <col className="w-28" />
+                  <col className="w-24" />
                 </colgroup>
                 <thead className="bg-muted/50">
                   <tr className="text-xs uppercase text-muted-foreground">
@@ -462,12 +546,14 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
                     <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Já devolvido</th>
                     <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Saldo</th>
                     <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Devolver agora</th>
+                    <th className="px-3 py-2 font-medium text-center whitespace-nowrap">Sem devolução</th>
                   </tr>
                 </thead>
                 <tbody>
                   {grupo.itens.map((s: any) => {
                     const jaDev = devolvidoPorOrigem.get(s.id) ?? 0;
                     const saldo = Number(s.quantidade) - jaDev;
+                    const sem = !!semDevolucao[s.id];
                     return (
                       <tr key={s.id} className="border-t border-border">
                         <td className="px-3 py-2 font-medium truncate">{s.item?.nome}</td>
@@ -475,17 +561,16 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground whitespace-nowrap">{jaDev}</td>
                         <td className="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{saldo}</td>
                         <td className="px-3 py-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            max={saldo}
-                            step="0.01"
-                            value={qtds[s.id] ?? ""}
+                          <Input type="number" min="0" max={saldo} step="0.01"
+                            value={sem ? "" : (qtds[s.id] ?? "")}
                             onChange={(e) => setQtds((q) => ({ ...q, [s.id]: e.target.value }))}
-                            placeholder="0"
-                            disabled={saldo <= 0}
-                            className="h-8 text-right"
-                          />
+                            placeholder="0" disabled={saldo <= 0 || sem} className="h-8 text-right" />
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <Checkbox checked={sem} onCheckedChange={(v) => {
+                            setSemDevolucao((m) => ({ ...m, [s.id]: !!v }));
+                            if (v) setQtds((q) => ({ ...q, [s.id]: "" }));
+                          }} />
                         </td>
                       </tr>
                     );
@@ -494,7 +579,7 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, solicitantes, onSubmit, sub
               </table>
             </div>
           </Card>
-          <p className="text-xs text-muted-foreground">Deixe em branco ou 0 nos itens que não estão sendo devolvidos agora.</p>
+          <p className="text-xs text-muted-foreground">Marque "Sem devolução" para encerrar o saldo do item sem registrar uma devolução. Deixe a quantidade em branco/0 nos itens que não estão sendo devolvidos agora.</p>
         </div>
       )}
 
