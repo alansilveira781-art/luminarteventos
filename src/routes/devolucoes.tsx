@@ -20,6 +20,8 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { PeriodoFilter, filterByPeriodo, periodoFromPreset, type Periodo, type PeriodoPreset } from "@/components/PeriodoFilter";
+import { TablePagination } from "@/components/TablePagination";
 
 export const Route = createFileRoute("/devolucoes")({
   component: DevolucoesPage,
@@ -33,6 +35,10 @@ function DevolucoesPage() {
   const [q, setQ] = useState("");
   const { sort, toggleSort, applySort } = useSort();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("mes");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("mes"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
 
   const { data: devolucoes } = useQuery({
     queryKey: ["devolucoes"],
@@ -144,7 +150,18 @@ function DevolucoesPage() {
     });
   }, [devolucoes, sBusca, sort]);
 
-  const sel = useBulkSelection(filtered);
+  const filteredPeriodo = useMemo(
+    () => filterByPeriodo(filtered, periodo, (m: any) => m.data_movimento),
+    [filtered, periodo],
+  );
+  useMemo(() => { setPage(1); }, [sBusca, sort, periodo]);
+  const pageCount = Math.max(1, Math.ceil(filteredPeriodo.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => filteredPeriodo.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredPeriodo, page],
+  );
+
+  const sel = useBulkSelection(pageItems);
 
   const BULK_FIELDS: BulkField[] = [
     { key: "data_movimento", label: "Data/Hora", type: "datetime" },
@@ -186,18 +203,26 @@ function DevolucoesPage() {
       />
 
       <Card className="p-4 mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por item, código, solicitante, responsável, condição…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por item, código, solicitante, responsável, condição…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
           />
         </div>
         <div className="text-xs text-muted-foreground mt-2">
-          {filtered.length} {filtered.length === 1 ? "devolução" : "devoluções"}
-          {devolucoes && filtered.length !== devolucoes.length ? ` (de ${devolucoes.length})` : ""}
+          {filteredPeriodo.length === 0
+            ? "Nenhuma devolução"
+            : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredPeriodo.length)} de ${filteredPeriodo.length} devoluções`}
         </div>
       </Card>
 
@@ -236,7 +261,7 @@ function DevolucoesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length ? filtered.map((m: any) => (
+              {pageItems.length ? pageItems.map((m: any) => (
                 <tr key={m.id} className="border-t border-border hover:bg-muted/30">
                   {isAdmin && (
                     <td className="px-3 py-3">
@@ -274,6 +299,8 @@ function DevolucoesPage() {
           </table>
         </div>
       </Card>
+
+      <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { normalize } from "@/lib/utils";
 import { SortableTh, useSort } from "@/components/SortableTh";
+import { NumberInput } from "@/components/comercial/NumberInput";
 
 export const Route = createFileRoute("/patrimonio/")({ component: PatrimonioInventario });
 
@@ -456,14 +457,14 @@ function ItemDialog({ open, onOpenChange, editing, itens, onSave }: {
           </div>
           <div><Label>Especificação</Label><Input value={f.especificacao ?? ""} onChange={(e) => set("especificacao", e.target.value)} /></div>
           <div><Label>Dimensões</Label><Input value={f.dimensoes ?? ""} onChange={(e) => set("dimensoes", e.target.value)} /></div>
-          <div><Label>Quantidade</Label><Input type="number" step="0.01" value={f.quantidade ?? 1} onChange={(e) => set("quantidade", Number(e.target.value))} /></div>
+          <div><Label>Quantidade</Label><NumberInput step="0.01" value={Number(f.quantidade ?? 1)} onChange={(n) => set("quantidade", n)} /></div>
           <div><Label>Unidade</Label>
             <Select value={f.unidade ?? "UNIDADE"} onValueChange={(v) => set("unidade", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{UNIDADES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={f.valor ?? 0} onChange={(e) => set("valor", Number(e.target.value))} /></div>
+          <div><Label>Valor (R$)</Label><NumberInput step="0.01" value={Number(f.valor ?? 0)} onChange={(n) => set("valor", n)} /></div>
           <div><Label>Estado</Label>
             <Select value={f.estado ?? "BOM"} onValueChange={(v) => set("estado", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>

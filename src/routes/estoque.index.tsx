@@ -18,6 +18,8 @@ import { ITEM_TEMPLATE } from "@/lib/import-utils";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
+import { PeriodoFilter, filterByPeriodo, periodoFromPreset, type Periodo, type PeriodoPreset } from "@/components/PeriodoFilter";
+import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 
 const ITEM_BULK_FIELDS: BulkField[] = [
@@ -51,6 +53,10 @@ function EstoquePage() {
   const [importing, setImporting] = useState(false);
   const [hideZero, setHideZero] = useState(false);
   const [sort, setSort] = useState<{ key: string; dir: "desc" | "asc" } | null>(null);
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("todos");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("todos"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
 
   const { data: itens, isLoading } = useQuery({
     queryKey: ["itens"],
@@ -120,6 +126,7 @@ function EstoquePage() {
       );
     }
     if (hideZero) arr = arr.filter((i) => Number(i.quantidade_atual) > 0);
+    arr = filterByPeriodo(arr, periodo, (i: any) => i.created_at);
     if (sort) {
       const { key, dir } = sort;
       arr = [...arr].sort((a, b) => {
@@ -136,9 +143,13 @@ function EstoquePage() {
       });
     }
     return arr;
-  }, [itens, q, hideZero, sort]);
+  }, [itens, q, hideZero, sort, periodo]);
 
-  const sel = useBulkSelection(filtered);
+  useMemo(() => { setPage(1); }, [q, hideZero, sort, periodo]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
+
+  const sel = useBulkSelection(pageItems);
   const [bulkOpen, setBulkOpen] = useState(false);
   const bulkMut = useMutation({
     mutationFn: async (patch: Record<string, any>) => {
@@ -196,18 +207,26 @@ function EstoquePage() {
       />
 
       <Card className="p-4 mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, código, categoria, localização, status…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, código, categoria, localização, status…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
           />
         </div>
         <div className="text-xs text-muted-foreground mt-2">
-          {filtered.length} {filtered.length === 1 ? "item" : "itens"}
-          {itens && filtered.length !== itens.length ? ` (de ${itens.length})` : ""}
+          {filtered.length === 0
+            ? "Nenhum item"
+            : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} de ${filtered.length}${itens && filtered.length !== itens.length ? ` (total ${itens.length})` : ""}`}
         </div>
       </Card>
 
@@ -240,7 +259,7 @@ function EstoquePage() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={isAdmin ? 10 : 9} className="text-center py-10 text-muted-foreground">Nenhum item encontrado.</td></tr>
               ) : (
-                filtered.map((i) => (
+                pageItems.map((i) => (
                   <tr key={i.id} className="border-t border-border hover:bg-muted/30">
                     {isAdmin && (
                       <td className="px-3 py-3">
@@ -293,6 +312,8 @@ function EstoquePage() {
           </table>
         </div>
       </Card>
+
+      <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
 
       <Dialog open={creating || !!editing || !!duplicating} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); setDuplicating(null); } }}>
         <DialogContent className="max-w-[min(1100px,96vw)] w-[96vw]">

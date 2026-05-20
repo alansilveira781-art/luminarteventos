@@ -33,6 +33,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { NotasSefaz } from "@/components/estoque/NotasSefaz";
 import { EMPRESAS } from "@/lib/empresas";
+import { PeriodoFilter, filterByPeriodo, periodoFromPreset, type Periodo, type PeriodoPreset } from "@/components/PeriodoFilter";
+import { TablePagination } from "@/components/TablePagination";
 
 export const Route = createFileRoute("/entradas")({
   component: EntradasPage,
@@ -48,6 +50,10 @@ function EntradasPage() {
   const [importingXml, setImportingXml] = useState(false);
   const [q, setQ] = useState("");
   const [filterItemQ, setFilterItemQ] = useState<string>("");
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("mes");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("mes"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
   const [filterEvento, setFilterEvento] = useState<string>("__all");
   const { sort, toggleSort, applySort } = useSort();
 
@@ -280,7 +286,18 @@ function EntradasPage() {
       return g[k];
     });
   }, [filteredBaseList, sort]);
-  const sel = useBulkSelection(grupos);
+
+  const gruposPeriodo = useMemo(
+    () => filterByPeriodo(grupos, periodo, (g: any) => g.data_movimento),
+    [grupos, periodo],
+  );
+  useMemo(() => { setPage(1); }, [q, filterItemQ, filterEvento, periodo, sort]);
+  const pageCount = Math.max(1, Math.ceil(gruposPeriodo.length / PAGE_SIZE));
+  const pageGrupos = useMemo(
+    () => gruposPeriodo.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [gruposPeriodo, page],
+  );
+  const sel = useBulkSelection(pageGrupos);
   const [expandido, setExpandido] = useState<Record<string, boolean>>({});
   const [bulkOpen, setBulkOpen] = useState(false);
   const ENTRADA_BULK_FIELDS: BulkField[] = [
@@ -378,10 +395,16 @@ function EntradasPage() {
               <X className="h-3 w-3 mr-1" /> Limpar
             </Button>
           )}
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
+          />
         </div>
         <div className="text-xs text-muted-foreground">
-          {grupos.length} {grupos.length === 1 ? "entrada" : "entradas"}
-          {entradas && filteredBaseList.length !== entradas.length ? ` (de ${entradas.length} itens)` : ""}
+          {gruposPeriodo.length === 0
+            ? "Nenhuma entrada"
+            : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, gruposPeriodo.length)} de ${gruposPeriodo.length} entradas`}
         </div>
       </Card>
 
@@ -411,7 +434,7 @@ function EntradasPage() {
               </tr>
             </thead>
             <tbody>
-              {grupos.length ? grupos.map((g: any) => {
+              {pageGrupos.length ? pageGrupos.map((g: any) => {
                 const isOpen = !!expandido[g.id];
                 const colCount = (isAdmin ? 1 : 0) + 1 + 9 + (isAdmin ? 1 : 0);
                 return (
@@ -505,6 +528,8 @@ function EntradasPage() {
           </table>
         </div>
       </Card>
+
+      <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
 
       <BulkEditDialog
         open={bulkOpen}
