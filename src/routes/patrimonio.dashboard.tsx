@@ -253,10 +253,10 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
   return (
     <Card className="p-4">
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg bg-muted ${color}`}><Icon className="h-5 w-5" /></div>
-        <div className="min-w-0">
+        <div className={`shrink-0 p-2 rounded-lg bg-muted ${color}`}><Icon className="h-5 w-5" /></div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground truncate">{label}</p>
-          <p className="text-lg font-semibold truncate">{value}</p>
+          <p className="text-lg font-semibold leading-tight break-words" title={value}>{value}</p>
         </div>
       </div>
     </Card>
