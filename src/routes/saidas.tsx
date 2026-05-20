@@ -409,10 +409,16 @@ function SaidasPage() {
               <X className="h-3 w-3 mr-1" /> Limpar
             </Button>
           )}
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
+          />
         </div>
         <div className="text-xs text-muted-foreground">
-          {grupos.length} {grupos.length === 1 ? "saída" : "saídas"}
-          {saidas && filteredBaseList.length !== saidas.length ? ` (de ${saidas.length} itens)` : ""}
+          {gruposPeriodo.length === 0
+            ? "Nenhuma saída"
+            : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, gruposPeriodo.length)} de ${gruposPeriodo.length} saídas`}
         </div>
       </Card>
 
