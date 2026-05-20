@@ -73,6 +73,20 @@ function SolicitarPage() {
   const [form, setForm] = useState<FormState>(initial);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ numero: number | null; tipo: Tipo } | null>(null);
+  const [opcoes, setOpcoes] = useState<{ parcelamentos: string[]; condicoes_pagamento: string[] }>({
+    parcelamentos: [],
+    condicoes_pagamento: [],
+  });
+
+  useEffect(() => {
+    fetch("/api/public/opcoes-pagamento")
+      .then((r) => r.json())
+      .then((d) => setOpcoes({
+        parcelamentos: d.parcelamentos ?? [],
+        condicoes_pagamento: d.condicoes_pagamento ?? [],
+      }))
+      .catch(() => {});
+  }, []);
 
   const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
 
