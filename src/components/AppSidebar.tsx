@@ -103,9 +103,10 @@ function isActiveUrl(pathname: string, url: string, allUrls: string[] = []) {
   return pathname.startsWith(url + "/");
 }
 
-function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "contabil" | "juridico" | "rh" | "admin" {
+function getContext(pathname: string): "home" | "estoque" | "compras" | "financeiro" | "comercial" | "contabil" | "juridico" | "patrimonio" | "rh" | "admin" {
   if (pathname.startsWith("/admin")) return "admin";
   if (RH_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "rh";
+  if (PATRIMONIO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "patrimonio";
   if (JURIDICO_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "juridico";
   if (CONTABIL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "contabil";
   if (COMERCIAL_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"))) return "comercial";
@@ -127,10 +128,12 @@ function useNavItems(pathname: string) {
     if (i.module === "comercial") return ctx === "comercial" && (isAdmin || hasModule("comercial"));
     if (i.module === "contabil") return ctx === "contabil" && (isAdmin || hasModule("contabil"));
     if (i.module === "juridico") return ctx === "juridico" && (isAdmin || hasModule("juridico"));
+    if (i.module === "patrimonio") return ctx === "patrimonio" && (isAdmin || hasModule("patrimonio"));
     if (i.module === "rh") return ctx === "rh" && (isAdmin || hasModule("rh"));
     return true;
   });
 }
+
 
 function SidebarBody({
   pathname,
