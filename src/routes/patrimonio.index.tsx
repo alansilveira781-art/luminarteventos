@@ -190,18 +190,18 @@ function PatrimonioInventario() {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="text-left">
-                <th className="px-2 py-2 w-14">Foto</th>
-                <th className="px-2 py-2 w-16">COD</th>
-                <th className="px-2 py-2 w-24">ID</th>
-                <th className="px-2 py-2">Categoria</th>
-                <th className="px-2 py-2">Subcategoria</th>
-                <th className="px-2 py-2">Item</th>
-                <th className="px-2 py-2">Dimensões</th>
-                <th className="px-2 py-2 text-right w-16">Qtde</th>
-                <th className="px-2 py-2 text-right w-24">Valor</th>
-                <th className="px-2 py-2 w-32">Estado</th>
-                <th className="px-2 py-2">Local</th>
-                <th className="px-2 py-2 w-20"></th>
+                <th className="px-2 py-2 w-14 bg-card">Foto</th>
+                <SortableTh sort={sort} onToggle={toggleSort} k="cod" label="COD" className="bg-card w-16" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="id_item" label="ID" className="bg-card w-24" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="categoria" label="Categoria" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="subcategoria" label="Subcategoria" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="nome" label="Item" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="dimensoes" label="Dimensões" className="bg-card" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="quantidade" label="Qtde" align="right" className="bg-card w-16" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="valor" label="Valor" align="right" className="bg-card w-24" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="estado" label="Estado" className="bg-card w-32" />
+                <SortableTh sort={sort} onToggle={toggleSort} k="localizacao" label="Local" className="bg-card" />
+                <th className="px-2 py-2 w-20 bg-card"></th>
               </tr>
             </thead>
             <tbody>
