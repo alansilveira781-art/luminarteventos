@@ -529,6 +529,8 @@ function EntradasPage() {
         </div>
       </Card>
 
+      <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
+
       <BulkEditDialog
         open={bulkOpen}
         onOpenChange={setBulkOpen}
