@@ -93,6 +93,10 @@ function EstoquePage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["itens-select"] });
+      qc.invalidateQueries({ queryKey: ["itens-select-saida"] });
+      qc.invalidateQueries({ queryKey: ["itens-busca"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-itens"] });
       toast.success("Item salvo");
       setEditing(null);
       setCreating(false);
