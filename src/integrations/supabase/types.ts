@@ -1161,12 +1161,14 @@ export type Database = {
           cliente_email: string | null
           cliente_nome: string | null
           cliente_telefone: string | null
+          corpo_html: string | null
           created_at: string
           created_by: string | null
           data_assinatura: string | null
           data_fechamento: string | null
           empresa: string | null
           id: string
+          modelo_id: string | null
           observacoes: string | null
           ordem: number
           proposta_numero: number | null
@@ -1176,18 +1178,21 @@ export type Database = {
           titulo: string
           updated_at: string
           valor: number | null
+          variaveis_valores: Json | null
         }
         Insert: {
           cliente_documento?: string | null
           cliente_email?: string | null
           cliente_nome?: string | null
           cliente_telefone?: string | null
+          corpo_html?: string | null
           created_at?: string
           created_by?: string | null
           data_assinatura?: string | null
           data_fechamento?: string | null
           empresa?: string | null
           id?: string
+          modelo_id?: string | null
           observacoes?: string | null
           ordem?: number
           proposta_numero?: number | null
@@ -1197,18 +1202,21 @@ export type Database = {
           titulo: string
           updated_at?: string
           valor?: number | null
+          variaveis_valores?: Json | null
         }
         Update: {
           cliente_documento?: string | null
           cliente_email?: string | null
           cliente_nome?: string | null
           cliente_telefone?: string | null
+          corpo_html?: string | null
           created_at?: string
           created_by?: string | null
           data_assinatura?: string | null
           data_fechamento?: string | null
           empresa?: string | null
           id?: string
+          modelo_id?: string | null
           observacoes?: string | null
           ordem?: number
           proposta_numero?: number | null
@@ -1218,6 +1226,51 @@ export type Database = {
           titulo?: string
           updated_at?: string
           valor?: number | null
+          variaveis_valores?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juridico_contratos_modelo_id_fkey"
+            columns: ["modelo_id"]
+            isOneToOne: false
+            referencedRelation: "juridico_modelos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      juridico_modelos: {
+        Row: {
+          ativo: boolean
+          corpo_html: string
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          variaveis: Json
+        }
+        Insert: {
+          ativo?: boolean
+          corpo_html?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+          variaveis?: Json
+        }
+        Update: {
+          ativo?: boolean
+          corpo_html?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          variaveis?: Json
         }
         Relationships: []
       }
@@ -1534,6 +1587,138 @@ export type Database = {
           nome?: string
         }
         Relationships: []
+      }
+      pat_itens: {
+        Row: {
+          categoria: string | null
+          cod: number | null
+          created_at: string
+          data_compra: string | null
+          dimensoes: string | null
+          especificacao: string | null
+          estado: string
+          id: string
+          id_item: string | null
+          imagem_url: string | null
+          localizacao: string | null
+          nome: string
+          observacoes: string | null
+          quantidade: number
+          subcategoria: string | null
+          unidade: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string | null
+          cod?: number | null
+          created_at?: string
+          data_compra?: string | null
+          dimensoes?: string | null
+          especificacao?: string | null
+          estado?: string
+          id?: string
+          id_item?: string | null
+          imagem_url?: string | null
+          localizacao?: string | null
+          nome: string
+          observacoes?: string | null
+          quantidade?: number
+          subcategoria?: string | null
+          unidade?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string | null
+          cod?: number | null
+          created_at?: string
+          data_compra?: string | null
+          dimensoes?: string | null
+          especificacao?: string | null
+          estado?: string
+          id?: string
+          id_item?: string | null
+          imagem_url?: string | null
+          localizacao?: string | null
+          nome?: string
+          observacoes?: string | null
+          quantidade?: number
+          subcategoria?: string | null
+          unidade?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      pat_movimentacoes: {
+        Row: {
+          condicao: string | null
+          created_at: string
+          created_by: string | null
+          data_movimento: string
+          data_prevista_devolucao: string | null
+          evento_projeto: string | null
+          finalidade: string | null
+          id: string
+          item_id: string | null
+          observacoes: string | null
+          quantidade: number
+          responsavel: string | null
+          saida_origem_id: string | null
+          saida_status: string | null
+          tipo: string
+        }
+        Insert: {
+          condicao?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_movimento?: string
+          data_prevista_devolucao?: string | null
+          evento_projeto?: string | null
+          finalidade?: string | null
+          id?: string
+          item_id?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          responsavel?: string | null
+          saida_origem_id?: string | null
+          saida_status?: string | null
+          tipo: string
+        }
+        Update: {
+          condicao?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_movimento?: string
+          data_prevista_devolucao?: string | null
+          evento_projeto?: string | null
+          finalidade?: string | null
+          id?: string
+          item_id?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          responsavel?: string | null
+          saida_origem_id?: string | null
+          saida_status?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pat_movimentacoes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pat_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pat_movimentacoes_saida_origem_id_fkey"
+            columns: ["saida_origem_id"]
+            isOneToOne: false
+            referencedRelation: "pat_movimentacoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
