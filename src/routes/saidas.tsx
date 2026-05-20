@@ -184,7 +184,7 @@ function SaidasPage() {
       });
       return all.filter((i: any) => Number(i.quantidade_atual) > 0);
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   });
   const { data: solicitantes } = useQuery({
     queryKey: ["solicitantes-select"],
