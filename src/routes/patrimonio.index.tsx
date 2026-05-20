@@ -385,12 +385,23 @@ function downloadBlob(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function ItemDialog({ open, onOpenChange, editing, onSave }: {
-  open: boolean; onOpenChange: (v: boolean) => void; editing: Pat | null; onSave: (p: any) => void;
+function ItemDialog({ open, onOpenChange, editing, itens, onSave }: {
+  open: boolean; onOpenChange: (v: boolean) => void; editing: Pat | null; itens: Pat[]; onSave: (p: any) => void;
 }) {
   const [f, setF] = useState<any>({});
+  const [extraSubs, setExtraSubs] = useState<string[]>([]);
+  const [addingSub, setAddingSub] = useState(false);
+  const [newSub, setNewSub] = useState("");
   useMemo(() => { setF(editing ?? { estado: "BOM", unidade: "UNIDADE", quantidade: 1, valor: 0 }); }, [editing, open]);
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
+
+  const subcategorias = useMemo(() => {
+    const set = new Set<string>();
+    itens.forEach((i) => { if (i.subcategoria) set.add(i.subcategoria); });
+    extraSubs.forEach((s) => set.add(s));
+    if (f.subcategoria) set.add(f.subcategoria);
+    return Array.from(set).sort();
+  }, [itens, extraSubs, f.subcategoria]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -406,7 +417,43 @@ function ItemDialog({ open, onOpenChange, editing, onSave }: {
               <SelectContent>{CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div><Label>Subcategoria</Label><Input value={f.subcategoria ?? ""} onChange={(e) => set("subcategoria", e.target.value)} /></div>
+          <div>
+            <Label>Subcategoria</Label>
+            <div className="flex gap-1">
+              <Select value={f.subcategoria ?? "__none"} onValueChange={(v) => set("subcategoria", v === "__none" ? null : v)}>
+                <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">— Nenhuma —</SelectItem>
+                  {subcategorias.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setAddingSub((v) => !v)}>
+                {addingSub ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+            {addingSub && (
+              <div className="flex gap-1 mt-1 rounded-md border border-border bg-muted/30 p-2">
+                <Input
+                  value={newSub}
+                  autoFocus
+                  placeholder="Nova subcategoria"
+                  onChange={(e) => setNewSub(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = newSub.trim().toUpperCase();
+                      if (v) { setExtraSubs((p) => [...p, v]); set("subcategoria", v); setNewSub(""); setAddingSub(false); }
+                    }
+                    if (e.key === "Escape") { setAddingSub(false); setNewSub(""); }
+                  }}
+                />
+                <Button type="button" size="sm" disabled={!newSub.trim()} onClick={() => {
+                  const v = newSub.trim().toUpperCase();
+                  setExtraSubs((p) => [...p, v]); set("subcategoria", v); setNewSub(""); setAddingSub(false);
+                }}>Adicionar</Button>
+              </div>
+            )}
+          </div>
           <div><Label>Especificação</Label><Input value={f.especificacao ?? ""} onChange={(e) => set("especificacao", e.target.value)} /></div>
           <div><Label>Dimensões</Label><Input value={f.dimensoes ?? ""} onChange={(e) => set("dimensoes", e.target.value)} /></div>
           <div><Label>Quantidade</Label><Input type="number" step="0.01" value={f.quantidade ?? 1} onChange={(e) => set("quantidade", Number(e.target.value))} /></div>
