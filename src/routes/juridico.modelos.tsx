@@ -131,7 +131,7 @@ function ModeloDialog({ open, onOpenChange, editing, onSave }: {
   useMemo(() => {
     const init = editing ?? { tipo: "corporativo", nome: "", corpo_html: "<p>Escreva o contrato aqui. Use <strong>{{cliente_nome}}</strong>, {{valor}}, {{cnpj}} para campos dinâmicos.</p>" };
     setF(init);
-    setTimeout(() => { if (ref.current) ref.current.innerHTML = init.corpo_html ?? ""; }, 50);
+    setTimeout(() => { if (ref.current) ref.current.innerHTML = sanitizeHtml(init.corpo_html ?? ""); }, 50);
   }, [editing, open]);
 
   const exec = (cmd: string, val?: string) => { document.execCommand(cmd, false, val); ref.current?.focus(); };
