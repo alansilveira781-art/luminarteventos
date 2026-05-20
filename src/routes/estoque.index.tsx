@@ -18,6 +18,8 @@ import { ITEM_TEMPLATE } from "@/lib/import-utils";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionsBar } from "@/components/BulkActionsBar";
 import { BulkEditDialog, normalizeBulkPatch, type BulkField } from "@/components/BulkEditDialog";
+import { PeriodoFilter, filterByPeriodo, periodoFromPreset, type Periodo, type PeriodoPreset } from "@/components/PeriodoFilter";
+import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 
 const ITEM_BULK_FIELDS: BulkField[] = [
