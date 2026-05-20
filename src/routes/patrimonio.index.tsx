@@ -241,7 +241,7 @@ function PatrimonioInventario() {
                   </td>
                 </tr>
               ))}
-              {filtered.length > 500 && <tr><td colSpan={11} className="p-2 text-center text-xs text-muted-foreground">Mostrando 500 de {filtered.length}. Refine os filtros para ver mais.</td></tr>}
+              {filtered.length > 500 && <tr><td colSpan={12} className="p-2 text-center text-xs text-muted-foreground">Mostrando 500 de {filtered.length}. Refine os filtros para ver mais.</td></tr>}
             </tbody>
           </table>
         </div>
