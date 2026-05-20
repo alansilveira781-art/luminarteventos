@@ -66,7 +66,7 @@ function DevolucoesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimentacoes")
-        .select("id, data_movimento, quantidade, item_id, solicitante_id, evento_projeto, saida_status, item:itens(nome,codigo,unidade), solicitante:solicitantes(nome)")
+        .select("id, data_movimento, quantidade, item_id, solicitante_id, evento_projeto, saida_status, requisicao_numero, item:itens(nome,codigo,unidade), solicitante:solicitantes(nome)")
         .eq("tipo", "saida")
         .in("saida_status", ["aberta", "parcialmente_devolvida"])
         .order("data_movimento", { ascending: false });
