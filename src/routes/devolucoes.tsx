@@ -203,18 +203,26 @@ function DevolucoesPage() {
       />
 
       <Card className="p-4 mb-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por item, código, solicitante, responsável, condição…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9"
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por item, código, solicitante, responsável, condição…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <PeriodoFilter
+            preset={periodoPreset}
+            periodo={periodo}
+            onChange={(p, per) => { setPeriodoPreset(p); setPeriodo(per); }}
           />
         </div>
         <div className="text-xs text-muted-foreground mt-2">
-          {filtered.length} {filtered.length === 1 ? "devolução" : "devoluções"}
-          {devolucoes && filtered.length !== devolucoes.length ? ` (de ${devolucoes.length})` : ""}
+          {filteredPeriodo.length === 0
+            ? "Nenhuma devolução"
+            : `Exibindo ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredPeriodo.length)} de ${filteredPeriodo.length} devoluções`}
         </div>
       </Card>
 
