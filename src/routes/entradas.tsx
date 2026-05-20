@@ -286,7 +286,18 @@ function EntradasPage() {
       return g[k];
     });
   }, [filteredBaseList, sort]);
-  const sel = useBulkSelection(grupos);
+
+  const gruposPeriodo = useMemo(
+    () => filterByPeriodo(grupos, periodo, (g: any) => g.data_movimento),
+    [grupos, periodo],
+  );
+  useMemo(() => { setPage(1); }, [q, filterItemQ, filterEvento, periodo, sort]);
+  const pageCount = Math.max(1, Math.ceil(gruposPeriodo.length / PAGE_SIZE));
+  const pageGrupos = useMemo(
+    () => gruposPeriodo.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [gruposPeriodo, page],
+  );
+  const sel = useBulkSelection(pageGrupos);
   const [expandido, setExpandido] = useState<Record<string, boolean>>({});
   const [bulkOpen, setBulkOpen] = useState(false);
   const ENTRADA_BULK_FIELDS: BulkField[] = [
