@@ -137,11 +137,16 @@ function PatrimonioInventario() {
         title="Inventário de Patrimônio"
         description={`${totals.count} itens · ${totals.qtd.toLocaleString("pt-BR")} un · ${brl(totals.valor)}`}
         actions={
-          isAdmin && (
-            <Button onClick={() => { setEditing(null); setOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Novo item
+          <>
+            <Button variant="outline" onClick={() => setExportOpen(true)}>
+              <Download className="h-4 w-4 mr-1" /> Exportar
             </Button>
-          )
+            {isAdmin && (
+              <Button onClick={() => { setEditing(null); setOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" /> Novo item
+              </Button>
+            )}
+          </>
         }
       />
 
