@@ -98,6 +98,7 @@ function FornecedoresPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fornecedores"] });
+      qc.invalidateQueries({ queryKey: ["fornecedores-select"] });
       toast.success("Fornecedores atualizados");
       setBulkOpen(false);
       sel.clear();
