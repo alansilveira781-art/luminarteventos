@@ -92,21 +92,40 @@ function PatrimonioInventario() {
       if (filterEstado !== "__all" && i.estado !== filterEstado) return false;
       if (filterLoc !== "__all" && i.localizacao !== filterLoc) return false;
       if (!nq) return true;
-      return [i.nome, i.id_item, i.especificacao, i.localizacao, i.subcategoria]
+      return [i.nome, i.id_item, i.especificacao, i.localizacao, i.subcategoria, i.cod != null ? String(i.cod) : ""]
         .some((v) => normalize(String(v ?? "")).includes(nq));
     });
     return applySort(base);
   }, [itens, q, filterCat, filterEstado, filterLoc, sort]);
 
+  const filteredPeriodo = useMemo(
+    () => filterByPeriodo(filtered, periodo, (i: Pat) => i.created_at ?? null),
+    [filtered, periodo],
+  );
+  useMemo(() => { setPage(1); }, [q, filterCat, filterEstado, filterLoc, periodo, sort]);
+  const pageCount = Math.max(1, Math.ceil(filteredPeriodo.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => filteredPeriodo.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredPeriodo, page],
+  );
+
   const totals = useMemo(() => {
-    const t = { count: filtered.length, valor: 0, qtd: 0 };
-    filtered.forEach((i) => { t.valor += Number(i.valor || 0) * Number(i.quantidade || 1); t.qtd += Number(i.quantidade || 0); });
+    const t = { count: filteredPeriodo.length, valor: 0, qtd: 0 };
+    filteredPeriodo.forEach((i) => { t.valor += Number(i.valor || 0) * Number(i.quantidade || 1); t.qtd += Number(i.quantidade || 0); });
     return t;
-  }, [filtered]);
+  }, [filteredPeriodo]);
 
   const saveMut = useMutation({
     mutationFn: async (payload: any) => {
       const { id, ...rest } = payload;
+      // Validar COD único
+      if (rest.cod != null && rest.cod !== "") {
+        const codNum = Number(rest.cod);
+        let q = supabase.from("pat_itens").select("id").eq("cod", codNum);
+        if (id) q = q.neq("id", id);
+        const { data: dup } = await q.limit(1);
+        if (dup && dup.length) throw new Error(`Já existe um item com o COD ${codNum}.`);
+      }
       if (id) {
         const { error } = await supabase.from("pat_itens").update(rest).eq("id", id);
         if (error) throw error;
