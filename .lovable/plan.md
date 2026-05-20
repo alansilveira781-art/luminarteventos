@@ -1,60 +1,63 @@
-## Patrimônio · Inventário — corrigir campos numéricos
+# Ajustes — Estoque (Entradas/Saídas/Devoluções)
 
-No diálogo de item (`src/routes/patrimonio.index.tsx`, linhas ~459/466), os campos **Quantidade** e **Valor (R$)** usam `<Input type="number" value={f.quantidade ?? 1}>` e `value={f.valor ?? 0}`. Isso força o "0"/"1" a reaparecer quando o usuário apaga, impedindo digitar livremente.
+## 1. Sincronização base ↔ tela (item recém-criado já disponível em Entradas)
 
-**Solução:** trocar esses dois inputs pelo componente existente `src/components/comercial/NumberInput.tsx`, que mantém um buffer de texto local e permite apagar o campo sem repopular. O valor enviado ao salvar continua sendo `number` (0 quando vazio).
+**Problema:** após cadastrar um item no Estoque, ao abrir Entradas o item ainda não aparece imediatamente — é preciso recarregar.
+
+**Causa:** quando o item é salvo em `src/routes/estoque.index.tsx`, o `onSuccess` invalida apenas `["itens"]`, mas `entradas.tsx` (e os demais formulários) usam uma queryKey diferente (`["itens-select"]` / `["itens-busca"]`).
+
+**Correção:**
+- Em `src/routes/estoque.index.tsx`, no `onSuccess` de criação/edição de item, invalidar também as queries usadas pelos selects de item: `["itens-select"]`, `["itens-busca"]`, `["dashboard-itens"]`.
+- Verificar o mesmo em fornecedores (`src/routes/fornecedores.tsx`) e solicitantes (`src/routes/solicitantes.tsx`) — invalidar `["fornecedores-select"]` e `["solicitantes-select"]` após save.
+- Em `src/components/ItemSearchSelect.tsx` e `EntitySearchSelect.tsx`, garantir `staleTime: 0` (ou reduzir) para que ao reabrir o formulário a lista seja sempre revalidada.
+
+## 2. Devoluções — busca na "Saída vinculada"
+
+**Hoje:** o campo é um `<Select>` simples com a lista fixa.
+
+**Mudança em `src/routes/devolucoes.tsx` (componente `DevolucaoForm`):**
+- Substituir o `<Select>` por um Combobox pesquisável (usando `Command` / `Popover` do shadcn, padrão já usado em `EntitySearchSelect`).
+- Cada grupo de saída receberá um número de lançamento curto (ex: `#1234` derivado dos primeiros caracteres do ID, ou usar a ordem cronológica) exibido junto da label.
+- Índice de busca por grupo: nome do solicitante + número do lançamento + data formatada (`dd/MM/yyyy`) + nomes dos itens. A função `normalize()` já existente cobre acentos.
+- Mantém a seleção atual ao escolher (preserva `handleSelectGrupo`).
+
+## 3. Saídas — remover toggle "Não será devolvido"
+
+**Em `src/routes/saidas.tsx`:**
+- Remover a UI adicionada no expandido para marcar item como "não será devolvido" e a mutação `lineStatusMut` que altera `saida_status` por linha.
+- A linha da saída volta a se comportar como antes: status muda apenas via devoluções.
+
+## 4. Devoluções — checkbox "Não terá devolução" por item
+
+**Em `src/routes/devolucoes.tsx`, dentro da tabela de itens do `DevolucaoForm`:**
+- Adicionar uma coluna `Sem devolução` com `<Checkbox>` por linha (estado local `semDevolucao: Record<string,boolean>`).
+- Quando marcado:
+  - O input "Devolver agora" é desabilitado e zerado.
+  - Ao submeter, para cada item marcado a mutação atualiza diretamente `movimentacoes.saida_status = 'finalizada'` (encerrando o saldo daquele item sem gerar linha de devolução).
+- Itens não marcados seguem o fluxo atual (criam linha em `movimentacoes` com `tipo='devolucao'`).
+- Permite submissão se houver ao menos um item com qtd > 0 **ou** um item marcado como sem devolução.
+
+### Detalhe técnico do submit (devoluções)
+
+```ts
+// para cada item marcado em semDevolucao, atualizar a saída
+const idsSem = grupo.itens.filter(s => semDevolucao[s.id]).map(s => s.id);
+if (idsSem.length) {
+  await supabase.from("movimentacoes")
+    .update({ saida_status: "finalizada" })
+    .in("id", idsSem);
+}
+// + insert das linhas de devolução normais (como já é hoje)
+```
+
+Após sucesso, invalidar `["saidas"]`, `["saidas-abertas"]`, `["devolucoes"]`.
 
 ---
 
-## Estoque · paginação e filtro de período
-
-Adicionar nas abas:
-- `src/routes/estoque.index.tsx` (Estoque / Itens) — filtrar por `created_at` do item
-- `src/routes/entradas.tsx` — filtrar por `data_movimentacao` (ou `created_at`)
-- `src/routes/saidas.tsx` — idem
-- `src/routes/devolucoes.tsx` — idem
-
-### 1. Filtro de período (componente compartilhado novo)
-
-Criar `src/components/PeriodoFilter.tsx` com um `Select` de presets + `Popover` com dois `Calendar` quando "Personalizado":
-
-- Hoje
-- Esta semana (segunda → domingo)
-- Este mês
-- Este ano
-- Personalizado (intervalo de datas via shadcn `Calendar`)
-- Todos (sem filtro)
-
-Exporta `{ from, to }` como `Date | null`. Default: **Este mês**.
-
-### 2. Paginação (100 por página)
-
-Criar `src/components/TablePagination.tsx` usando os primitivos shadcn de `src/components/ui/pagination.tsx` (Previous, números com elipses, Next), recebendo `page`, `pageCount`, `onPageChange`.
-
-### 3. Integração em cada aba
-
-Em cada uma das 4 rotas:
-- Adicionar `const [periodo, setPeriodo] = useState<{from, to}>(thisMonth)` e `const [page, setPage] = useState(1)`.
-- Filtrar o array já existente pelo campo de data adequado dentro do `useMemo` que monta a lista exibida.
-- Resetar `page` para 1 sempre que filtros (busca, período, ordenação) mudarem.
-- Fatiar a lista: `pageItems = filtered.slice((page-1)*100, page*100)`.
-- Renderizar `<PeriodoFilter>` ao lado do campo de busca/header.
-- Renderizar `<TablePagination>` abaixo da tabela com `pageCount = Math.ceil(filtered.length / 100)`.
-- Contadores existentes (ex.: "X itens") passam a mostrar "exibindo N–M de X".
-
-Observação: a query do Supabase continua trazendo todos os registros (já está paginada internamente em lotes de 1000); a paginação e o filtro de período são aplicados no cliente, mantendo busca, ordenação e seleção em massa funcionando como hoje.
-
----
-
-## Arquivos alterados/criados
-
-**Novos**
-- `src/components/PeriodoFilter.tsx`
-- `src/components/TablePagination.tsx`
-
-**Editados**
-- `src/routes/patrimonio.index.tsx` (substituir 2 inputs por `NumberInput`)
-- `src/routes/estoque.index.tsx`
-- `src/routes/entradas.tsx`
-- `src/routes/saidas.tsx`
-- `src/routes/devolucoes.tsx`
+## Arquivos editados
+- `src/routes/estoque.index.tsx` — invalidações ampliadas
+- `src/routes/fornecedores.tsx` — invalidações ampliadas
+- `src/routes/solicitantes.tsx` — invalidações ampliadas
+- `src/components/ItemSearchSelect.tsx` / `EntitySearchSelect.tsx` — `staleTime` reduzido
+- `src/routes/devolucoes.tsx` — combobox de saída vinculada + checkbox "sem devolução"
+- `src/routes/saidas.tsx` — remover toggle "não será devolvido"
