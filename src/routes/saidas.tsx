@@ -49,6 +49,11 @@ function SaidasPage() {
   const [filterEvento, setFilterEvento] = useState<string>("__all");
   const [filterEmpresa, setFilterEmpresa] = useState<string>("__all");
   const { sort, toggleSort, applySort } = useSort();
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>("mes");
+  const [periodo, setPeriodo] = useState<Periodo>(periodoFromPreset("mes"));
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
+
 
   const editMut = useMutation({
     mutationFn: async (p: { original: any; patch: any }) => {
