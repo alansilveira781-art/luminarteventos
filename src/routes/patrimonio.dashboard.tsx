@@ -1,0 +1,264 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { Boxes, DollarSign, ArrowDownToLine, ArrowUpFromLine, AlertTriangle } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+export const Route = createFileRoute("/patrimonio/dashboard")({ component: PatrimonioDashboard });
+
+const brl = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16"];
+
+function PatrimonioDashboard() {
+  const [catSelecionada, setCatSelecionada] = useState<string>("__all");
+
+  const { data: itens } = useQuery({
+    queryKey: ["pat_itens_dash"],
+    queryFn: async () => {
+      const all: any[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("pat_itens")
+          .select("id,cod,id_item,categoria,subcategoria,nome,quantidade,valor,estado,localizacao")
+          .order("cod").range(from, from + 999);
+        if (error) throw error;
+        all.push(...(data ?? []));
+        if ((data?.length ?? 0) < 1000) break;
+        from += 1000;
+      }
+      return all;
+    },
+  });
+
+  const { data: movs } = useQuery({
+    queryKey: ["pat_movs_dash"],
+    queryFn: async () => {
+      const since = new Date(); since.setMonth(since.getMonth() - 11); since.setDate(1);
+      const { data, error } = await supabase.from("pat_movimentacoes")
+        .select("tipo,quantidade,data_movimento")
+        .gte("data_movimento", since.toISOString())
+        .order("data_movimento");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stats = useMemo(() => {
+    const list = itens ?? [];
+    const totalItens = list.length;
+    const totalQtd = list.reduce((s, i) => s + Number(i.quantidade || 0), 0);
+    const totalValor = list.reduce((s, i) => s + Number(i.valor || 0) * Number(i.quantidade || 1), 0);
+    const danificados = list.filter((i) => ["DANIFICADO", "EM MANUTENCAO"].includes(i.estado)).length;
+    return { totalItens, totalQtd, totalValor, danificados };
+  }, [itens]);
+
+  const porCategoria = useMemo(() => {
+    const m = new Map<string, { qtd: number; valor: number; count: number }>();
+    (itens ?? []).forEach((i) => {
+      const k = i.categoria || "Sem categoria";
+      const prev = m.get(k) ?? { qtd: 0, valor: 0, count: 0 };
+      prev.qtd += Number(i.quantidade || 0);
+      prev.valor += Number(i.valor || 0) * Number(i.quantidade || 1);
+      prev.count += 1;
+      m.set(k, prev);
+    });
+    return Array.from(m, ([name, v]) => ({ name, ...v })).sort((a, b) => b.valor - a.valor);
+  }, [itens]);
+
+  const porEstado = useMemo(() => {
+    const m = new Map<string, number>();
+    (itens ?? []).forEach((i) => m.set(i.estado, (m.get(i.estado) ?? 0) + 1));
+    return Array.from(m, ([name, value]) => ({ name, value }));
+  }, [itens]);
+
+  const movPorMes = useMemo(() => {
+    const m = new Map<string, { mes: string; entrada: number; saida: number }>();
+    const fmt = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit" });
+    const hoje = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      m.set(k, { mes: fmt.format(d), entrada: 0, saida: 0 });
+    }
+    (movs ?? []).forEach((mv: any) => {
+      const d = new Date(mv.data_movimento);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const row = m.get(k); if (!row) return;
+      const q = Number(mv.quantidade || 0);
+      if (mv.tipo === "entrada") row.entrada += q;
+      else if (mv.tipo === "saida") row.saida += q;
+    });
+    return Array.from(m.values());
+  }, [movs]);
+
+  const categorias = useMemo(() => Array.from(new Set((itens ?? []).map((i) => i.categoria).filter(Boolean))).sort(), [itens]);
+  const itensFiltrados = useMemo(() => {
+    if (catSelecionada === "__all") return [];
+    return (itens ?? []).filter((i) => i.categoria === catSelecionada);
+  }, [itens, catSelecionada]);
+
+  return (
+    <>
+      <PageHeader title="Dashboard do Patrimônio" description="Visão geral do inventário e movimentações" />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <StatCard icon={Boxes} label="Itens cadastrados" value={stats.totalItens.toLocaleString("pt-BR")} color="text-blue-600" />
+        <StatCard icon={Boxes} label="Quantidade total" value={stats.totalQtd.toLocaleString("pt-BR")} color="text-emerald-600" />
+        <StatCard icon={DollarSign} label="Valor do patrimônio" value={brl(stats.totalValor)} color="text-violet-600" />
+        <StatCard icon={AlertTriangle} label="Em manutenção / danificados" value={stats.danificados.toLocaleString("pt-BR")} color="text-amber-600" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ArrowDownToLine className="h-4 w-4 text-emerald-600" />
+            <h3 className="font-semibold text-sm">Entradas nos últimos 12 meses</h3>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={movPorMes}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Bar dataKey="entrada" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ArrowUpFromLine className="h-4 w-4 text-rose-600" />
+            <h3 className="font-semibold text-sm">Saídas nos últimos 12 meses</h3>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={movPorMes}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Bar dataKey="saida" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-semibold text-sm mb-3">Valor por categoria</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={porCategoria} layout="vertical" margin={{ left: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} formatter={(v: any) => brl(Number(v))} />
+                <Bar dataKey="valor" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-semibold text-sm mb-3">Itens por estado de conservação</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={porEstado} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={{ fontSize: 11 }}>
+                  {porEstado.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+          <h3 className="font-semibold text-sm">Itens por categoria</h3>
+          <div className="w-full sm:w-72">
+            <Select value={catSelecionada} onValueChange={setCatSelecionada}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma categoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Selecione uma categoria…</SelectItem>
+                {categorias.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {catSelecionada === "__all" ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Escolha uma categoria acima para visualizar os itens correspondentes.</p>
+        ) : (
+          <div className="overflow-auto max-h-[500px] border rounded-md">
+            <table className="w-full text-xs">
+              <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
+                <tr className="text-left">
+                  <th className="px-2 py-2 w-24">ID</th>
+                  <th className="px-2 py-2">Item</th>
+                  <th className="px-2 py-2">Subcategoria</th>
+                  <th className="px-2 py-2 text-right w-16">Qtde</th>
+                  <th className="px-2 py-2 text-right w-28">Valor unit.</th>
+                  <th className="px-2 py-2 text-right w-28">Total</th>
+                  <th className="px-2 py-2 w-32">Estado</th>
+                  <th className="px-2 py-2">Local</th>
+                </tr>
+              </thead>
+              <tbody>
+                {itensFiltrados.map((i) => (
+                  <tr key={i.id} className="border-t border-border hover:bg-muted/30">
+                    <td className="px-2 py-1.5 font-mono text-[11px]">{i.id_item}</td>
+                    <td className="px-2 py-1.5 font-medium">{i.nome}</td>
+                    <td className="px-2 py-1.5">{i.subcategoria}</td>
+                    <td className="px-2 py-1.5 text-right">{i.quantidade}</td>
+                    <td className="px-2 py-1.5 text-right">{brl(i.valor)}</td>
+                    <td className="px-2 py-1.5 text-right">{brl(Number(i.valor || 0) * Number(i.quantidade || 1))}</td>
+                    <td className="px-2 py-1.5">{i.estado}</td>
+                    <td className="px-2 py-1.5">{i.localizacao}</td>
+                  </tr>
+                ))}
+                {itensFiltrados.length === 0 && (
+                  <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">Nenhum item nesta categoria.</td></tr>
+                )}
+              </tbody>
+              {itensFiltrados.length > 0 && (
+                <tfoot className="bg-muted/30 font-medium">
+                  <tr>
+                    <td className="px-2 py-2" colSpan={3}>{itensFiltrados.length} itens</td>
+                    <td className="px-2 py-2 text-right">{itensFiltrados.reduce((s, i) => s + Number(i.quantidade || 0), 0)}</td>
+                    <td className="px-2 py-2"></td>
+                    <td className="px-2 py-2 text-right">{brl(itensFiltrados.reduce((s, i) => s + Number(i.valor || 0) * Number(i.quantidade || 1), 0))}</td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) {
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg bg-muted ${color}`}><Icon className="h-5 w-5" /></div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground truncate">{label}</p>
+          <p className="text-lg font-semibold truncate">{value}</p>
+        </div>
+      </div>
+    </Card>
+  );
+}

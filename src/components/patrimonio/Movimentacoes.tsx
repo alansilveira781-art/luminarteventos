@@ -127,7 +127,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
       <Card className="overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-300px)]">
           <table className="w-full text-xs">
-            <thead className="bg-muted/40 sticky top-0">
+            <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="text-left">
                 <th className="px-2 py-2 w-28">Data</th>
                 <th className="px-2 py-2">Item</th>
