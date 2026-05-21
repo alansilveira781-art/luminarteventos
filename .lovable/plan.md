@@ -1,63 +1,85 @@
-# Ajustes — Estoque (Entradas/Saídas/Devoluções)
+# Plano de performance — backend e frontend
 
-## 1. Sincronização base ↔ tela (item recém-criado já disponível em Entradas)
+Objetivo: deixar o ERP mais rápido sem mudar comportamento de negócio. Mudanças divididas em 3 frentes.
 
-**Problema:** após cadastrar um item no Estoque, ao abrir Entradas o item ainda não aparece imediatamente — é preciso recarregar.
+## 1. Backend (banco de dados)
 
-**Causa:** quando o item é salvo em `src/routes/estoque.index.tsx`, o `onSuccess` invalida apenas `["itens"]`, mas `entradas.tsx` (e os demais formulários) usam uma queryKey diferente (`["itens-select"]` / `["itens-busca"]`).
+### 1.1 Índices nas colunas mais consultadas
+Migration única adicionando índices `IF NOT EXISTS` (não bloqueante, sem perda de dados):
 
-**Correção:**
-- Em `src/routes/estoque.index.tsx`, no `onSuccess` de criação/edição de item, invalidar também as queries usadas pelos selects de item: `["itens-select"]`, `["itens-busca"]`, `["dashboard-itens"]`.
-- Verificar o mesmo em fornecedores (`src/routes/fornecedores.tsx`) e solicitantes (`src/routes/solicitantes.tsx`) — invalidar `["fornecedores-select"]` e `["solicitantes-select"]` após save.
-- Em `src/components/ItemSearchSelect.tsx` e `EntitySearchSelect.tsx`, garantir `staleTime: 0` (ou reduzir) para que ao reabrir o formulário a lista seja sempre revalidada.
+- `itens`: `codigo`, `codigo_proprio`, `categoria`, `status`, `created_at desc`, `nome` (trigram p/ busca).
+- `movimentacoes`: `(tipo, data_movimento desc)`, `item_id`, `fornecedor_id`, `solicitante_id`, `saida_origem_id`, `saida_status`, `created_at desc`, `requisicao_numero`.
+- `movimentacao_itens`: `movimentacao_id`, `item_id`.
+- `fornecedores`: `documento`, `nome`, `status`.
+- `solicitantes`: `nome`, `status`.
+- `compras`: `status`, `(status, ordem)`, `created_at desc`, `fornecedor_id`, `solicitante_id`, `numero`.
+- `compra_itens`: `compra_id`, `item_id`.
+- `pat_itens`: `cod` (único parcial), `categoria`, `created_at desc`.
+- `pat_movimentacoes`: `item_id`, `(tipo, data_movimento desc)`, `saida_origem_id`.
+- `demandas`: `status`, `created_at desc`.
+- `notificacoes`: `(user_id, lida, created_at desc)`.
+- `contabil_notas_fiscais`: `(empresa, data_emissao desc)`, `status`.
 
-## 2. Devoluções — busca na "Saída vinculada"
+Habilitar extensão `pg_trgm` para buscas por nome (índices GIN nos campos de texto pesquisados).
 
-**Hoje:** o campo é um `<Select>` simples com a lista fixa.
+### 1.2 Restrição de COD duplicado no patrimônio
+Índice único parcial em `pat_itens.cod` (já solicitado em iteração anterior — confirmar presença).
 
-**Mudança em `src/routes/devolucoes.tsx` (componente `DevolucaoForm`):**
-- Substituir o `<Select>` por um Combobox pesquisável (usando `Command` / `Popover` do shadcn, padrão já usado em `EntitySearchSelect`).
-- Cada grupo de saída receberá um número de lançamento curto (ex: `#1234` derivado dos primeiros caracteres do ID, ou usar a ordem cronológica) exibido junto da label.
-- Índice de busca por grupo: nome do solicitante + número do lançamento + data formatada (`dd/MM/yyyy`) + nomes dos itens. A função `normalize()` já existente cobre acentos.
-- Mantém a seleção atual ao escolher (preserva `handleSelectGrupo`).
+## 2. Backend (queries)
 
-## 3. Saídas — remover toggle "Não será devolvido"
+Substituir `select("*")` por listas explícitas de colunas nas listagens das tabelas dos módulos:
 
-**Em `src/routes/saidas.tsx`:**
-- Remover a UI adicionada no expandido para marcar item como "não será devolvido" e a mutação `lineStatusMut` que altera `saida_status` por linha.
-- A linha da saída volta a se comportar como antes: status muda apenas via devoluções.
+- `estoque.index.tsx` — itens: só `id, codigo, codigo_proprio, nome, categoria, unidade, quantidade_atual, quantidade_minima, status, valor_unitario, localizacao, foto_url`.
+- `entradas.tsx` / `saidas.tsx` / `devolucoes.tsx` — movimentações: campos exibidos + ids p/ joins; remover `observacoes` longos da listagem (carregar só no detalhe).
+- `patrimonio.index.tsx` — pat_itens: omitir `imagem_url` e `observacoes` na listagem (carregar no dialog).
+- `compras.index.tsx` — `compras`: omitir `observacoes`, `motivo_negacao` da listagem do kanban.
+- `fornecedores.tsx` / `solicitantes.tsx` — listar só campos da tabela.
+- Hovers/selects (`ItemSearchSelect`, `EntitySearchSelect`) — manter já enxutos.
 
-## 4. Devoluções — checkbox "Não terá devolução" por item
+Detalhes pesados (observações, anexos, histórico) seguem carregados sob demanda nos dialogs já existentes.
 
-**Em `src/routes/devolucoes.tsx`, dentro da tabela de itens do `DevolucaoForm`:**
-- Adicionar uma coluna `Sem devolução` com `<Checkbox>` por linha (estado local `semDevolucao: Record<string,boolean>`).
-- Quando marcado:
-  - O input "Devolver agora" é desabilitado e zerado.
-  - Ao submeter, para cada item marcado a mutação atualiza diretamente `movimentacoes.saida_status = 'finalizada'` (encerrando o saldo daquele item sem gerar linha de devolução).
-- Itens não marcados seguem o fluxo atual (criam linha em `movimentacoes` com `tipo='devolucao'`).
-- Permite submissão se houver ao menos um item com qtd > 0 **ou** um item marcado como sem devolução.
+## 3. Frontend
 
-### Detalhe técnico do submit (devoluções)
+### 3.1 Debounce 300ms
+Criar `src/hooks/useDebouncedValue.ts` e aplicar nos inputs de busca/filtro de:
+- `estoque.index.tsx`, `entradas.tsx`, `saidas.tsx`, `devolucoes.tsx`, `patrimonio.index.tsx`
+- `compras.index.tsx`, `fornecedores.tsx`, `solicitantes.tsx`
+- `relatorios.tsx`, `contabil.notas.tsx`, `contabil.consultas.tsx`
 
-```ts
-// para cada item marcado em semDevolucao, atualizar a saída
-const idsSem = grupo.itens.filter(s => semDevolucao[s.id]).map(s => s.id);
-if (idsSem.length) {
-  await supabase.from("movimentacoes")
-    .update({ saida_status: "finalizada" })
-    .in("id", idsSem);
-}
-// + insert das linhas de devolução normais (como já é hoje)
-```
+O valor exibido no input continua imediato; só o valor usado para filtrar/queryKey é debounced.
 
-Após sucesso, invalidar `["saidas"]`, `["saidas-abertas"]`, `["devolucoes"]`.
+### 3.2 Listas grandes — virtualização
+Adicionar `@tanstack/react-virtual` e virtualizar o `<TableBody>` quando >100 linhas em:
+- estoque, entradas, saídas, devoluções, patrimônio, compras (lista), fornecedores, solicitantes.
 
----
+Como já há paginação client-side (100/página), a virtualização entra como salvaguarda quando o usuário aumenta o page size ou usa o filtro "ano".
 
-## Arquivos editados
-- `src/routes/estoque.index.tsx` — invalidações ampliadas
-- `src/routes/fornecedores.tsx` — invalidações ampliadas
-- `src/routes/solicitantes.tsx` — invalidações ampliadas
-- `src/components/ItemSearchSelect.tsx` / `EntitySearchSelect.tsx` — `staleTime` reduzido
-- `src/routes/devolucoes.tsx` — combobox de saída vinculada + checkbox "sem devolução"
-- `src/routes/saidas.tsx` — remover toggle "não será devolvido"
+### 3.3 Lazy loading / code splitting
+Converter rotas pesadas para `createLazyFileRoute` (split do componente, loader continua crítico):
+- `compras.dashboard.tsx`, `patrimonio.dashboard.tsx`, `financeiro.dashboard.tsx`
+- `contabil.index.tsx`, `contabil.consultas.tsx`, `contabil.notas.tsx`
+- `relatorios.tsx`, `comercial.propostas.tsx`, `comercial.catalogo.tsx`
+- `financeiro.rotinas.tsx`, `financeiro.conta-azul.tsx`
+
+Recharts e libs pesadas ficam isoladas no chunk lazy de cada dashboard.
+
+### 3.4 Revisão de re-renders
+- Memoizar linhas de tabela pesadas com `React.memo` (`EstoqueRow`, `MovimentacaoRow`, `PatrimonioRow`).
+- Estabilizar callbacks com `useCallback` onde passados a filhos memoizados.
+- Trocar `useMemo`/derivações que recriam objetos a cada render por valores derivados de queryData direto.
+- Mover filtros de período (`PeriodoFilter`) para estado local memoizado; só recalcular `from/to` quando muda o tipo.
+- Garantir `queryKey` estável (arrays primitivos), evitando objetos novos a cada render.
+- Auditar `staleTime: 0` colocado em iteração anterior nos selects de itens/fornecedores — manter só onde necessário para sincronização imediata (form de entrada/saída logo após cadastro); demais selects voltam a `staleTime` padrão.
+
+## Arquivos afetados (resumo)
+
+Migration: 1 nova (índices + extensão pg_trgm).
+Hooks novos: `src/hooks/useDebouncedValue.ts`.
+Dependência nova: `@tanstack/react-virtual`.
+Componentes/rotas editados: ~18 arquivos listados acima, com edições cirúrgicas (select de colunas, debounce no filtro, memoização de linhas, conversão para lazy route quando aplicável).
+
+## Fora do escopo
+
+- Nenhuma mudança de UI/UX visível.
+- Nenhuma mudança em RLS ou regras de negócio.
+- Sem alteração nos triggers/funções do banco.
