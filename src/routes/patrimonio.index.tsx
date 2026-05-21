@@ -97,7 +97,7 @@ function PatrimonioInventario() {
         .some((v) => normalize(String(v ?? "")).includes(nq));
     });
     return applySort(base);
-  }, [itens, q, filterCat, filterEstado, filterLoc, sort]);
+  }, [itens, qd, filterCat, filterEstado, filterLoc, applySort]);
 
   const filteredPeriodo = useMemo(
     () => filterByPeriodo(filtered, periodo, (i: Pat) => i.created_at ?? null),
