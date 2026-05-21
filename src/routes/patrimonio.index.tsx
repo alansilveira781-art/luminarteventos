@@ -65,7 +65,7 @@ function PatrimonioInventario() {
       while (true) {
         const { data, error } = await supabase
           .from("pat_itens")
-          .select("*")
+          .select("id,cod,id_item,categoria,subcategoria,data_compra,nome,especificacao,dimensoes,quantidade,valor,estado,unidade,localizacao,imagem_url,observacoes,created_at")
           .order("cod", { ascending: true, nullsFirst: false })
           .range(from, from + pageSize - 1);
         if (error) throw error;
