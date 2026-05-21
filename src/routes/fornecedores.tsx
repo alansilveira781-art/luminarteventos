@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -37,13 +38,13 @@ function FornecedoresPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [importing, setImporting] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(""); const qd = useDebouncedValue(q, 300);
   const { sort, toggleSort, applySort } = useSort();
 
   const { data } = useQuery({
     queryKey: ["fornecedores"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("fornecedores").select("*").order("nome");
+      const { data, error } = await supabase.from("fornecedores").select("id,nome,nome_fantasia,documento,contato_nome,telefone,email,endereco,tipo_fornecimento,status,observacoes").order("nome");
       if (error) throw error;
       return data;
     },
@@ -80,7 +81,7 @@ function FornecedoresPage() {
     },
   });
 
-  const s = normalize(q);
+  const s = normalize(qd);
   const filteredBase = (data ?? []).filter((f: any) => {
     if (!s) return true;
     return normalize([f.nome, f.nome_fantasia, f.documento, f.contato_nome, f.telefone, f.email, f.tipo_fornecimento].join(" ")).includes(s);

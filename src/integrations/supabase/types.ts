@@ -1937,6 +1937,8 @@ export type Database = {
       }
       next_requisicao_numero: { Args: never; Returns: number }
       refresh_item_status: { Args: { p_item_id: string }; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "user"

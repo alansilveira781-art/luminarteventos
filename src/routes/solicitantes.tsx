@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -36,13 +37,13 @@ function SolicitantesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [importing, setImporting] = useState(false);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(""); const qd = useDebouncedValue(q, 300);
   const { sort, toggleSort, applySort } = useSort();
 
   const { data } = useQuery({
     queryKey: ["solicitantes"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("solicitantes").select("*").order("nome");
+      const { data, error } = await supabase.from("solicitantes").select("id,nome,apelido,setor,cargo,telefone,email,status,observacoes").order("nome");
       if (error) throw error;
       return data;
     },
@@ -72,7 +73,7 @@ function SolicitantesPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const s = normalize(q);
+  const s = normalize(qd);
   const filteredBase = (data ?? []).filter((it: any) => {
     if (!s) return true;
     return normalize([it.nome, it.apelido, it.setor, it.cargo, it.telefone, it.email].join(" ")).includes(s);

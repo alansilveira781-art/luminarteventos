@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -47,6 +48,7 @@ function EstoquePage() {
   const qc = useQueryClient();
   const { isModuleAdmin } = useAuth(); const isAdmin = isModuleAdmin("estoque");
   const [q, setQ] = useState("");
+  const qd = useDebouncedValue(q, 300);
   const [editing, setEditing] = useState<any | null>(null);
   const [duplicating, setDuplicating] = useState<any | null>(null);
   const [creating, setCreating] = useState(false);
@@ -64,10 +66,11 @@ function EstoquePage() {
       const all: any[] = [];
       const pageSize = 1000;
       let from = 0;
+      const cols = "id,codigo,codigo_proprio,nome,descricao,categoria,subcategoria,unidade,quantidade_atual,quantidade_minima,status,valor_unitario,localizacao,foto_url,observacoes,created_at,updated_at";
       while (true) {
         const { data, error } = await supabase
           .from("itens")
-          .select("*")
+          .select(cols)
           .order("nome")
           .range(from, from + pageSize - 1);
         if (error) throw error;
@@ -123,7 +126,7 @@ function EstoquePage() {
   const filtered = useMemo(() => {
     if (!itens) return [];
     let arr = itens as any[];
-    const s = normalize(q);
+    const s = normalize(qd);
     if (s) {
       arr = arr.filter((i) =>
         normalize([i.nome, i.codigo, i.categoria, i.localizacao, i.status].join(" ")).includes(s),
