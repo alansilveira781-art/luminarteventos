@@ -189,8 +189,7 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
             </div>
             <div>
               <Label>Valor estimado (R$)</Label>
-              <NumberInput
-                step="0.01"
+              <MoneyInput
                 value={form.valorEstimado}
                 onChange={(n) => setForm({ ...form, valorEstimado: n })}
               />
