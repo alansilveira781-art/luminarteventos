@@ -738,7 +738,9 @@ export type Database = {
           empresa: string
           id: string
           impostos: Json | null
+          nome_evento: string | null
           numero: string | null
+          numero_evento: string | null
           observacoes: string | null
           status: string
           tipo_servico: string | null
@@ -756,7 +758,9 @@ export type Database = {
           empresa: string
           id?: string
           impostos?: Json | null
+          nome_evento?: string | null
           numero?: string | null
+          numero_evento?: string | null
           observacoes?: string | null
           status?: string
           tipo_servico?: string | null
@@ -774,7 +778,9 @@ export type Database = {
           empresa?: string
           id?: string
           impostos?: Json | null
+          nome_evento?: string | null
           numero?: string | null
+          numero_evento?: string | null
           observacoes?: string | null
           status?: string
           tipo_servico?: string | null
@@ -786,6 +792,56 @@ export type Database = {
           valor_liquido?: number | null
         }
         Relationships: []
+      }
+      contabil_recebimentos: {
+        Row: {
+          banco: string | null
+          created_at: string
+          created_by: string | null
+          data_recebimento: string
+          empresa: string
+          id: string
+          nota_id: string | null
+          numero_nf: string | null
+          observacoes: string | null
+          updated_at: string
+          valor_recebido: number
+        }
+        Insert: {
+          banco?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_recebimento: string
+          empresa: string
+          id?: string
+          nota_id?: string | null
+          numero_nf?: string | null
+          observacoes?: string | null
+          updated_at?: string
+          valor_recebido?: number
+        }
+        Update: {
+          banco?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_recebimento?: string
+          empresa?: string
+          id?: string
+          nota_id?: string | null
+          numero_nf?: string | null
+          observacoes?: string | null
+          updated_at?: string
+          valor_recebido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contabil_recebimentos_nota_id_fkey"
+            columns: ["nota_id"]
+            isOneToOne: false
+            referencedRelation: "contabil_notas_fiscais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demanda_anexos: {
         Row: {
