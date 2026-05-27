@@ -322,7 +322,7 @@ function NotaForm({
           <Input type="email" value={tomadorEmail} onChange={(e) => setTomadorEmail(e.target.value)} />
         </FormField>
         <FormField label="Valor bruto (R$)*">
-          <Input type="number" step="0.01" value={valorBruto} onChange={(e) => setValorBruto(e.target.value)} required />
+          <MoneyInput value={Number(valorBruto || 0)} onChange={(n) => setValorBruto(n ? String(n) : "")} />
         </FormField>
       </FormSection>
 
