@@ -28,10 +28,15 @@ function ApuracoesPage() {
   const [ano, setAno] = useState<number>(2026);
   const [mes, setMes] = useState<string>("Março");
   const [empresa, setEmpresa] = useState<string>(EMPRESAS[0]);
+  const [regime, setRegime] = useState<"caixa" | "competencia">("caixa");
 
   const mIdx = mesIndex(mes);
   const periodoInicio = useMemo(() => new Date(ano, mIdx, 1).toISOString().slice(0, 10), [ano, mIdx]);
   const periodoFim = useMemo(() => new Date(ano, mIdx + 1, 0).toISOString().slice(0, 10), [ano, mIdx]);
+  const vencimento = useMemo(() => {
+    const d = new Date(ano, mIdx + 1, 1);
+    return `${MESES[d.getMonth()]}/${d.getFullYear()}`;
+  }, [ano, mIdx]);
 
   const { data: aliquotas } = useQuery({
     queryKey: ["contabil-aliquotas-apuracao", empresa],
@@ -61,6 +66,21 @@ function ApuracoesPage() {
     },
   });
 
+  const { data: notasEmitidas } = useQuery({
+    queryKey: ["contabil-notas-emitidas-mes", empresa, periodoInicio, periodoFim],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from("contabil_notas_fiscais")
+        .select("id, numero, nome_evento, valor_bruto, data_emissao, tomador_nome")
+        .eq("empresa", empresa)
+        .gte("data_emissao", periodoInicio)
+        .lte("data_emissao", periodoFim)
+        .order("data_emissao");
+      if (error) throw error;
+      return data as Array<{ id: string; numero: string | null; nome_evento: string | null; valor_bruto: number; data_emissao: string; tomador_nome: string | null }>;
+    },
+  });
+
   const { data: notasMap } = useQuery({
     queryKey: ["contabil-notas-map", empresa],
     queryFn: async () => {
@@ -79,8 +99,11 @@ function ApuracoesPage() {
     },
   });
 
-  const faturamento = (recebimentos ?? []).reduce((s, r) => s + Number(r.valor_recebido || 0), 0);
+  const faturamentoCaixa = (recebimentos ?? []).reduce((s, r) => s + Number(r.valor_recebido || 0), 0);
+  const faturamentoCompetencia = (notasEmitidas ?? []).reduce((s, n) => s + Number(n.valor_bruto || 0), 0);
+  const faturamento = regime === "caixa" ? faturamentoCaixa : faturamentoCompetencia;
   const apuracao = useMemo(() => calcularImpostosPresumido(faturamento, aliquotas ?? []), [faturamento, aliquotas]);
+
 
   const { data: historico } = useQuery({
     queryKey: ["contabil-apuracoes-hist"],
