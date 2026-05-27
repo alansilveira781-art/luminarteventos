@@ -153,10 +153,12 @@ function SolicitarPage() {
           descricao: form.descricao.trim(),
           valor_total: form.valor_total ? Number(form.valor_total) : null,
           itens: itensValidos,
-          pago: form.tipo === "demanda" ? form.pago : null,
-          parcelamento: form.parcelamento || "",
-          condicao_pagamento: form.condicao_pagamento || "",
-          data_compra: form.data_compra || "",
+          pago: form.tipo === "demanda" && !form.is_reembolso ? form.pago : null,
+          parcelamento: form.is_reembolso ? "" : (form.parcelamento || ""),
+          condicao_pagamento: form.is_reembolso ? "" : (form.condicao_pagamento || ""),
+          data_compra: form.is_reembolso ? "" : (form.data_compra || ""),
+          is_reembolso: form.tipo === "demanda" ? form.is_reembolso : false,
+          reembolsar_para: form.is_reembolso ? form.reembolsar_para.trim() : "",
         }),
       });
       const json = await res.json();
