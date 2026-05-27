@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatBRT, toBRTInputDateTime, fromBRTInputDateTime } from "@/lib/datetime";
 import { saidaTipoLabels } from "@/lib/labels";
 import { listEventos } from "@/server/sheets.functions";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
@@ -473,14 +473,14 @@ function SaidasPage() {
                       <td className="px-3 py-3 font-mono text-xs whitespace-nowrap">
                         {g.numero != null ? `REQ-${String(g.numero).padStart(4, "0")}` : "—"}
                       </td>
-                      <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(g.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                      <td className="px-4 py-3 tabular-nums whitespace-nowrap">{formatBRT(g.data_movimento)}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{g.empresa ?? "—"}</td>
                       <td className="px-4 py-3 text-foreground">{g.evento_projeto ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{g.solicitante?.nome ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{g.saida_tipo ? saidaTipoLabels[g.saida_tipo] : "—"}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{g.linhas.length}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-destructive">-{g.qtd_total}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{g.data_prevista_devolucao ? format(new Date(g.data_prevista_devolucao), "dd/MM/yyyy") : "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{g.data_prevista_devolucao ? formatBRT(g.data_prevista_devolucao, { dateStyle: "short" }) : "—"}</td>
                       <td className="px-4 py-3"><StatusBadge status={g.saida_status} /></td>
                       {isAdmin && (
                         <td className="px-4 py-3">
@@ -617,8 +617,8 @@ type Linha = { item_id: string; quantidade: string };
 function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: isEditing && prefill?.data_movimento
-      ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+      ? toBRTInputDateTime(prefill.data_movimento)
+      : toBRTInputDateTime(),
     saida_tipo: prefill?.saida_tipo ?? "evento",
     empresa: prefill?.empresa ?? "",
     solicitante_id: prefill?.solicitante_id ?? "",
@@ -693,7 +693,7 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
       if (validas.length === 0) return toast.error("Adicione pelo menos um item");
       onSubmit(
         {
-          data_movimento: new Date(meta.data_movimento).toISOString(),
+          data_movimento: fromBRTInputDateTime(meta.data_movimento),
           saida_tipo: meta.saida_tipo,
           empresa: meta.empresa || null,
           solicitante_id: meta.solicitante_id || null,
@@ -838,7 +838,7 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
 
 function SaidaEditForm({ original, itens, solicitantes, onEditSolicitante, eventos, onSubmit, submitting }: any) {
   const [form, setForm] = useState({
-    data_movimento: new Date(original.data_movimento).toISOString().slice(0, 16),
+    data_movimento: toBRTInputDateTime(original.data_movimento),
     saida_tipo: original.saida_tipo ?? "evento",
     item_id: original.item_id,
     quantidade: String(original.quantidade),
@@ -860,7 +860,7 @@ function SaidaEditForm({ original, itens, solicitantes, onEditSolicitante, event
       if (isEvento && !form.evento_projeto) return toast.error("Evento/Projeto é obrigatório");
       if (form.sera_devolvido === "sim" && !form.data_prevista_devolucao) return toast.error("Informe a data prevista de devolução");
       onSubmit({
-        data_movimento: new Date(form.data_movimento).toISOString(),
+        data_movimento: fromBRTInputDateTime(form.data_movimento),
         saida_tipo: form.saida_tipo,
         item_id: form.item_id,
         quantidade: Number(form.quantidade),

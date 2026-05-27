@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { toBRTInputDateTime, fromBRTInputDateTime } from "@/lib/datetime";
 import { entradaTipoLabels } from "@/lib/labels";
 import { ImportDialog } from "@/components/ImportDialog";
 import { ENTRADA_TEMPLATE } from "@/lib/import-utils";
@@ -768,8 +769,8 @@ const novaLinha = (overrides: Partial<Linha> = {}): Linha => ({ item_id: "", qua
 function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: isEditing && prefill?.data_movimento
-      ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+      ? toBRTInputDateTime(prefill.data_movimento)
+      : toBRTInputDateTime(),
     entrada_tipo: prefill?.entrada_tipo ?? "compra",
     empresa: prefill?.empresa ?? "",
     fornecedor_id: prefill?.fornecedor_id ?? "",
@@ -858,7 +859,7 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
       if (validas.length === 0) return toast.error("Adicione pelo menos um item");
       onSubmit(
         {
-          data_movimento: new Date(meta.data_movimento).toISOString(),
+          data_movimento: fromBRTInputDateTime(meta.data_movimento),
           entrada_tipo: meta.entrada_tipo,
           fornecedor_id: meta.fornecedor_id || null,
           empresa: meta.empresa || null,
