@@ -170,7 +170,7 @@ function CatalogoDialog({
             <Label>
               Valor unitário (R${tipoMedida === "area" ? "/m²" : tipoMedida === "linear" ? "/m" : ""}) *
             </Label>
-            <NumberInput step="0.01" value={valor} onChange={setValor} />
+            <MoneyInput value={valor} onChange={setValor} />
           </div>
         </div>
         <DialogFooter>
