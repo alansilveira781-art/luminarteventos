@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FormField, FormSection, FormActions } from "@/components/FormSection";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { EMPRESAS, EMPRESA_REGIME, REGIME_LABEL, IMPOSTOS_POR_REGIME, type Empresa } from "@/lib/empresas";
