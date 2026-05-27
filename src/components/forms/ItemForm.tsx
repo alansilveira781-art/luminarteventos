@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FormActions, FormField, FormSection } from "@/components/FormSection";
 import { SelectCreatable } from "@/components/SelectCreatable";
 import { Upload, ImagePlus } from "lucide-react";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toast } from "sonner";
 import { useRef } from "react";
 
