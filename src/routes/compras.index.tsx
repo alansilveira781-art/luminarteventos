@@ -19,6 +19,8 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { toast } from "sonner";
+import { AvancarCardDialog } from "@/components/AvancarCardDialog";
+import { notifyResponsavel } from "@/lib/notify";
 
 const sb = supabase as any;
 
