@@ -481,7 +481,7 @@ export function PropostaWizard({ open, onOpenChange, cardId, defaults, proposta 
                   {custos.outros.map((c, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <Input placeholder="Descrição" value={c.descricao} onChange={(e) => setCustos({ ...custos, outros: custos.outros.map((x, j) => j === i ? { ...x, descricao: e.target.value } : x) })} />
-                      <NumberInput step="0.01" className="w-32 text-right" value={c.valor} onChange={(n) => setCustos({ ...custos, outros: custos.outros.map((x, j) => j === i ? { ...x, valor: n } : x) })} />
+                      <MoneyInput className="w-40" value={c.valor} onChange={(n) => setCustos({ ...custos, outros: custos.outros.map((x, j) => j === i ? { ...x, valor: n } : x) })} />
                       <Button size="icon" variant="ghost" onClick={() => setCustos({ ...custos, outros: custos.outros.filter((_, j) => j !== i) })}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   ))}
