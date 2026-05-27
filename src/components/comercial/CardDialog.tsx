@@ -30,6 +30,7 @@ const empty = {
   responsavel: "",
   observacoes: "",
   status: "lead" as CardStatus,
+  dataEnvio: "",
 };
 
 export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
