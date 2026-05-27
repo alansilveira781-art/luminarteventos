@@ -194,7 +194,13 @@ function QuadroVendas() {
       <PerdaDialog
         open={!!perdaCardId}
         onOpenChange={(v) => { if (!v) setPerdaCardId(null); }}
-        onConfirm={(motivo) => { if (perdaCardId) moveCard(perdaCardId, "perda", motivo); setPerdaCardId(null); }}
+        onConfirm={(motivo) => { if (perdaCardId) moveCard(perdaCardId, "perda", { motivoPerda: motivo }); setPerdaCardId(null); }}
+      />
+      <EnvioDialog
+        open={!!envioCardId}
+        onOpenChange={(v) => { if (!v) setEnvioCardId(null); }}
+        defaultDate={cards.find((c) => c.id === envioCardId)?.dataEnvio || undefined}
+        onConfirm={(data) => { if (envioCardId) moveCard(envioCardId, "orcamento_enviado", { dataEnvio: data }); setEnvioCardId(null); }}
       />
       <DetalhesDrawer open={!!detalhesCard} onOpenChange={(v) => { if (!v) setDetalhesCard(null); }} card={detalhesCard} />
       <PropostaWizard
