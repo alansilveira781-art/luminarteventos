@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CARD_STATUSES, type CardStatus, type ComercialCard } from "@/lib/comercial/types";
 import { createCard, updateCard, deleteCard, upsertCliente, addConsultor, useComercial } from "@/lib/comercial/store";
 import { NumberInput } from "@/components/comercial/NumberInput";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toast } from "sonner";
 
 type Props = {
