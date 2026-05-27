@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MoneyInput } from "@/components/MoneyInput";
 
 export type BulkField =
   | { key: string; label: string; type: "text" }
   | { key: string; label: string; type: "textarea" }
   | { key: string; label: string; type: "number"; step?: string }
+  | { key: string; label: string; type: "money" }
   | { key: string; label: string; type: "date" }
   | { key: string; label: string; type: "datetime" }
   | {
