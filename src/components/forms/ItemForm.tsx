@@ -96,7 +96,7 @@ export function ItemForm({
         <FormField label="Categoria">
           <SelectCreatable table="categorias" value={form.categoria || null} onChange={(v) => set("categoria", v ?? "")} />
         </FormField>
-        <FormField label="Valor unitário (R$)"><Input type="number" min="0" step="0.01" value={form.valor_unitario} onChange={(e) => set("valor_unitario", e.target.value)} placeholder="0.00" /></FormField>
+        <FormField label="Valor unitário (R$)"><MoneyInput value={form.valor_unitario === "" ? 0 : Number(form.valor_unitario)} onChange={(n) => set("valor_unitario", n ? String(n) : "")} /></FormField>
         <FormField label="Unidade de medida">
           <SelectCreatable table="unidades" value={form.unidade || null} onChange={(v) => set("unidade", v ?? "")} />
         </FormField>
