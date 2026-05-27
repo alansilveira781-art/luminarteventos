@@ -473,7 +473,7 @@ function SaidasPage() {
                       <td className="px-3 py-3 font-mono text-xs whitespace-nowrap">
                         {g.numero != null ? `REQ-${String(g.numero).padStart(4, "0")}` : "—"}
                       </td>
-                      <td className="px-4 py-3 tabular-nums whitespace-nowrap">{format(new Date(g.data_movimento), "dd/MM/yyyy HH:mm")}</td>
+                      <td className="px-4 py-3 tabular-nums whitespace-nowrap">{formatBRT(g.data_movimento)}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{g.empresa ?? "—"}</td>
                       <td className="px-4 py-3 text-foreground">{g.evento_projeto ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{g.solicitante?.nome ?? "—"}</td>
