@@ -208,6 +208,28 @@ function ComprasKanban() {
       )}
 
       <CompraDialog open={open} onOpenChange={setOpen} compraId={editId} defaultStatus={defaultStatus} />
+
+      <AvancarCardDialog
+        open={!!pendingMove}
+        onOpenChange={(v) => { if (!v) setPendingMove(null); }}
+        statusLabel={pendingMove ? (COMPRA_STATUSES.find((s) => s.key === pendingMove.status)?.label || "") : ""}
+        onConfirm={async ({ responsavelId, responsavelNome, observacao }) => {
+          if (!pendingMove) return;
+          const { id, status, titulo } = pendingMove;
+          const statusLabel = COMPRA_STATUSES.find((s) => s.key === status)?.label || status;
+          moveStatus.mutate({ id, status, responsavelId, responsavelNome });
+          await notifyResponsavel({
+            userId: responsavelId,
+            titulo: `Compra: ${statusLabel}`,
+            mensagem: `${titulo}${observacao ? ` — ${observacao}` : ""}`,
+            link: `/compras?id=${id}`,
+            tipo: "compra_responsavel",
+          });
+          toast.success(`Card movido. ${responsavelNome} foi notificado.`);
+          setPendingMove(null);
+        }}
+      />
+
     </>
   );
 }
