@@ -1,65 +1,63 @@
-# Dashboard Financeiro com abas Financeiro + Uber
+# Corrigir integração Uber Business
 
-## 1. Navegação por abas
+## Diagnóstico
 
-No topo de `/financeiro/dashboard`, acima do título "Dashboard Financeiro", adicionar `Tabs` (shadcn) com 2 entradas: **Financeiro** e **Uber**. A aba muda o conteúdo abaixo sem trocar de rota (estado local + persistência via `?tab=` na URL para deep link).
+O erro `400 invalid_scope` vem do `POST https://auth.uber.com/oauth/v2/token` porque pedimos `scope=business.trips`, mas:
 
-- Aba **Financeiro**: mantém todo o conteúdo atual (KPIs, gráficos por mês/fornecedor/tipo/status).
-- Aba **Uber**: novo painel descrito abaixo.
+1. A documentação oficial ([Receipts API → Authentication](https://developer.uber.com/docs/businesses/receipts/guides/authentication)) usa o escopo **`business.receipts`** para `client_credentials`.
+2. O escopo `business.trips` existe, mas pertence à **Employees Trips API** (`POST /v1/trips/search`) e precisa estar **explicitamente habilitado no painel do app** em developer.uber.com → Apps → Auth → Scopes. Se não estiver habilitado, o servidor responde exatamente com `invalid_scope`.
+3. O endpoint atual no nosso código (`GET /v1/business/trips`) **não existe** na API pública atual. O que existe é:
+   - `POST /v1/trips/search` (escopo `business.trips`) — lista trips paginadas, **este é o que queremos**.
+   - `GET /v1/business/trips/{trip_id}/receipt` (escopo `business.receipts`) — recibo único, marcado como **deprecated**.
 
-## 2. Integração Uber for Business
+Ou seja, temos dois bugs combinados: escopo errado **e** endpoint inexistente.
 
-Como você já tem app no developer.uber.com, vou solicitar 3 secrets via `add_secret`:
-- `UBER_CLIENT_ID`
-- `UBER_CLIENT_SECRET`
-- `UBER_ORG_UUID` (UUID da sua organização Business)
+## Pergunta antes de implementar
 
-### Server function (TanStack)
-- `src/lib/uber/auth.server.ts` — pega token OAuth client_credentials em `https://auth.uber.com/oauth/v2/token` com escopo `business.trips`. Cacheia o token em memória até expirar.
-- `src/lib/uber/client.server.ts` — wrapper de fetch autenticado.
-- `src/lib/uber.functions.ts` — `getUberTrips({ from, to })` que chama `GET /v1/business/trips` (paginado, `limit=50`, segue `next_page`). Sempre executado quando a aba abre (sem cache de DB — "ao abrir a aba" conforme escolhido).
-- Período padrão: últimos 24 meses, ajustável pelo seletor De/Até existente.
+Precisamos saber quais escopos estão marcados como "Approved" no painel do seu app Uber (developer.uber.com → seu app → Auth → OAuth Scopes). As duas opções abaixo decidem o caminho:
 
-### Tratamento de erros
-Função retorna `{ data, error }` (DTO). UI exibe estado vazio + mensagem se faltar secret, token inválido, ou rate limit.
+- **Opção A — `business.trips` aprovado**: caminho ideal. Conseguimos listar todas as trips da organização com um único endpoint e montar todos os gráficos do dashboard.
+- **Opção B — apenas `business.receipts` aprovado**: API Receipts só entrega recibo trip-a-trip a partir de um `trip_id` que você já tem (ex.: via webhook). Não dá pra listar viagens só com client_credentials. Nesse caso precisaríamos configurar webhook `trips.receipt.ready` + tabela no banco pra armazenar histórico — escopo bem maior.
 
-## 3. Painel Uber (aba)
+Confirma qual está habilitado? Se não tiver certeza, mande print da seção "OAuth Scopes" do app.
 
-Layout reusando `Stat` / `ChartCard` já presentes no arquivo:
+## Mudanças (assumindo Opção A)
 
-**KPIs (linha de cards):**
-- Gasto total no período
-- Nº de corridas
-- Ticket médio (gasto / corridas)
-- Variação vs período anterior (mesma duração, anterior)
+### `src/lib/uber/auth.server.ts`
+- Trocar `scope: "business.trips"` — manter, **mas** garantir que o app realmente tenha esse escopo aprovado.
+- Mensagem de erro mais explícita quando vier `invalid_scope`: instruir o usuário a habilitar o escopo no painel.
 
-**Gráficos / blocos:**
-1. **Gasto mensal** — barras (com linha de comparação ano anterior quando houver).
-2. **Comparações** — 3 cards lado a lado:
-   - Mês atual vs mês anterior
-   - Ano atual vs ano anterior (YTD)
-   - Período selecionado vs período imediatamente anterior
-3. **Gasto por projeto / centro de custo** — barras horizontais (campo `expense_code` / `expense_memo` da Uber API).
-4. **Gasto por tipo de corrida** — pizza (`product_type`: UberX, Black, Comfort etc.).
-5. **Top solicitantes** — tabela (nome, nº viagens, total gasto, ticket médio).
-6. **Endereços recorrentes** — tabela top 10 (origem ou destino, contagem, % do total). Agrupa por `start_address` e `end_address` normalizados.
+### `src/lib/uber.functions.ts`
+Reescrever `getUberTrips` para usar `POST /v1/trips/search`:
 
-Tudo respeita o filtro De/Até do header. Loading com skeletons; vazio com mensagem amigável quando não há dados.
+```ts
+const res = await fetch("https://api.uber.com/v1/trips/search", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "Accept-Language": "pt-BR",
+  },
+  body: JSON.stringify({
+    third_party_customer_organization_id: orgUuid,
+    search_filters: {
+      interval: { starts_at: fromMs, ends_at: toMs },
+    },
+    paging_option: { page_size: 50, cursor: nextCursor ?? undefined },
+  }),
+});
+```
 
-## 4. Arquivos a criar/editar
+- Paginação por cursor (`paging_option.cursor` / `response.next_cursor`) em vez de offset.
+- Ajustar `normalize()` para o shape real do response (`trips[].fare_breakdown.total`, `trips[].vehicle_view_name`, `trips[].rider.{name,email}`, `trips[].request_time_ms`, etc.) — mantendo o DTO `UberTrip` já consumido pela UI.
+- Manter retorno `{ trips, error }` com tratamento amigável para 401/403/invalid_scope.
 
-**Criar:**
-- `src/lib/uber/auth.server.ts`
-- `src/lib/uber/client.server.ts`
-- `src/lib/uber.functions.ts`
-- `src/components/financeiro/UberDashboard.tsx`
+### UI (`UberDashboard.tsx`)
+Sem mudanças — o componente consome o DTO normalizado.
 
-**Editar:**
-- `src/routes/financeiro.dashboard.tsx` — adicionar `Tabs` no topo, mover conteúdo atual para `<TabsContent value="financeiro">`, adicionar `<TabsContent value="uber"><UberDashboard from={from} to={to} /></TabsContent>`. Mudar default de `from` para 24 meses atrás quando a aba Uber está ativa.
+### Se for Opção B
+Mudo o plano: troco para `scope: "business.receipts"`, removo o fetch de listagem, e proponho separadamente o caminho webhook + persistência. Não implemento sem confirmar.
 
-## 5. Secrets
+## Próximo passo
 
-Vou disparar `add_secret(["UBER_CLIENT_ID","UBER_CLIENT_SECRET","UBER_ORG_UUID"])` no início da implementação. Você cola os valores; só depois eu sigo escrevendo a integração.
-
-## Observação técnica
-A Uber for Business API exige que o app esteja com o escopo `business.trips` aprovado pela Uber. Se a chamada retornar `403 invalid_scope`, será preciso solicitar o escopo no painel do app antes de funcionar — eu trato isso como erro amigável na UI.
+Me confirma quais escopos o app tem aprovados no painel (ou peça pra habilitar `business.trips` lá) e eu sigo com a Opção A.
