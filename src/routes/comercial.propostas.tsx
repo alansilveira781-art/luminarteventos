@@ -94,6 +94,18 @@ function Propostas() {
                     <Button size="sm" variant="outline" onClick={() => gerarPropostaPDF(p)}>
                       <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
                     </Button>
+                    {["enviado", "em_negociacao", "em_revisao"].includes(p.status) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const nova = criarNovaVersaoProposta(p.id);
+                          if (nova) toast.success(`Nova versão criada (v${nova.version})`);
+                        }}
+                      >
+                        <GitBranch className="h-3.5 w-3.5 mr-1" /> Nova versão
+                      </Button>
+                    )}
                     <Button size="sm" onClick={() => toast.success("Proposta enviada com sucesso!")}>
                       <Send className="h-3.5 w-3.5 mr-1" /> Enviar
                     </Button>
