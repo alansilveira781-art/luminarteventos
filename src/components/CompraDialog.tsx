@@ -368,7 +368,7 @@ export function CompraDialog({
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Valor unit.</label>
-                    <Input type="number" step="0.01" value={it.valor_unitario ?? ""} onChange={(e) => updateItem(idx, { valor_unitario: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <MoneyInput value={it.valor_unitario ?? 0} onChange={(n) => updateItem(idx, { valor_unitario: n || null })} />
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Subtotal</label>
