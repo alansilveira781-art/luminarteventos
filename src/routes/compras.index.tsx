@@ -79,9 +79,16 @@ function ComprasKanban() {
     return m;
   }, [filteredCompras]);
 
+  const [pendingMove, setPendingMove] = useState<{ id: string; status: CompraStatus; titulo: string } | null>(null);
+
   const moveStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: CompraStatus }) => {
-      const { error } = await sb.from("compras").update({ status }).eq("id", id);
+    mutationFn: async (vars: { id: string; status: CompraStatus; responsavelId?: string; responsavelNome?: string }) => {
+      const patch: any = { status: vars.status };
+      if (vars.responsavelId) {
+        patch.responsavel_id = vars.responsavelId;
+        patch.responsavel_nome = vars.responsavelNome;
+      }
+      const { error } = await sb.from("compras").update(patch).eq("id", vars.id);
       if (error) throw error;
     },
     onMutate: async ({ id, status }) => {
@@ -110,8 +117,16 @@ function ComprasKanban() {
     const status = overId as CompraStatus;
     const compra = compras.find((c) => c.id === id);
     if (!compra || compra.status === status) return;
-    moveStatus.mutate({ id, status });
+    const oldIdx = COMPRA_STATUSES.findIndex((s) => s.key === compra.status);
+    const newIdx = COMPRA_STATUSES.findIndex((s) => s.key === status);
+    // Avanço (ou status especial): pede responsável. Retorno: muda direto.
+    if (newIdx > oldIdx) {
+      setPendingMove({ id, status, titulo: compra.titulo || compra.fornecedor || `Compra ${compra.numero ?? ""}` });
+    } else {
+      moveStatus.mutate({ id, status });
+    }
   }
+
 
   return (
     <>
