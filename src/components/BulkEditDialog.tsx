@@ -110,6 +110,12 @@ export function BulkEditDialog({
                         onChange={(e) => set(f.key, e.target.value)}
                       />
                     )}
+                    {f.type === "money" && (
+                      <MoneyInput
+                        value={Number(values[f.key] ?? 0)}
+                        onChange={(n) => set(f.key, String(n))}
+                      />
+                    )}
                     {f.type === "date" && (
                       <Input
                         type="date"
