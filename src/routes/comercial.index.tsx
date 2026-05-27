@@ -19,6 +19,9 @@ import { EnvioDialog } from "@/components/comercial/EnvioDialog";
 import { DetalhesDrawer } from "@/components/comercial/DetalhesDrawer";
 import { PropostaWizard } from "@/components/comercial/PropostaWizard";
 import { gerarPropostaPDF } from "@/lib/comercial/pdf";
+import { AvancarCardDialog } from "@/components/AvancarCardDialog";
+import { notifyResponsavel } from "@/lib/notify";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/comercial/")({
   component: QuadroVendas,
