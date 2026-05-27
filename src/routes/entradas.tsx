@@ -769,8 +769,8 @@ const novaLinha = (overrides: Partial<Linha> = {}): Linha => ({ item_id: "", qua
 function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: isEditing && prefill?.data_movimento
-      ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+      ? toBRTInputDateTime(prefill.data_movimento)
+      : toBRTInputDateTime(),
     entrada_tipo: prefill?.entrada_tipo ?? "compra",
     empresa: prefill?.empresa ?? "",
     fornecedor_id: prefill?.fornecedor_id ?? "",
