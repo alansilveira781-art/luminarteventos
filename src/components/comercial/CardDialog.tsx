@@ -53,6 +53,7 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
           responsavel: card.responsavel,
           observacoes: card.observacoes,
           status: card.status,
+          dataEnvio: card.dataEnvio ?? "",
         });
       } else {
         setForm({ ...empty, status: defaultStatus ?? "lead" });
@@ -69,7 +70,11 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
       toast.error("A data final não pode ser anterior à data inicial");
       return;
     }
-    const payload = {
+    if (form.status === "orcamento_enviado" && !form.dataEnvio) {
+      toast.error("Informe a data de envio para mover para Orçamento Enviado");
+      return;
+    }
+    const payload: Partial<ComercialCard> = {
       clienteNome: form.clienteNome,
       eventoNome: form.eventoNome,
       eventoDataInicio: form.eventoDataInicio,
@@ -78,6 +83,7 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
       responsavel: form.responsavel,
       observacoes: form.observacoes,
       status: form.status,
+      dataEnvio: form.status === "orcamento_enviado" ? form.dataEnvio : (card?.dataEnvio ?? null),
     };
 
     if (card) {
@@ -93,7 +99,18 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
         });
         clienteId = c.id;
       }
-      createCard({ clienteId, ...payload });
+      createCard({
+        clienteId,
+        clienteNome: payload.clienteNome!,
+        eventoNome: payload.eventoNome!,
+        eventoDataInicio: payload.eventoDataInicio!,
+        eventoDataFim: payload.eventoDataFim!,
+        valorEstimado: payload.valorEstimado!,
+        responsavel: payload.responsavel!,
+        observacoes: payload.observacoes!,
+        status: payload.status,
+        dataEnvio: payload.dataEnvio,
+      });
       toast.success("Lead criado");
     }
     onOpenChange(false);
