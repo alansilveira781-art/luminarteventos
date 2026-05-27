@@ -244,6 +244,12 @@ function ApuracoesPage() {
               </tr>
             </tbody>
           </table>
+          <div className="px-4 py-2 text-xs text-muted-foreground border-t border-border">
+            <strong>IRPJ:</strong> apurado {fmtBRL(apuracao.irpjDetalhe.irpjNormal)}
+            {" — "}Limite mensal {fmtBRL(apuracao.irpjDetalhe.limite)}
+            {" — "}Excedente {fmtBRL(apuracao.irpjDetalhe.excedente)}
+            {" — "}Adicional ({apuracao.irpjDetalhe.aliquotaAdicional.toFixed(2)}%): <span className="font-medium text-foreground">{fmtBRL(apuracao.irpjDetalhe.adicional)}</span>
+          </div>
           {(!aliquotas || aliquotas.length === 0) && (
             <div className="px-4 py-2 text-xs text-muted-foreground border-t border-border">
               Nenhuma alíquota configurada para {empresa}. Configure em <strong>Configuração</strong>.
