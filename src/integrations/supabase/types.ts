@@ -652,7 +652,9 @@ export type Database = {
       contabil_configuracao_aliquotas: {
         Row: {
           aliquota: number
+          aliquota_adicional: number
           ativo: boolean
+          base_calculo: number
           created_at: string
           empresa: string
           id: string
@@ -663,7 +665,9 @@ export type Database = {
         }
         Insert: {
           aliquota?: number
+          aliquota_adicional?: number
           ativo?: boolean
+          base_calculo?: number
           created_at?: string
           empresa: string
           id?: string
@@ -674,7 +678,9 @@ export type Database = {
         }
         Update: {
           aliquota?: number
+          aliquota_adicional?: number
           ativo?: boolean
+          base_calculo?: number
           created_at?: string
           empresa?: string
           id?: string
