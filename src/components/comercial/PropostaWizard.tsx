@@ -30,6 +30,7 @@ import {
   addConsultor,
 } from "@/lib/comercial/store";
 import { NumberInput } from "@/components/comercial/NumberInput";
+import { MoneyInput } from "@/components/MoneyInput";
 
 type Props = {
   open: boolean;
@@ -464,9 +465,9 @@ export function PropostaWizard({ open, onOpenChange, cardId, defaults, proposta 
           {step === 3 && (
             <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-3">
-                <div><Label>Frete (R$)</Label><NumberInput step="0.01" value={custos.frete} onChange={(n) => setCustos({ ...custos, frete: n })} /></div>
-                <div><Label>Montagem (R$)</Label><NumberInput step="0.01" value={custos.montagem} onChange={(n) => setCustos({ ...custos, montagem: n })} /></div>
-                <div><Label>Desmontagem (R$)</Label><NumberInput step="0.01" value={custos.desmontagem} onChange={(n) => setCustos({ ...custos, desmontagem: n })} /></div>
+                <div><Label>Frete (R$)</Label><MoneyInput value={custos.frete} onChange={(n) => setCustos({ ...custos, frete: n })} /></div>
+                <div><Label>Montagem (R$)</Label><MoneyInput value={custos.montagem} onChange={(n) => setCustos({ ...custos, montagem: n })} /></div>
+                <div><Label>Desmontagem (R$)</Label><MoneyInput value={custos.desmontagem} onChange={(n) => setCustos({ ...custos, desmontagem: n })} /></div>
               </div>
 
               <div className="rounded-lg border border-border p-3">
@@ -480,7 +481,7 @@ export function PropostaWizard({ open, onOpenChange, cardId, defaults, proposta 
                   {custos.outros.map((c, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <Input placeholder="Descrição" value={c.descricao} onChange={(e) => setCustos({ ...custos, outros: custos.outros.map((x, j) => j === i ? { ...x, descricao: e.target.value } : x) })} />
-                      <NumberInput step="0.01" className="w-32 text-right" value={c.valor} onChange={(n) => setCustos({ ...custos, outros: custos.outros.map((x, j) => j === i ? { ...x, valor: n } : x) })} />
+                      <MoneyInput className="w-40" value={c.valor} onChange={(n) => setCustos({ ...custos, outros: custos.outros.map((x, j) => j === i ? { ...x, valor: n } : x) })} />
                       <Button size="icon" variant="ghost" onClick={() => setCustos({ ...custos, outros: custos.outros.filter((_, j) => j !== i) })}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   ))}
@@ -608,7 +609,7 @@ function DescricaoRow({
           <Label className="text-[10px]">
             Valor un.{d.tipoMedida === "area" ? " (/m²)" : d.tipoMedida === "linear" ? " (/m)" : ""}
           </Label>
-          <NumberInput className="h-8 text-sm" step="0.01" value={d.valorUnitario} onChange={(n) => onPatch({ valorUnitario: n })} />
+          <MoneyInput className="h-8 text-sm" value={d.valorUnitario} onChange={(n) => onPatch({ valorUnitario: n })} />
         </div>
         <div className="text-right">
           <div className="text-[10px] text-muted-foreground">Subtotal</div>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumberInput } from "@/components/comercial/NumberInput";
+import { MoneyInput } from "@/components/MoneyInput";
 import {
   useComercial,
   createCatalogoDescricao,
@@ -169,7 +170,7 @@ function CatalogoDialog({
             <Label>
               Valor unitário (R${tipoMedida === "area" ? "/m²" : tipoMedida === "linear" ? "/m" : ""}) *
             </Label>
-            <NumberInput step="0.01" value={valor} onChange={setValor} />
+            <MoneyInput value={valor} onChange={setValor} />
           </div>
         </div>
         <DialogFooter>
