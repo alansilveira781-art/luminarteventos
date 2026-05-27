@@ -1,6 +1,7 @@
 export const CARD_STATUSES = [
   { key: "lead", label: "Lead", color: "bg-slate-400" },
   { key: "projeto", label: "Projeto", color: "bg-blue-500" },
+  { key: "orcamento_validado", label: "Orçamento Validado", color: "bg-violet-500" },
   { key: "orcamento_enviado", label: "Orçamento Enviado", color: "bg-indigo-500" },
   { key: "negociacao", label: "Negociação", color: "bg-amber-500" },
   { key: "fechamento", label: "Fechamento", color: "bg-emerald-500" },
