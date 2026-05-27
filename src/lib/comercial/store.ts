@@ -188,18 +188,31 @@ export function deleteCard(id: string) {
   setState({ cards: state.cards.filter((c) => c.id !== id) });
 }
 
-export function moveCard(id: string, status: CardStatus, motivoPerda?: string) {
+export function moveCard(id: string, status: CardStatus, extra?: { motivoPerda?: string; dataEnvio?: string }) {
   const card = state.cards.find((c) => c.id === id);
   if (!card) return;
   const patch: Partial<ComercialCard> = { status };
-  if (status === "perda") patch.motivoPerda = motivoPerda ?? card.motivoPerda ?? "";
+  if (status === "perda") patch.motivoPerda = extra?.motivoPerda ?? card.motivoPerda ?? "";
   if (status !== "perda") patch.motivoPerda = undefined;
+  if (status === "orcamento_enviado") {
+    patch.dataEnvio = extra?.dataEnvio ?? card.dataEnvio ?? new Date().toISOString().slice(0, 10);
+  }
   updateCard(id, patch);
   if (card.propostaId) {
     if (status === "fechamento") updatePropostaStatus(card.propostaId, "fechado");
     if (status === "perda") updatePropostaStatus(card.propostaId, "perdido");
     if (status === "orcamento_enviado") updatePropostaStatus(card.propostaId, "enviado");
   }
+}
+
+/** Retorna todas as propostas associadas a um card (todas as raízes e versões). */
+export function getPropostasDoCard(cardId: string): Proposta[] {
+  return state.propostas
+    .filter((p) => p.cardId === cardId)
+    .sort((a, b) => {
+      if (a.numero !== b.numero) return b.numero - a.numero;
+      return (b.version ?? 1) - (a.version ?? 1);
+    });
 }
 
 // ----- Clientes -----

@@ -30,6 +30,7 @@ const empty = {
   responsavel: "",
   observacoes: "",
   status: "lead" as CardStatus,
+  dataEnvio: "",
 };
 
 export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
@@ -52,6 +53,7 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
           responsavel: card.responsavel,
           observacoes: card.observacoes,
           status: card.status,
+          dataEnvio: card.dataEnvio ?? "",
         });
       } else {
         setForm({ ...empty, status: defaultStatus ?? "lead" });
@@ -68,7 +70,11 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
       toast.error("A data final não pode ser anterior à data inicial");
       return;
     }
-    const payload = {
+    if (form.status === "orcamento_enviado" && !form.dataEnvio) {
+      toast.error("Informe a data de envio para mover para Orçamento Enviado");
+      return;
+    }
+    const payload: Partial<ComercialCard> = {
       clienteNome: form.clienteNome,
       eventoNome: form.eventoNome,
       eventoDataInicio: form.eventoDataInicio,
@@ -77,6 +83,7 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
       responsavel: form.responsavel,
       observacoes: form.observacoes,
       status: form.status,
+      dataEnvio: form.status === "orcamento_enviado" ? form.dataEnvio : (card?.dataEnvio ?? null),
     };
 
     if (card) {
@@ -92,7 +99,18 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
         });
         clienteId = c.id;
       }
-      createCard({ clienteId, ...payload });
+      createCard({
+        clienteId,
+        clienteNome: payload.clienteNome!,
+        eventoNome: payload.eventoNome!,
+        eventoDataInicio: payload.eventoDataInicio!,
+        eventoDataFim: payload.eventoDataFim!,
+        valorEstimado: payload.valorEstimado!,
+        responsavel: payload.responsavel!,
+        observacoes: payload.observacoes!,
+        status: payload.status,
+        dataEnvio: payload.dataEnvio,
+      });
       toast.success("Lead criado");
     }
     onOpenChange(false);
@@ -199,6 +217,19 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
                 </SelectContent>
               </Select>
             </div>
+            {form.status === "orcamento_enviado" && (
+              <div className="sm:col-span-2">
+                <Label>Data de envio *</Label>
+                <Input
+                  type="date"
+                  value={form.dataEnvio}
+                  onChange={(e) => setForm({ ...form, dataEnvio: e.target.value })}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Obrigatória para mover o card para "Orçamento Enviado".
+                </p>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <Label>Observações rápidas</Label>
               <Textarea rows={3} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />

@@ -54,6 +54,8 @@ export type ComercialCard = {
   observacoes: string;
   motivoPerda?: string;
   propostaId?: string | null;
+  /** Data em que a proposta foi enviada ao cliente (preenchida ao mover para Orçamento Enviado). */
+  dataEnvio?: string | null;
   createdAt: string;
 };
 

@@ -15,6 +15,7 @@ import { CARD_STATUSES, type CardStatus, type ComercialCard, TIPOS_EVENTO } from
 import { useComercial, moveCard } from "@/lib/comercial/store";
 import { CardDialog } from "@/components/comercial/CardDialog";
 import { PerdaDialog } from "@/components/comercial/PerdaDialog";
+import { EnvioDialog } from "@/components/comercial/EnvioDialog";
 import { DetalhesDrawer } from "@/components/comercial/DetalhesDrawer";
 import { PropostaWizard } from "@/components/comercial/PropostaWizard";
 import { gerarPropostaPDF } from "@/lib/comercial/pdf";
@@ -42,6 +43,7 @@ function QuadroVendas() {
   const [defaultStatus, setDefaultStatus] = useState<CardStatus>("lead");
   const [openCard, setOpenCard] = useState(false);
   const [perdaCardId, setPerdaCardId] = useState<string | null>(null);
+  const [envioCardId, setEnvioCardId] = useState<string | null>(null);
   const [detalhesCard, setDetalhesCard] = useState<ComercialCard | null>(null);
   const [wizardCardId, setWizardCardId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -93,6 +95,10 @@ function QuadroVendas() {
     if (!card || card.status === status) return;
     if (status === "perda") {
       setPerdaCardId(id);
+      return;
+    }
+    if (status === "orcamento_enviado") {
+      setEnvioCardId(id);
       return;
     }
     moveCard(id, status);
@@ -188,7 +194,13 @@ function QuadroVendas() {
       <PerdaDialog
         open={!!perdaCardId}
         onOpenChange={(v) => { if (!v) setPerdaCardId(null); }}
-        onConfirm={(motivo) => { if (perdaCardId) moveCard(perdaCardId, "perda", motivo); setPerdaCardId(null); }}
+        onConfirm={(motivo) => { if (perdaCardId) moveCard(perdaCardId, "perda", { motivoPerda: motivo }); setPerdaCardId(null); }}
+      />
+      <EnvioDialog
+        open={!!envioCardId}
+        onOpenChange={(v) => { if (!v) setEnvioCardId(null); }}
+        defaultDate={cards.find((c) => c.id === envioCardId)?.dataEnvio || undefined}
+        onConfirm={(data) => { if (envioCardId) moveCard(envioCardId, "orcamento_enviado", { dataEnvio: data }); setEnvioCardId(null); }}
       />
       <DetalhesDrawer open={!!detalhesCard} onOpenChange={(v) => { if (!v) setDetalhesCard(null); }} card={detalhesCard} />
       <PropostaWizard
