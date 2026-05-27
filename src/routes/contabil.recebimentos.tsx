@@ -338,7 +338,7 @@ function RecebimentoForm({
           <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
         </FormField>
         <FormField label="Valor recebido (R$)">
-          <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} />
+          <MoneyInput value={Number(valor || 0)} onChange={(n) => setValor(n ? String(n) : "")} />
         </FormField>
         <FormField label="Banco">
           <Input value={banco} onChange={(e) => setBanco(e.target.value)} placeholder="Ex.: Itaú" />
