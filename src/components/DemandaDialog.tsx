@@ -216,11 +216,9 @@ export function DemandaDialog({
                   onChange={(v) => setForm({ ...form, condicao_pagamento: v })} />
               </FormField>
               <FormField label="Valor total (R$)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.valor_total ?? ""}
-                  onChange={(e) => setForm({ ...form, valor_total: e.target.value === "" ? null : Number(e.target.value) })}
+                <MoneyInput
+                  value={form.valor_total ?? 0}
+                  onChange={(n) => setForm({ ...form, valor_total: n || null })}
                 />
               </FormField>
               <FormField label="Observações" wide>
