@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toBRTInputDateTime, fromBRTInputDateTime } from "@/lib/datetime";
 import { entradaTipoLabels } from "@/lib/labels";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -936,8 +937,8 @@ function EntradaForm({ prefill, isEditing, itens, fornecedores, onEditFornecedor
               </div>
               <div className="w-[100px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Cust. Unit.</label>
-                <Input ref={(el) => { valorRefs.current[i] = el; }} type="number" min="0" step="any" value={l.valor_unitario} onChange={(e) => setL(i, "valor_unitario", e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (l.item_id && Number(l.quantidade) > 0) goNextItem(i); } }} className="px-2" />
+                <MoneyInput value={Number(l.valor_unitario || 0)} onChange={(n) => setL(i, "valor_unitario", n ? String(n) : "")}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (l.item_id && Number(l.quantidade) > 0) goNextItem(i); } }} hidePrefix />
               </div>
               <div className="w-[80px]">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground h-4 block">Desconto</label>

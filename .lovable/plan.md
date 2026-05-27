@@ -1,89 +1,86 @@
-# Envio de e-mails para clientes (Comercial)
+# Input monetário "cents-as-you-type" em R$
 
-## Objetivo
-Permitir disparar e-mails para clientes diretamente do card no Kanban do Comercial, com suporte a:
-- **Envio manual avulso** (você escreve assunto/mensagem na hora)
-- **Templates pré-definidos** (envio de proposta, follow-up, agradecimento, cobrança)
-- **Automações em eventos** (ex.: ao mover card para "Orçamento Enviado", ao aprovar proposta)
-- **PDF da proposta** incluído como link de download seguro no corpo do e-mail
+## Comportamento
 
-## Pré-requisitos (configuração)
-1. **Configurar domínio remetente** na Lovable Cloud (você adiciona registros DNS — eu te entrego o passo a passo no diálogo). Sem isso os e-mails não saem com sua marca.
-2. **Infraestrutura de e-mails da Lovable**: fila de envio com retry, logs, supressão de bounces/reclamações e link de unsubscribe automático.
+Em qualquer campo de dinheiro do sistema o usuário digita só dígitos. A vírgula fica fixa nas duas últimas casas e o restante vai sendo deslocado:
 
-## Funcionalidades
+```text
+(vazio)        R$ 0,00
+1              R$ 0,01
+12             R$ 0,12
+123            R$ 1,23
+1234           R$ 12,34
+12345          R$ 123,45
+123456         R$ 1.234,56
+1234567        R$ 12.345,67
+```
 
-### 1. Botão "Enviar e-mail" no card (Kanban Comercial)
-Adicionado no `DetalhesDrawer.tsx` do card. Abre um diálogo com:
-- Destinatário pré-preenchido (e-mail do cliente do card)
-- Seletor de template: **Personalizado**, **Envio de Proposta**, **Follow-up**, **Agradecimento**, **Cobrança**
-- Campos de assunto e mensagem (editáveis — template apenas pré-preenche)
-- Checkbox **"Anexar PDF da proposta"** (visível quando o card tem proposta vinculada)
-- Histórico de e-mails enviados para aquele card
+- Backspace apaga o último dígito (12345 → 1234 → 123…).
+- Campo vazio salva como `0` (ou `null`, mantendo o comportamento atual de cada tela).
+- Prefixo "R$" fixo dentro do input (cinza, não editável).
+- Separador de milhar com ponto e decimal com vírgula (pt-BR).
+- `inputMode="decimal"` para abrir teclado numérico no mobile.
+- Aceita colar valores formatados ("1.234,56", "1234.56", "R$ 12,00") — normaliza tudo para centavos.
 
-### 2. PDF da proposta como link de download
-Como a Lovable não suporta anexo nativo, o fluxo é:
-1. Gerar o PDF da proposta (já existe `src/lib/comercial/pdf.ts`)
-2. Subir o PDF em um bucket privado do Storage (`propostas-pdf`)
-3. Criar uma URL assinada de 30 dias
-4. Incluir o link como botão **"Baixar proposta (PDF)"** no corpo do e-mail
+## Novo componente
 
-### 3. Templates de e-mail (React Email)
-Quatro templates branded com a identidade visual do app:
-- `proposta-envio` — envio de proposta com link do PDF e dados do evento
-- `proposta-followup` — follow-up de proposta enviada
-- `proposta-agradecimento` — agradecimento pós-fechamento
-- `proposta-cobranca` — lembrete educado de retorno
-- `comercial-personalizado` — template genérico para envios manuais
+`src/components/MoneyInput.tsx`
 
-### 4. Automações opcionais (você liga/desliga)
-- Ao mover card para **Orçamento Enviado** → sugere disparar e-mail "Envio de Proposta" (não envia automático, só pré-abre o diálogo, para você revisar antes)
-- Ao aprovar proposta → opção de disparar agradecimento
+```ts
+type Props = {
+  value: number | null;          // valor em reais (ex.: 1234.56)
+  onChange: (v: number) => void; // sempre devolve number em reais
+  allowNull?: boolean;           // se true, campo vazio → onChange(null as any)
+  ...InputHTMLAttributes (menos value/onChange/type)
+}
+```
 
-### 5. Histórico de e-mails
-Nova aba/sessão no drawer do card listando: data, destinatário, template, assunto, status (enviado / falhou / suprimido), com link para reenvio.
+Internamente trabalha em centavos (inteiro). Conversão:
+- entrada: `Math.round(value * 100)` na inicialização / quando `value` muda externamente.
+- saída: `cents / 100` no `onChange`.
 
-## Detalhes técnicos
+Renderiza um wrapper com o "R$" absoluto à esquerda e o `<Input>` com `pl-9 text-right tabular-nums`, reaproveitando o input shadcn já existente.
 
-### Banco de dados (nova tabela)
-- `comercial_email_log` — registro de e-mails enviados por card/proposta:
-  - `card_id`, `proposta_id`, `cliente_email`, `template_name`, `subject`, `pdf_url`, `status`, `enviado_por` (user_id)
-  - RLS: apenas usuários autenticados com acesso ao módulo Comercial leem/escrevem
-  - GRANTs para `authenticated` e `service_role`
+## Substituições no sistema
 
-### Storage
-- Novo bucket privado `propostas-pdf` com policy que restringe leitura via URL assinada
-- Path: `{proposta_id}/v{version}-{timestamp}.pdf`
+Trocar `<Input type="number">` / `<NumberInput>` por `<MoneyInput>` apenas em campos de dinheiro:
 
-### Infraestrutura de e-mail
-- `email_domain--setup_email_infra` + `email_domain--scaffold_transactional_email`
-- Server route `/lovable/email/transactional/send` (criado pelo scaffold) — usado por todo envio
-- Server function `sendComercialEmail` em `src/lib/comercial/email.functions.ts` que:
-  1. Gera PDF (se solicitado), faz upload e gera URL assinada
-  2. Chama o template registrado com os dados do card/proposta
-  3. Registra em `comercial_email_log`
+- **Estoque / Movimentações**
+  - `src/routes/entradas.tsx` — `valor_unitario` por linha (form de criação e edição).
+  - `src/components/patrimonio/Movimentacoes.tsx` — `valor_unitario`.
+- **Comercial**
+  - `src/components/comercial/PropostaWizard.tsx` — preços/valores da proposta.
+  - `src/components/comercial/CardDialog.tsx` — valor do card.
+  - `src/routes/comercial.catalogo.tsx` — preço dos itens do catálogo.
+- **Compras / Demandas**
+  - `src/components/CompraDialog.tsx` — valor estimado.
+  - `src/components/DemandaDialog.tsx` — valor estimado.
+- **Financeiro / Contábil**
+  - `src/routes/contabil.recebimentos.tsx` — valor recebido.
+  - `src/routes/contabil.notas.tsx` — valor da nota.
+  - `src/routes/contabil.configuracao.tsx` — parâmetros monetários.
+- **Cadastros**
+  - `src/components/forms/ItemForm.tsx` — preço de referência / custo médio.
+- **Edição em massa**
+  - `src/components/BulkEditDialog.tsx` — quando o campo selecionado for monetário.
 
-### Arquivos a criar
-- `src/lib/email-templates/proposta-envio.tsx` (+ 3 outros templates)
-- `src/lib/email-templates/registry.ts` (atualizado)
-- `src/lib/comercial/email.functions.ts` (server functions)
-- `src/components/comercial/EnviarEmailDialog.tsx` (diálogo no drawer)
-- `src/components/comercial/HistoricoEmails.tsx` (lista no drawer)
-- Migration: tabela `comercial_email_log` + bucket `propostas-pdf` + policies
+Campos que **não** mudam: quantidades (inteiras ou fracionárias), códigos, NCM, ano, percentuais, qualquer coisa que não represente moeda.
 
-### Arquivos a editar
-- `src/components/comercial/DetalhesDrawer.tsx` — botão "Enviar e-mail" + aba histórico
-- `src/lib/comercial/store.ts` — helper para buscar e-mails enviados de um card
-- `package.json` — adicionar `@react-email/components`, `react-email`, `@lovable.dev/email-js`, `@lovable.dev/webhooks-js`
+## Itens fora do escopo
 
-## Fluxo de aprovação
-1. Você aprova este plano
-2. Eu rodo a migration (cria tabela + bucket)
-3. Eu configuro a infraestrutura de e-mail e abro o diálogo de domínio para você colar os DNS
-4. Eu crio os templates, server functions e UI do diálogo
-5. Você testa enviando para você mesmo antes de usar com cliente real
+- Quantidades, percentuais, datas, telefones — permanecem como hoje.
+- Não vou alterar o backend / schema; o valor continua sendo salvo como `number` em reais.
+- Não vou criar máscara para inputs de quantidade com decimais (ex.: 1,5 m²). Se quiser depois, é outro componente.
 
-## Fora do escopo (não será feito)
-- Envio em massa / newsletter / marketing (não permitido pela política de e-mail transacional)
-- Editor visual de templates (templates são código com branding fixo; texto/assunto editáveis no envio)
-- Recebimento de respostas dentro do app (respostas vão para sua caixa de entrada normal via "Reply-To")
+## Validação
+
+- O componente sempre devolve `number ≥ 0`.
+- Mantenho os `toast.error` existentes ("informe um valor", etc.) — eles validam `value <= 0` e seguem funcionando.
+
+## Checagem final
+
+Depois de aplicar, abro Entradas, Comercial → Proposta e Compras no preview e digito alguns valores para confirmar:
+1. dígito vai sempre para os centavos;
+2. backspace funciona;
+3. salvar grava o número certo (sem fator 100);
+4. reabrir o registro reexibe formatado.

@@ -11,6 +11,7 @@ import { FormField, FormSection } from "@/components/FormSection";
 import { SelectCreatable } from "@/components/SelectCreatable";
 import { MentionInput, renderCommentText } from "@/components/MentionInput";
 import { Trash2, Upload, Download, FileIcon } from "lucide-react";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toast } from "sonner";
 import { DEMANDA_STATUSES, TIPO_DEMANDA_OPTIONS, type DemandaStatus } from "@/lib/demandas";
 import { useAuth } from "@/contexts/AuthContext";
@@ -215,11 +216,9 @@ export function DemandaDialog({
                   onChange={(v) => setForm({ ...form, condicao_pagamento: v })} />
               </FormField>
               <FormField label="Valor total (R$)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={form.valor_total ?? ""}
-                  onChange={(e) => setForm({ ...form, valor_total: e.target.value === "" ? null : Number(e.target.value) })}
+                <MoneyInput
+                  value={form.valor_total ?? 0}
+                  onChange={(n) => setForm({ ...form, valor_total: n || null })}
                 />
               </FormField>
               <FormField label="Observações" wide>

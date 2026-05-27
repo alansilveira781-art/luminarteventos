@@ -12,6 +12,7 @@ import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { SelectCreatable } from "@/components/SelectCreatable";
 import { MentionInput, renderCommentText } from "@/components/MentionInput";
 import { Plus, Trash2, Upload, Download, FileIcon } from "lucide-react";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toast } from "sonner";
 import { COMPRA_STATUSES, TIPO_COMPRA_OPTIONS, type CompraStatus } from "@/lib/compras";
 import { useAuth } from "@/contexts/AuthContext";
@@ -367,7 +368,7 @@ export function CompraDialog({
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Valor unit.</label>
-                    <Input type="number" step="0.01" value={it.valor_unitario ?? ""} onChange={(e) => updateItem(idx, { valor_unitario: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <MoneyInput value={it.valor_unitario ?? 0} onChange={(n) => updateItem(idx, { valor_unitario: n || null })} />
                   </div>
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Subtotal</label>

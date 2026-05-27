@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FormField, FormSection, FormActions } from "@/components/FormSection";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { MoneyInput } from "@/components/MoneyInput";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { EMPRESAS, EMPRESA_REGIME, REGIME_LABEL, IMPOSTOS_POR_REGIME, type Empresa } from "@/lib/empresas";
@@ -321,7 +322,7 @@ function NotaForm({
           <Input type="email" value={tomadorEmail} onChange={(e) => setTomadorEmail(e.target.value)} />
         </FormField>
         <FormField label="Valor bruto (R$)*">
-          <Input type="number" step="0.01" value={valorBruto} onChange={(e) => setValorBruto(e.target.value)} required />
+          <MoneyInput value={Number(valorBruto || 0)} onChange={(n) => setValorBruto(n ? String(n) : "")} />
         </FormField>
       </FormSection>
 
