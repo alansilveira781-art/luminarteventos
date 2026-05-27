@@ -617,8 +617,8 @@ type Linha = { item_id: string; quantidade: string };
 function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante, eventos, eventosError, onReloadEventos, reloadingEventos, onSubmit, submitting }: any) {
   const [meta, setMeta] = useState({
     data_movimento: isEditing && prefill?.data_movimento
-      ? new Date(prefill.data_movimento).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
+      ? toBRTInputDateTime(prefill.data_movimento)
+      : toBRTInputDateTime(),
     saida_tipo: prefill?.saida_tipo ?? "evento",
     empresa: prefill?.empresa ?? "",
     solicitante_id: prefill?.solicitante_id ?? "",
