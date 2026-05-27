@@ -37,7 +37,7 @@ const fmtPeriodo = (ini: string, fim: string) => {
 };
 
 function QuadroVendas() {
-  const { cards, propostas } = useComercial();
+  const { cards, propostas, consultores } = useComercial();
   const [editCard, setEditCard] = useState<ComercialCard | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<CardStatus>("lead");
   const [openCard, setOpenCard] = useState(false);
@@ -46,12 +46,41 @@ function QuadroVendas() {
   const [wizardCardId, setWizardCardId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
+  // Filtros
+  const [fVendedor, setFVendedor] = useState<string>("__all__");
+  const [fTipo, setFTipo] = useState<string>("__all__");
+  const [fDe, setFDe] = useState<string>("");
+  const [fAte, setFAte] = useState<string>("");
+
+  const filteredCards = useMemo(() => {
+    return cards.filter((c) => {
+      if (fVendedor !== "__all__" && c.responsavel !== fVendedor) return false;
+      if (fTipo !== "__all__") {
+        const prop = c.propostaId ? propostas.find((p) => p.id === c.propostaId) : null;
+        const tipo = prop?.evento.tipo || "";
+        if (tipo !== fTipo) return false;
+      }
+      if (fDe && c.eventoDataInicio && c.eventoDataInicio < fDe) return false;
+      if (fAte && c.eventoDataInicio && c.eventoDataInicio > fAte) return false;
+      return true;
+    });
+  }, [cards, propostas, fVendedor, fTipo, fDe, fAte]);
+
   const byStatus = useMemo(() => {
     const m: Record<CardStatus, ComercialCard[]> = {} as any;
     CARD_STATUSES.forEach((s) => (m[s.key] = []));
-    cards.forEach((c) => (m[c.status] ??= []).push(c));
+    filteredCards.forEach((c) => (m[c.status] ??= []).push(c));
     return m;
-  }, [cards]);
+  }, [filteredCards]);
+
+  const limparFiltros = () => {
+    setFVendedor("__all__");
+    setFTipo("__all__");
+    setFDe("");
+    setFAte("");
+  };
+  const filtrosAtivos =
+    fVendedor !== "__all__" || fTipo !== "__all__" || !!fDe || !!fAte;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
