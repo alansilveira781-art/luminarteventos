@@ -254,6 +254,66 @@ export type Database = {
         }
         Relationships: []
       }
+      comercial_email_log: {
+        Row: {
+          card_id: string | null
+          cliente_email: string
+          cliente_nome: string | null
+          created_at: string
+          enviado_por: string | null
+          enviado_por_nome: string | null
+          error_message: string | null
+          id: string
+          mensagem: string | null
+          pdf_storage_path: string | null
+          pdf_url: string | null
+          proposta_id: string | null
+          proposta_numero: number | null
+          proposta_version: number | null
+          status: string
+          subject: string
+          template_name: string
+        }
+        Insert: {
+          card_id?: string | null
+          cliente_email: string
+          cliente_nome?: string | null
+          created_at?: string
+          enviado_por?: string | null
+          enviado_por_nome?: string | null
+          error_message?: string | null
+          id?: string
+          mensagem?: string | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          proposta_id?: string | null
+          proposta_numero?: number | null
+          proposta_version?: number | null
+          status?: string
+          subject: string
+          template_name: string
+        }
+        Update: {
+          card_id?: string | null
+          cliente_email?: string
+          cliente_nome?: string | null
+          created_at?: string
+          enviado_por?: string | null
+          enviado_por_nome?: string | null
+          error_message?: string | null
+          id?: string
+          mensagem?: string | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          proposta_id?: string | null
+          proposta_numero?: number | null
+          proposta_version?: number | null
+          status?: string
+          subject?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
       compra_anexos: {
         Row: {
           compra_id: string
