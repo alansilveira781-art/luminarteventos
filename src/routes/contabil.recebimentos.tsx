@@ -235,20 +235,49 @@ function RecebimentoForm({
   const [banco, setBanco] = useState<string>(initial?.banco ?? "");
   const [obs, setObs] = useState<string>(initial?.observacoes ?? "");
 
+  // Soma já recebida por nota (excluindo o registro em edição)
+  const recebidoPorNota = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of recebimentos) {
+      if (!r.nota_id) continue;
+      if (initial && r.id === initial.id) continue;
+      m.set(r.nota_id, (m.get(r.nota_id) ?? 0) + Number(r.valor_recebido || 0));
+    }
+    return m;
+  }, [recebimentos, initial]);
+
   const notasEmpresa = notas.filter((n) => n.empresa === empresa);
+  const notaSelecionada = notaId !== "__none" ? notas.find((n) => n.id === notaId) : null;
+  const jaRecebido = notaSelecionada ? (recebidoPorNota.get(notaSelecionada.id) ?? 0) : 0;
+  const restante = notaSelecionada ? +(Number(notaSelecionada.valor_bruto) - jaRecebido).toFixed(2) : 0;
+  const quitada = !!notaSelecionada && restante <= 0;
+  const valorNum = Number(valor || 0);
+  const excedeRestante = !!notaSelecionada && valorNum > restante + 0.001;
 
   function handleNotaChange(v: string) {
     setNotaId(v);
     if (v !== "__none") {
       const n = notas.find((x) => x.id === v);
       if (n?.numero) setNumeroNf(n.numero);
-      if (n && !valor) setValor(String(n.valor_bruto));
+      if (n) {
+        const ja = recebidoPorNota.get(n.id) ?? 0;
+        const rest = +(Number(n.valor_bruto) - ja).toFixed(2);
+        if (!valor || Number(valor) === 0) setValor(String(Math.max(0, rest)));
+      }
     }
   }
 
   function submit() {
     if (!data || !empresa || !valor) {
       toast.error("Preencha empresa, data e valor.");
+      return;
+    }
+    if (quitada) {
+      toast.error("Esta nota fiscal já foi totalmente recebida.");
+      return;
+    }
+    if (excedeRestante) {
+      toast.error(`O valor excede o restante da NF (${fmtBRL(restante)}).`);
       return;
     }
     onSubmit({
@@ -278,15 +307,28 @@ function RecebimentoForm({
             <SelectTrigger><SelectValue placeholder="Sem vínculo" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">— sem vínculo —</SelectItem>
-              {notasEmpresa.map((n) => (
-                <SelectItem key={n.id} value={n.id}>
-                  NF {n.numero ?? "—"} · {fmtBRL(n.valor_bruto)} {n.nome_evento ? `· ${n.nome_evento}` : ""}
-                </SelectItem>
-              ))}
+              {notasEmpresa.map((n) => {
+                const ja = recebidoPorNota.get(n.id) ?? 0;
+                const rest = +(Number(n.valor_bruto) - ja).toFixed(2);
+                const isQuit = rest <= 0;
+                return (
+                  <SelectItem key={n.id} value={n.id} disabled={isQuit && n.id !== initial?.nota_id}>
+                    NF {n.numero ?? "—"} · {fmtBRL(n.valor_bruto)}
+                    {isQuit ? " · quitada" : ` · resta ${fmtBRL(rest)}`}
+                    {n.nome_evento ? ` · ${n.nome_evento}` : ""}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </FormField>
       </FormSection>
+      {notaSelecionada && (
+        <div className={`text-xs px-3 py-2 rounded-md border ${quitada ? "bg-destructive/10 border-destructive/30 text-destructive" : "bg-muted/40 border-border text-muted-foreground"}`}>
+          NF {notaSelecionada.numero ?? "—"} · valor bruto {fmtBRL(notaSelecionada.valor_bruto)} · já recebido {fmtBRL(jaRecebido)} · <strong className="text-foreground">restante {fmtBRL(restante)}</strong>
+          {quitada && " — esta NF já foi totalmente recebida, não é possível registrar novos valores."}
+        </div>
+      )}
       <FormSection>
         <FormField label="Nº NF (manual)">
           <Input value={numeroNf} onChange={(e) => setNumeroNf(e.target.value)} placeholder="Ex.: 40" />
