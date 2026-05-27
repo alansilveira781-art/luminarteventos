@@ -106,7 +106,11 @@ function SolicitarPage() {
 
   function canAdvance(): boolean {
     if (step === 0) return !!form.tipo;
-    if (step === 1) return form.titulo.trim().length > 0;
+    if (step === 1) {
+      if (form.titulo.trim().length === 0) return false;
+      if (form.tipo === "demanda" && form.is_reembolso && form.reembolsar_para.trim().length === 0) return false;
+      return true;
+    }
     if (step === 2) {
       if (form.solicitante_nome.trim().length === 0) return false;
       if (form.tipo === "compra") {
