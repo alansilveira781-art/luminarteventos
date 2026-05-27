@@ -221,7 +221,7 @@ function ApuracoesPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         <Card className="overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex justify-between items-center">
             <div className="text-sm font-semibold">
