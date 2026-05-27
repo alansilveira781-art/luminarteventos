@@ -30,6 +30,8 @@ const baseSchema = z.object({
   parcelamento: z.string().trim().max(100).optional().or(z.literal("")),
   condicao_pagamento: z.string().trim().max(100).optional().or(z.literal("")),
   data_compra: z.string().trim().max(20).optional().or(z.literal("")),
+  is_reembolso: z.boolean().optional(),
+  reembolsar_para: z.string().trim().max(160).optional().or(z.literal("")),
 });
 
 // In-memory IP rate limiter (best-effort; works per worker instance).
