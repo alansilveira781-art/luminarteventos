@@ -838,7 +838,7 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
 
 function SaidaEditForm({ original, itens, solicitantes, onEditSolicitante, eventos, onSubmit, submitting }: any) {
   const [form, setForm] = useState({
-    data_movimento: new Date(original.data_movimento).toISOString().slice(0, 16),
+    data_movimento: toBRTInputDateTime(original.data_movimento),
     saida_tipo: original.saida_tipo ?? "evento",
     item_id: original.item_id,
     quantidade: String(original.quantidade),
