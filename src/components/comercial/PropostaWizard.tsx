@@ -609,7 +609,7 @@ function DescricaoRow({
           <Label className="text-[10px]">
             Valor un.{d.tipoMedida === "area" ? " (/m²)" : d.tipoMedida === "linear" ? " (/m)" : ""}
           </Label>
-          <NumberInput className="h-8 text-sm" step="0.01" value={d.valorUnitario} onChange={(n) => onPatch({ valorUnitario: n })} />
+          <MoneyInput className="h-8 text-sm" value={d.valorUnitario} onChange={(n) => onPatch({ valorUnitario: n })} />
         </div>
         <div className="text-right">
           <div className="text-[10px] text-muted-foreground">Subtotal</div>
