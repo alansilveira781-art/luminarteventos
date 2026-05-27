@@ -284,34 +284,36 @@ function ApuracoesPage() {
           <div className="px-4 py-3 border-b border-border text-sm font-semibold">
             Impostos apurados — Base presumida (32%): <span className="tabular-nums">{fmtBRL(apuracao.basePresumida)}</span>
           </div>
+          <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="px-4 py-2 text-left">Imposto</th>
-                <th className="px-4 py-2 text-right">Base</th>
-                <th className="px-4 py-2 text-right">Alíq.</th>
-                <th className="px-4 py-2 text-right">Valor</th>
-                <th className="px-4 py-2 text-right">Adicional</th>
-                <th className="px-4 py-2 text-right">Total</th>
+                <th className="px-2 py-2 text-left">Imposto</th>
+                <th className="px-2 py-2 text-right">Base</th>
+                <th className="px-2 py-2 text-right">Alíq.</th>
+                <th className="px-2 py-2 text-right">Valor</th>
+                <th className="px-2 py-2 text-right">Adic.</th>
+                <th className="px-2 py-2 text-right">Total</th>
               </tr>
             </thead>
             <tbody>
               {apuracao.itens.map((i) => (
                 <tr key={i.imposto} className="border-t border-border">
-                  <td className="px-4 py-2 font-medium">{i.imposto}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{fmtBRL(i.base)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{i.aliquota.toFixed(2)}%</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{fmtBRL(i.valor)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{i.adicional ? fmtBRL(i.adicional) : "—"}</td>
-                  <td className="px-4 py-2 text-right tabular-nums font-medium">{fmtBRL(i.total)}</td>
+                  <td className="px-2 py-2 font-medium whitespace-nowrap">{i.imposto}</td>
+                  <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap">{fmtBRL(i.base)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap">{i.aliquota.toFixed(2)}%</td>
+                  <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap">{fmtBRL(i.valor)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap">{i.adicional ? fmtBRL(i.adicional) : "—"}</td>
+                  <td className="px-2 py-2 text-right tabular-nums font-medium whitespace-nowrap">{fmtBRL(i.total)}</td>
                 </tr>
               ))}
               <tr className="border-t-2 border-border bg-muted/30">
-                <td colSpan={5} className="px-4 py-2 text-sm font-semibold">Total a pagar</td>
-                <td className="px-4 py-2 text-right tabular-nums font-semibold">{fmtBRL(apuracao.totalImpostos)}</td>
+                <td colSpan={5} className="px-2 py-2 text-sm font-semibold">Total a pagar</td>
+                <td className="px-2 py-2 text-right tabular-nums font-semibold whitespace-nowrap">{fmtBRL(apuracao.totalImpostos)}</td>
               </tr>
             </tbody>
           </table>
+          </div>
           <div className="px-4 py-2 text-xs text-muted-foreground border-t border-border">
             <strong>IRPJ:</strong> apurado {fmtBRL(apuracao.irpjDetalhe.irpjNormal)}
             {" — "}Limite mensal {fmtBRL(apuracao.irpjDetalhe.limite)}
