@@ -220,6 +220,29 @@ function QuadroVendas() {
         onConfirm={(data) => { if (envioCardId) moveCard(envioCardId, "orcamento_enviado", { dataEnvio: data }); setEnvioCardId(null); }}
       />
       <DetalhesDrawer open={!!detalhesCard} onOpenChange={(v) => { if (!v) setDetalhesCard(null); }} card={detalhesCard} />
+
+      <AvancarCardDialog
+        open={!!pendingMove}
+        onOpenChange={(v) => { if (!v) setPendingMove(null); }}
+        statusLabel={pendingMove ? (CARD_STATUSES.find((s) => s.key === pendingMove.status)?.label || "") : ""}
+        onConfirm={async ({ responsavelId, responsavelNome, observacao }) => {
+          if (!pendingMove) return;
+          const { id, status } = pendingMove;
+          const card = cards.find((c) => c.id === id);
+          moveCard(id, status);
+          const statusLabel = CARD_STATUSES.find((s) => s.key === status)?.label || status;
+          await notifyResponsavel({
+            userId: responsavelId,
+            titulo: `Venda: ${statusLabel}`,
+            mensagem: `${card?.clienteNome ?? "Card"}${card?.eventoNome ? ` — ${card.eventoNome}` : ""}${observacao ? ` — ${observacao}` : ""}`,
+            link: `/comercial?card=${id}`,
+            tipo: "comercial_responsavel",
+          });
+          toast.success(`Card movido. ${responsavelNome} foi notificado.`);
+          setPendingMove(null);
+        }}
+      />
+
       <PropostaWizard
         open={wizardOpen}
         onOpenChange={(v) => { setWizardOpen(v); if (!v) setWizardCardId(null); }}
