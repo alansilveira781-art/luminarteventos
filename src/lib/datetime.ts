@@ -11,8 +11,6 @@ function toDate(d: Date | string | number): Date {
 /** Valor para <input type="datetime-local"> representando o instante em BRT. */
 export function toBRTInputDateTime(d: Date | string | number = new Date()): string {
   const date = toDate(d);
-  const brt = new Date(date.getTime() + (BRT_OFFSET_MIN - date.getTimezoneOffset() * -1 + date.getTimezoneOffset()) * 0);
-  // Mais simples: somar o offset desejado ao UTC.
   const shifted = new Date(date.getTime() + BRT_OFFSET_MIN * 60_000);
   return shifted.toISOString().slice(0, 16);
 }
