@@ -174,9 +174,12 @@ function ApuracoesPage() {
         title="Apurações de impostos"
         description="Cálculo de PIS, COFINS, IRPJ e CSLL (Lucro Presumido). Escolha entre regime de caixa (valores recebidos) ou competência (notas emitidas)."
         actions={
-          <Button onClick={() => salvarMut.mutate()} disabled={salvarMut.isPending || faturamento <= 0}>
-            <Save className="h-4 w-4 mr-1" /> Registrar apuração
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground hidden sm:block">Salva no histórico abaixo</span>
+            <Button onClick={() => salvarMut.mutate()} disabled={salvarMut.isPending || faturamento <= 0} title="Salva esta apuração no card 'Apurações registradas' abaixo">
+              <Save className="h-4 w-4 mr-1" /> Registrar apuração
+            </Button>
+          </div>
         }
       />
 
