@@ -1,67 +1,65 @@
-## Objetivo
+# Dashboard Financeiro com abas Financeiro + Uber
 
-Ao avançar um card (no Quadro de Vendas e no Quadro de Compras), atribuir um **responsável** (usuário do sistema) e notificá-lo dentro da ferramenta. Melhorar o sino de notificações para listar recentes, abrir página completa, marcar como concluída/pendente e navegar direto ao card.
+## 1. Navegação por abas
 
----
+No topo de `/financeiro/dashboard`, acima do título "Dashboard Financeiro", adicionar `Tabs` (shadcn) com 2 entradas: **Financeiro** e **Uber**. A aba muda o conteúdo abaixo sem trocar de rota (estado local + persistência via `?tab=` na URL para deep link).
 
-## 1. Quadro de Compras (`/compras`)
+- Aba **Financeiro**: mantém todo o conteúdo atual (KPIs, gráficos por mês/fornecedor/tipo/status).
+- Aba **Uber**: novo painel descrito abaixo.
 
-Hoje a função `moveStatus` em `src/routes/compras.index.tsx` apenas troca o `status` no banco. O `notify.ts` já notifica por *módulo*, mas não por pessoa específica.
+## 2. Integração Uber for Business
 
-**Mudanças:**
-- Ao soltar um card em uma nova coluna, abrir um **mini-diálogo** "Avançar para {status}" pedindo:
-  - Responsável (combobox com usuários do sistema — `profiles`)
-  - Observação opcional
-- Salvar `responsavel_id` + `responsavel_nome` no card (novas colunas em `compras`) e registrar entrada em `compra_historico` com o responsável.
-- Criar 1 notificação direcionada ao responsável escolhido (`notificacoes` com `user_id = responsavel_id`, `link = /compras?id={compraId}`).
-- Manter a notificação por módulo já existente como fallback opcional (ou remover — ver pergunta abaixo).
-- O `CompraDialog` deve abrir automaticamente quando a URL tiver `?id=...` (já abre via state; só garantir).
+Como você já tem app no developer.uber.com, vou solicitar 3 secrets via `add_secret`:
+- `UBER_CLIENT_ID`
+- `UBER_CLIENT_SECRET`
+- `UBER_ORG_UUID` (UUID da sua organização Business)
 
-## 2. Quadro de Vendas (`/comercial`)
+### Server function (TanStack)
+- `src/lib/uber/auth.server.ts` — pega token OAuth client_credentials em `https://auth.uber.com/oauth/v2/token` com escopo `business.trips`. Cacheia o token em memória até expirar.
+- `src/lib/uber/client.server.ts` — wrapper de fetch autenticado.
+- `src/lib/uber.functions.ts` — `getUberTrips({ from, to })` que chama `GET /v1/business/trips` (paginado, `limit=50`, segue `next_page`). Sempre executado quando a aba abre (sem cache de DB — "ao abrir a aba" conforme escolhido).
+- Período padrão: últimos 24 meses, ajustável pelo seletor De/Até existente.
 
-Hoje os cards vivem em **localStorage** (`src/lib/comercial/store.ts`). Notificar outro usuário exige persistência no banco.
+### Tratamento de erros
+Função retorna `{ data, error }` (DTO). UI exibe estado vazio + mensagem se faltar secret, token inválido, ou rate limit.
 
-**Opção escolhida (proposta):** Manter os cards em localStorage, mas, ao avançar de coluna, abrir o mesmo mini-diálogo de "Responsável" e gravar **apenas a notificação** em `notificacoes` (tabela já existente) com `link = /comercial?card={cardId}`. O card em si continua local; ao clicar na notificação, abre `/comercial` e expande o `DetalhesDrawer` do card via query param.
+## 3. Painel Uber (aba)
 
-- Adicionar campo `responsavelUserId` no `ComercialCard` (localStorage) para histórico.
-- `/comercial` lê `?card=...` e abre o drawer correspondente automaticamente.
+Layout reusando `Stat` / `ChartCard` já presentes no arquivo:
 
-## 3. Central de Notificações
+**KPIs (linha de cards):**
+- Gasto total no período
+- Nº de corridas
+- Ticket médio (gasto / corridas)
+- Variação vs período anterior (mesma duração, anterior)
 
-Hoje o `NotificationBell` mostra até 20, marca todas como lidas. Falta: ver todas, marcar individual como concluída/pendente.
+**Gráficos / blocos:**
+1. **Gasto mensal** — barras (com linha de comparação ano anterior quando houver).
+2. **Comparações** — 3 cards lado a lado:
+   - Mês atual vs mês anterior
+   - Ano atual vs ano anterior (YTD)
+   - Período selecionado vs período imediatamente anterior
+3. **Gasto por projeto / centro de custo** — barras horizontais (campo `expense_code` / `expense_memo` da Uber API).
+4. **Gasto por tipo de corrida** — pizza (`product_type`: UberX, Black, Comfort etc.).
+5. **Top solicitantes** — tabela (nome, nº viagens, total gasto, ticket médio).
+6. **Endereços recorrentes** — tabela top 10 (origem ou destino, contagem, % do total). Agrupa por `start_address` e `end_address` normalizados.
 
-**Mudanças:**
-- Adicionar coluna `concluida BOOLEAN DEFAULT false` em `notificacoes` (separado de `lida`).
-- No popover do sino: mostrar 8 mais recentes + link **"Ver todas"** que abre nova rota `/notificacoes`.
-- Nova rota `/notificacoes` com tabela completa: filtro por status (todas / não lidas / pendentes / concluídas), checkbox "concluída" por linha, botão para abrir o link.
-- Ao clicar em uma notificação: marca como lida + navega para `link`.
-- Botão "Marcar como concluída" / "Reabrir" em cada item (no popover e na página).
+Tudo respeita o filtro De/Até do header. Loading com skeletons; vazio com mensagem amigável quando não há dados.
 
----
+## 4. Arquivos a criar/editar
 
-## Detalhes técnicos
+**Criar:**
+- `src/lib/uber/auth.server.ts`
+- `src/lib/uber/client.server.ts`
+- `src/lib/uber.functions.ts`
+- `src/components/financeiro/UberDashboard.tsx`
 
-**Migrations (em uma só):**
-- `ALTER TABLE compras ADD COLUMN responsavel_id UUID, ADD COLUMN responsavel_nome TEXT;`
-- `ALTER TABLE notificacoes ADD COLUMN concluida BOOLEAN NOT NULL DEFAULT false, ADD COLUMN concluida_em TIMESTAMPTZ;`
+**Editar:**
+- `src/routes/financeiro.dashboard.tsx` — adicionar `Tabs` no topo, mover conteúdo atual para `<TabsContent value="financeiro">`, adicionar `<TabsContent value="uber"><UberDashboard from={from} to={to} /></TabsContent>`. Mudar default de `from` para 24 meses atrás quando a aba Uber está ativa.
 
-**Novo componente:** `src/components/AvancarCardDialog.tsx` — reusável (Compras e Vendas). Recebe `onConfirm({responsavelId, responsavelNome, observacao})`.
+## 5. Secrets
 
-**Helper:** `notifyResponsavel(userId, titulo, mensagem, link)` em `src/lib/notify.ts`.
+Vou disparar `add_secret(["UBER_CLIENT_ID","UBER_CLIENT_SECRET","UBER_ORG_UUID"])` no início da implementação. Você cola os valores; só depois eu sigo escrevendo a integração.
 
-**Arquivos editados:**
-- `src/routes/compras.index.tsx` — interceptar `onDragEnd` com diálogo
-- `src/routes/comercial.index.tsx` — interceptar drag + abrir drawer via `?card=`
-- `src/components/NotificationBell.tsx` — botão "ver todas", marcar concluída
-- `src/components/AppSidebar.tsx` ou route tree — registrar `/notificacoes`
-- `src/routes/notificacoes.tsx` — nova página
-- `src/lib/notify.ts` — função `notifyResponsavel`
-- `src/lib/comercial/types.ts` + `store.ts` — campo `responsavelUserId`
-
----
-
-## Perguntas
-
-1. **Lista de responsáveis**: usar todos os usuários da tabela `profiles`, ou filtrar por módulo (ex.: só quem tem acesso a `compras` para o Quadro de Compras)?
-2. **Notificação por módulo** (genérica, já existente): manter junto com a notificação direcionada ao responsável, ou substituir completamente?
-3. **Voltar card para coluna anterior** (drag pra trás): também pedir responsável, ou só pedir quando avança?
+## Observação técnica
+A Uber for Business API exige que o app esteja com o escopo `business.trips` aprovado pela Uber. Se a chamada retornar `403 invalid_scope`, será preciso solicitar o escopo no painel do app antes de funcionar — eu trato isso como erro amigável na UI.
