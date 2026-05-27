@@ -217,6 +217,19 @@ export function CardDialog({ open, onOpenChange, card, defaultStatus }: Props) {
                 </SelectContent>
               </Select>
             </div>
+            {form.status === "orcamento_enviado" && (
+              <div className="sm:col-span-2">
+                <Label>Data de envio *</Label>
+                <Input
+                  type="date"
+                  value={form.dataEnvio}
+                  onChange={(e) => setForm({ ...form, dataEnvio: e.target.value })}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Obrigatória para mover o card para "Orçamento Enviado".
+                </p>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <Label>Observações rápidas</Label>
               <Textarea rows={3} value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} />
