@@ -204,7 +204,7 @@ function QuadroVendas() {
 
       <TooltipProvider>
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <div className="flex gap-3 overflow-x-auto pb-4 items-start">
+          <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-4 items-stretch h-[calc(100dvh-230px)] min-h-[420px]">
             {CARD_STATUSES.map((s) => (
               <Column key={s.key} statusKey={s.key} label={s.label} color={s.color} count={byStatus[s.key]?.length ?? 0}>
                 {(byStatus[s.key] ?? []).map((c) => {
