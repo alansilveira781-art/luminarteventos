@@ -110,9 +110,9 @@ function AppShell() {
   if (!session) return <Navigate to="/auth" />;
 
   return (
-    <div className="flex min-h-dvh w-full bg-background text-foreground">
+    <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
       <AppSidebar />
-      <main className="flex-1 min-w-0 overflow-x-hidden pl-16 sm:pl-20 lg:pl-0">
+      <main className="flex-1 min-w-0 h-dvh overflow-y-auto overflow-x-hidden pl-16 sm:pl-20 lg:pl-0">
         <AppTopBar />
         <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto">
           <Outlet />
