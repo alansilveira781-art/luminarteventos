@@ -51,7 +51,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
       let from = 0;
       while (true) {
         const { data, error } = await supabase
-          .from("pat_itens").select("id,id_item,cod,nome,categoria,localizacao,unidade")
+          .from("pat_itens").select("id,id_item,cod,nome,categoria,localizacao,unidade,quantidade")
           .order("nome").range(from, from + 999);
         if (error) throw error;
         all.push(...(data ?? []));
