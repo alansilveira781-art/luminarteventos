@@ -123,7 +123,11 @@ function AppShell() {
       <AppSidebar />
       <main className="flex-1 min-w-0 h-dvh overflow-y-auto overflow-x-hidden pl-16 sm:pl-20 lg:pl-0">
         <AppTopBar />
-        <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto">
+        <div
+          className="px-4 py-6 sm:px-8 sm:py-8 max-w-[1400px] mx-auto"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
+        >
+
           <Outlet />
         </div>
       </main>

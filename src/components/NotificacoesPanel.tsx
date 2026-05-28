@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Bell, Check, RotateCcw, Trash2 } from "lucide-react";
+import { PushNotificationsToggle } from "@/components/PushNotificationsToggle";
+
 
 const sb = supabase as any;
 
@@ -91,10 +93,14 @@ export function NotificacoesPanel({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Bell className="h-5 w-5" />
-        <h2 className="text-lg font-semibold">Notificações</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Notificações</h2>
+        </div>
+        <PushNotificationsToggle />
       </div>
+
 
       <Tabs value={filtro} onValueChange={(v) => setFiltro(v as any)}>
         <TabsList>
