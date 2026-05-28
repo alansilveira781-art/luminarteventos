@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Bell, Check, RotateCcw, Trash2 } from "lucide-react";
+import { PushNotificationsToggle } from "@/components/PushNotificationsToggle";
+
 
 const sb = supabase as any;
 
