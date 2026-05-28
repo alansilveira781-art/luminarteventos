@@ -53,6 +53,17 @@ function QuadroVendas() {
   const [detalhesCard, setDetalhesCard] = useState<ComercialCard | null>(null);
   const [wizardCardId, setWizardCardId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardProposta, setWizardProposta] = useState<Proposta | null>(null);
+
+  const { data: statusDefaults = [] } = useQuery({
+    queryKey: ["comercial_status_defaults"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("comercial_status_defaults")
+        .select("status, responsavel_id, responsavel_nome");
+      return (data ?? []) as { status: CardStatus; responsavel_id: string | null; responsavel_nome: string | null }[];
+    },
+  });
 
   // Filtros
   const [fVendedor, setFVendedor] = useState<string>("__all__");
