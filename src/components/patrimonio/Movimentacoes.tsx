@@ -16,6 +16,7 @@ import { normalize } from "@/lib/utils";
 import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { ComboboxCreatable } from "@/components/ComboboxCreatable";
 import { EventoSheetCombobox } from "@/components/EventoSheetCombobox";
+import { PatItemInfoHover } from "@/components/patrimonio/PatItemInfoHover";
 
 
 type Mov = {
@@ -51,7 +52,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
       let from = 0;
       while (true) {
         const { data, error } = await supabase
-          .from("pat_itens").select("id,id_item,cod,nome,categoria,localizacao,unidade")
+          .from("pat_itens").select("id,id_item,cod,nome,categoria,localizacao,unidade,quantidade")
           .order("nome").range(from, from + 999);
         if (error) throw error;
         all.push(...(data ?? []));
@@ -401,7 +402,7 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
       codigo: i.id_item ?? "",
       codigo_proprio: i.cod != null ? String(i.cod) : null,
       unidade: i.unidade,
-      quantidade_atual: undefined,
+      quantidade_atual: i.quantidade,
     })),
     [itens],
   );
@@ -494,12 +495,16 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
           {linhas.map((l, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-start">
               <div className="col-span-8">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item</label>
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  Item
+                  {l.item_id && <PatItemInfoHover itemId={l.item_id} />}
+                </label>
                 <ItemSearchSelect
                   itens={itemOptions}
                   value={l.item_id}
                   onChange={(id) => setL(i, "item_id", id)}
                   placeholder="Buscar por COD, ID ou nome…"
+                  showStock
                   onAfterSelect={() => focusQty(i)}
                 />
               </div>
