@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Search, ChevronRight, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +17,7 @@ import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { ComboboxCreatable } from "@/components/ComboboxCreatable";
 import { EventoSheetCombobox } from "@/components/EventoSheetCombobox";
 import { PatItemInfoHover } from "@/components/patrimonio/PatItemInfoHover";
-
+import { PatGroupSelect, buildPatGroups, allocateFromGroup, type PatItem, type PatGroup } from "@/components/patrimonio/PatGroupSelect";
 
 type Mov = {
   id: string; tipo: string; item_id: string | null; quantidade: number;
@@ -32,7 +32,8 @@ type Mov = {
 const FINALIDADES = ["Evento", "Manutenção", "Empréstimo", "Descarte", "Transferência", "Outro"];
 const CONDICOES = ["perfeito", "danificado", "quebrado", "faltando_peca", "em_manutencao"];
 
-type Linha = { item_id: string; quantidade: string };
+type LinhaSaida = { groupKey: string; quantidade: string };
+type LinhaEntrada = { item_id: string; quantidade: string };
 
 export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
   tipo: "entrada" | "saida"; titulo: string; descricao: string;
@@ -46,16 +47,17 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
   const [expandido, setExpandido] = useState<Record<string, boolean>>({});
 
   const { data: itens } = useQuery({
-    queryKey: ["pat_itens_lite"],
+    queryKey: ["pat_itens_full"],
     queryFn: async () => {
-      const all: any[] = [];
+      const all: PatItem[] = [];
       let from = 0;
       while (true) {
         const { data, error } = await supabase
-          .from("pat_itens").select("id,id_item,cod,nome,categoria,localizacao,unidade,quantidade")
+          .from("pat_itens")
+          .select("id,id_item,cod,nome,especificacao,dimensoes,categoria,subcategoria,localizacao,unidade,quantidade,estado")
           .order("nome").range(from, from + 999);
         if (error) throw error;
-        all.push(...(data ?? []));
+        all.push(...((data ?? []) as any));
         if ((data?.length ?? 0) < 1000) break;
         from += 1000;
       }
@@ -63,7 +65,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
     },
   });
 
-  const itemMap = useMemo(() => Object.fromEntries((itens ?? []).map((i) => [i.id, i])), [itens]);
+  const itemMap = useMemo(() => Object.fromEntries((itens ?? []).map((i: any) => [i.id, i])), [itens]);
 
   const { data: movs, isLoading } = useQuery({
     queryKey: ["pat_movs", tipo],
@@ -76,6 +78,44 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
     },
   });
 
+  // Saídas em aberto/parcialmente devolvidas — usado p/ calcular "em uso" por item
+  const { data: saidasAbertas } = useQuery({
+    queryKey: ["pat_saidas_abertas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pat_movimentacoes").select("id,item_id,quantidade,saida_status")
+        .eq("tipo", "saida").in("saida_status", ["aberta", "parcialmente_devolvida"]);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; item_id: string | null; quantidade: number; saida_status: string | null }>;
+    },
+  });
+
+  const { data: devolvidoPorOrigem } = useQuery({
+    queryKey: ["pat_devolvido_por_origem"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pat_movimentacoes").select("saida_origem_id, quantidade")
+        .eq("tipo", "devolucao").not("saida_origem_id", "is", null);
+      const m = new Map<string, number>();
+      (data ?? []).forEach((r: any) => {
+        m.set(r.saida_origem_id, (m.get(r.saida_origem_id) ?? 0) + Number(r.quantidade));
+      });
+      return m;
+    },
+  });
+
+  // Qtd "em uso" por item_id
+  const emUsoPorItem = useMemo(() => {
+    const m = new Map<string, number>();
+    (saidasAbertas ?? []).forEach((s) => {
+      if (!s.item_id) return;
+      const jaDev = devolvidoPorOrigem?.get(s.id) ?? 0;
+      const restante = Math.max(0, Number(s.quantidade) - jaDev);
+      if (restante > 0) m.set(s.item_id, (m.get(s.item_id) ?? 0) + restante);
+    });
+    return m;
+  }, [saidasAbertas, devolvidoPorOrigem]);
+
   // Filtragem linha a linha
   const filteredMovs = useMemo(() => {
     const nq = normalize(q);
@@ -87,7 +127,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
     });
   }, [movs, q, itemMap]);
 
-  // Para SAÍDA: agrupar por requisicao_numero (linhas sem número viram solo)
+  // SAÍDA: agrupar por requisicao_numero
   const grupos = useMemo(() => {
     if (tipo !== "saida") return [];
     const map = new Map<string, any>();
@@ -114,12 +154,11 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
     return Array.from(map.values());
   }, [filteredMovs, tipo]);
 
-  // Salvar (saída multi-itens OU entrada single)
+  // Salvar
   const saveMut = useMutation({
-    mutationFn: async (p: { meta: any; linhas: Array<{ item_id: string; quantidade: number }>; editingGroup?: any }) => {
+    mutationFn: async (p: { meta: any; rows: Array<{ item_id: string; quantidade: number }>; editingGroup?: any }) => {
       if (tipo === "entrada") {
-        // entrada single-item
-        const linha = p.linhas[0];
+        const linha = p.rows[0];
         const payload = { ...p.meta, tipo: "entrada", item_id: linha.item_id, quantidade: linha.quantidade, created_by: user?.id ?? null };
         if (p.editingGroup?.linhas?.[0]?.id) {
           const { error } = await supabase.from("pat_movimentacoes").update(payload).eq("id", p.editingGroup.linhas[0].id);
@@ -130,10 +169,9 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
         }
         return;
       }
-      // saída multi-itens com requisicao_numero
+      // saída multi-itens
       let requisicao_numero: number | null = p.editingGroup?.numero ?? null;
       if (p.editingGroup) {
-        // bloquear se houver devoluções vinculadas
         const ids = (p.editingGroup.linhas as Mov[]).map((l) => l.id);
         const { data: dev } = await supabase.from("pat_movimentacoes").select("id").in("saida_origem_id", ids).eq("tipo", "devolucao").limit(1);
         if (dev && dev.length) throw new Error("Esta requisição já tem devoluções vinculadas. Exclua as devoluções antes de editar.");
@@ -144,7 +182,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
         if (error) throw error;
         requisicao_numero = data as number;
       }
-      const inserts = p.linhas.map((l) => ({
+      const inserts = p.rows.map((l) => ({
         ...p.meta,
         tipo: "saida",
         item_id: l.item_id,
@@ -170,7 +208,6 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
     mutationFn: async (grupo: any) => {
       const linhas: Mov[] = grupo.linhas ?? [grupo];
       const ids = linhas.map((l) => l.id);
-      // apagar devoluções vinculadas (se saída)
       if (tipo === "saida") {
         await supabase.from("pat_movimentacoes").delete().in("saida_origem_id", ids).eq("tipo", "devolucao");
       }
@@ -230,6 +267,19 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
                 {!isLoading && grupos.length === 0 && <tr><td colSpan={10} className="p-4 text-center text-muted-foreground">Nenhuma saída.</td></tr>}
                 {grupos.map((g: any) => {
                   const isOpen = !!expandido[g.id];
+                  // Agrupar linhas (peças) por grupo de item para exibição resumida
+                  const porGrupo = new Map<string, { nome: string; especificacao: string; unidade: string; qtd: number; ids: string[] }>();
+                  for (const l of g.linhas as Mov[]) {
+                    const it: any = l.item_id ? (itemMap as any)[l.item_id] : null;
+                    const gk = [normalize(it?.nome ?? ""), normalize(it?.especificacao ?? ""), normalize(it?.dimensoes ?? ""), normalize(it?.unidade ?? "")].join("|");
+                    if (!porGrupo.has(gk)) {
+                      porGrupo.set(gk, { nome: it?.nome ?? "—", especificacao: it?.especificacao ?? "", unidade: it?.unidade ?? "", qtd: 0, ids: [] });
+                    }
+                    const e = porGrupo.get(gk)!;
+                    e.qtd += Number(l.quantidade);
+                    if (it?.id_item) e.ids.push(it.id_item);
+                  }
+                  const itensAgrupados = Array.from(porGrupo.values());
                   return (
                     <>
                       <tr key={g.id} className="border-t border-border hover:bg-muted/30">
@@ -244,7 +294,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
                         <td className="px-2 py-1.5">{g.responsavel ?? "—"}</td>
                         <td className="px-2 py-1.5">{g.evento_projeto ?? "—"}</td>
                         <td className="px-2 py-1.5">{g.finalidade ?? "—"}</td>
-                        <td className="px-2 py-1.5 text-right">{g.linhas.length}</td>
+                        <td className="px-2 py-1.5 text-right">{itensAgrupados.length}</td>
                         <td className="px-2 py-1.5 text-right">{g.qtd_total}</td>
                         <td className="px-2 py-1.5">{g.data_prevista_devolucao ? new Date(g.data_prevista_devolucao + "T00:00").toLocaleDateString("pt-BR") : ""}</td>
                         <td className="px-2 py-1.5">
@@ -262,24 +312,23 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
                             <table className="w-full text-xs">
                               <thead className="text-muted-foreground">
                                 <tr>
-                                  <th className="text-left py-1">Código</th>
                                   <th className="text-left py-1">Item</th>
-                                  <th className="text-right py-1">Qtd</th>
-                                  <th className="text-left py-1 pl-2">UN</th>
+                                  <th className="text-left py-1">Especificação</th>
+                                  <th className="text-right py-1 w-20">Qtd</th>
+                                  <th className="text-left py-1 pl-2 w-20">UN</th>
+                                  <th className="text-left py-1 pl-2">Códigos</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {g.linhas.map((l: Mov) => {
-                                  const it: any = l.item_id ? (itemMap as any)[l.item_id] : null;
-                                  return (
-                                    <tr key={l.id} className="border-t border-border/40">
-                                      <td className="py-1 font-mono text-muted-foreground">{it?.id_item ?? "—"}</td>
-                                      <td className="py-1 font-medium">{it?.nome ?? "—"}</td>
-                                      <td className="py-1 text-right tabular-nums">{Number(l.quantidade)}</td>
-                                      <td className="py-1 pl-2 text-muted-foreground">{it?.unidade ?? ""}</td>
-                                    </tr>
-                                  );
-                                })}
+                                {itensAgrupados.map((row, idx) => (
+                                  <tr key={idx} className="border-t border-border/40 align-top">
+                                    <td className="py-1 font-medium">{row.nome}</td>
+                                    <td className="py-1 text-muted-foreground">{row.especificacao}</td>
+                                    <td className="py-1 text-right tabular-nums">{row.qtd}</td>
+                                    <td className="py-1 pl-2 text-muted-foreground">{row.unidade}</td>
+                                    <td className="py-1 pl-2 font-mono text-[11px] text-muted-foreground">{row.ids.join(", ")}</td>
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </td>
@@ -341,8 +390,9 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
           <MovForm
             tipo={tipo}
             editing={editing}
-            itens={itens ?? []}
-            onSubmit={(meta, linhas) => saveMut.mutate({ meta, linhas, editingGroup: editing })}
+            itens={(itens ?? []) as PatItem[]}
+            emUsoPorItem={emUsoPorItem}
+            onSubmit={(meta, rows) => saveMut.mutate({ meta, rows, editingGroup: editing })}
             submitting={saveMut.isPending}
           />
         </DialogContent>
@@ -351,13 +401,15 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
   );
 }
 
-function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
+function MovForm({ tipo, editing, itens, emUsoPorItem, onSubmit, submitting }: {
   tipo: "entrada" | "saida";
   editing: any | null;
-  itens: any[];
-  onSubmit: (meta: any, linhas: Array<{ item_id: string; quantidade: number }>) => void;
+  itens: PatItem[];
+  emUsoPorItem: Map<string, number>;
+  onSubmit: (meta: any, rows: Array<{ item_id: string; quantidade: number }>) => void;
   submitting: boolean;
 }) {
+  const isSaida = tipo === "saida";
   const first: Mov | null = editing?.linhas?.[0] ?? null;
   const [meta, setMeta] = useState({
     data_movimento: first?.data_movimento
@@ -370,7 +422,38 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
     condicao: first?.condicao ?? "",
     observacoes: first?.observacoes ?? "",
   });
-  const [linhas, setLinhas] = useState<Linha[]>(() => {
+
+  // IDs em uso pelas peças que estamos editando (não devem contar como "ocupadas" na re-alocação)
+  const excludeIds = useMemo(() => {
+    const s = new Set<string>();
+    if (editing?.linhas) for (const l of editing.linhas as Mov[]) if (l.item_id) s.add(l.item_id);
+    return s;
+  }, [editing]);
+
+  const itemMap = useMemo(() => Object.fromEntries(itens.map((i) => [i.id, i])), [itens]);
+
+  // Grupos para saída (recalculado dinamicamente)
+  const groups: PatGroup[] = useMemo(
+    () => buildPatGroups(itens, emUsoPorItem, excludeIds),
+    [itens, emUsoPorItem, excludeIds],
+  );
+
+  // Linhas — SAÍDA usa groupKey; ENTRADA usa item_id
+  const [linhasSaida, setLinhasSaida] = useState<LinhaSaida[]>(() => {
+    if (!isSaida || !editing?.linhas?.length) return [{ groupKey: "", quantidade: "1" }];
+    // Reagrupa peças por groupKey
+    const map = new Map<string, number>();
+    for (const l of editing.linhas as Mov[]) {
+      const it: any = l.item_id ? (itemMap as any)[l.item_id] : null;
+      if (!it) continue;
+      const gk = [normalize(it.nome ?? ""), normalize(it.especificacao ?? ""), normalize(it.dimensoes ?? ""), normalize(it.unidade ?? ""), normalize(it.categoria ?? ""), normalize(it.subcategoria ?? "")].join("|");
+      map.set(gk, (map.get(gk) ?? 0) + Number(l.quantidade));
+    }
+    return Array.from(map.entries()).map(([groupKey, qtd]) => ({ groupKey, quantidade: String(qtd) }));
+  });
+
+  const [linhasEntrada, setLinhasEntrada] = useState<LinhaEntrada[]>(() => {
+    if (isSaida) return [{ item_id: "", quantidade: "1" }];
     if (editing?.linhas?.length) {
       return editing.linhas.map((l: Mov) => ({ item_id: l.item_id ?? "", quantidade: String(l.quantidade) }));
     }
@@ -378,13 +461,17 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
   });
 
   const setM = (k: string, v: any) => setMeta((p) => ({ ...p, [k]: v }));
-  const setL = (i: number, k: keyof Linha, v: string) => setLinhas((arr) => {
+
+  const addLinhaSaida = () => setLinhasSaida((a) => [...a, { groupKey: "", quantidade: "1" }]);
+  const remLinhaSaida = (i: number) => setLinhasSaida((a) => (a.length === 1 ? a : a.filter((_, idx) => idx !== i)));
+  const setLS = (i: number, k: keyof LinhaSaida, v: string) => setLinhasSaida((arr) => {
     const novo = [...arr]; novo[i] = { ...novo[i], [k]: v }; return novo;
   });
-  const addLinha = () => setLinhas((a) => [...a, { item_id: "", quantidade: "1" }]);
-  const remLinha = (i: number) => setLinhas((a) => (a.length === 1 ? a : a.filter((_, idx) => idx !== i)));
+  const setLE = (i: number, k: keyof LinhaEntrada, v: string) => setLinhasEntrada((arr) => {
+    const novo = [...arr]; novo[i] = { ...novo[i], [k]: v }; return novo;
+  });
 
-  // Solicitantes (responsável) do módulo estoque
+  // Solicitantes
   const { data: solicitantes = [] } = useQuery({
     queryKey: ["solicitantes-select"],
     queryFn: async () => (await supabase.from("solicitantes").select("nome").eq("status", "ativo").order("nome")).data ?? [],
@@ -394,15 +481,14 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
     [solicitantes],
   );
 
-  // Adapta itens
-  const itemOptions = useMemo(
-    () => (itens ?? []).map((i: any) => ({
+  const itemOptionsEntrada = useMemo(
+    () => itens.map((i) => ({
       id: i.id,
       nome: i.nome,
       codigo: i.id_item ?? "",
       codigo_proprio: i.cod != null ? String(i.cod) : null,
-      unidade: i.unidade,
-      quantidade_atual: i.quantidade,
+      unidade: i.unidade ?? undefined,
+      quantidade_atual: i.quantidade ?? undefined,
     })),
     [itens],
   );
@@ -412,26 +498,41 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
     setTimeout(() => { const el = qtyRefs.current[i]; if (el) { el.focus(); el.select(); } }, 30);
   };
 
-  const isSaida = tipo === "saida";
-
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        const validas = linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
-        if (!validas.length) return toast.error("Adicione pelo menos um item");
-        onSubmit(
-          {
-            data_movimento: meta.data_movimento ? new Date(meta.data_movimento).toISOString() : new Date().toISOString(),
-            responsavel: meta.responsavel || null,
-            evento_projeto: meta.evento_projeto || null,
-            finalidade: meta.finalidade || null,
-            data_prevista_devolucao: isSaida ? (meta.data_prevista_devolucao || null) : null,
-            condicao: !isSaida ? (meta.condicao || null) : null,
-            observacoes: meta.observacoes || null,
-          },
-          validas.map((l) => ({ item_id: l.item_id, quantidade: Number(l.quantidade) })),
-        );
+        const metaPayload = {
+          data_movimento: meta.data_movimento ? new Date(meta.data_movimento).toISOString() : new Date().toISOString(),
+          responsavel: meta.responsavel || null,
+          evento_projeto: meta.evento_projeto || null,
+          finalidade: meta.finalidade || null,
+          data_prevista_devolucao: isSaida ? (meta.data_prevista_devolucao || null) : null,
+          condicao: !isSaida ? (meta.condicao || null) : null,
+          observacoes: meta.observacoes || null,
+        };
+
+        if (!isSaida) {
+          const validas = linhasEntrada.filter((l) => l.item_id && Number(l.quantidade) > 0);
+          if (!validas.length) return toast.error("Selecione um item");
+          onSubmit(metaPayload, validas.map((l) => ({ item_id: l.item_id, quantidade: Number(l.quantidade) })));
+          return;
+        }
+
+        // SAÍDA: aloca peças por grupo
+        const rows: Array<{ item_id: string; quantidade: number }> = [];
+        for (const l of linhasSaida) {
+          if (!l.groupKey || Number(l.quantidade) <= 0) continue;
+          const g = groups.find((gg) => gg.key === l.groupKey);
+          if (!g) return toast.error("Grupo de item inválido");
+          const qtdReq = Math.floor(Number(l.quantidade));
+          if (qtdReq > g.disponivel) return toast.error(`Disponível insuficiente para ${g.nome} (disp: ${g.disponivel})`);
+          const ids = allocateFromGroup(g, qtdReq, emUsoPorItem, excludeIds);
+          if (ids.length < qtdReq) return toast.error(`Não foi possível alocar ${qtdReq} de ${g.nome}`);
+          for (const id of ids) rows.push({ item_id: id, quantidade: 1 });
+        }
+        if (!rows.length) return toast.error("Adicione pelo menos um item");
+        onSubmit(metaPayload, rows);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault();
@@ -465,13 +566,13 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
           />
         </div>
         {isSaida && (
-          <div className="col-span-2">
+          <div>
             <Label>Previsão de devolução</Label>
             <Input type="date" value={meta.data_prevista_devolucao ?? ""} onChange={(e) => setM("data_prevista_devolucao", e.target.value || null)} />
           </div>
         )}
         {!isSaida && (
-          <div className="col-span-2">
+          <div>
             <Label>Condição do item recebido</Label>
             <Select value={meta.condicao ?? ""} onValueChange={(v) => setM("condicao", v)}>
               <SelectTrigger><SelectValue placeholder="Estado em que retornou" /></SelectTrigger>
@@ -486,46 +587,77 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Itens {isSaida ? "da saída" : "da entrada"}</h3>
           {isSaida && (
-            <Button type="button" size="sm" variant="outline" onClick={addLinha}>
+            <Button type="button" size="sm" variant="outline" onClick={addLinhaSaida}>
               <Plus className="h-3 w-3 mr-1" /> Adicionar item
             </Button>
           )}
         </div>
         <Card className="p-3 space-y-2">
-          {linhas.map((l, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-start">
-              <div className="col-span-8">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  Item
-                  {l.item_id && <PatItemInfoHover itemId={l.item_id} />}
-                </label>
-                <ItemSearchSelect
-                  itens={itemOptions}
-                  value={l.item_id}
-                  onChange={(id) => setL(i, "item_id", id)}
-                  placeholder="Buscar por COD, ID ou nome…"
-                  showStock
-                  onAfterSelect={() => focusQty(i)}
-                />
+          {isSaida ? (
+            linhasSaida.map((l, i) => {
+              const grupo = groups.find((g) => g.key === l.groupKey);
+              return (
+                <div key={i} className="flex flex-wrap items-end gap-2">
+                  <div className="flex-1 min-w-[260px]">
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">
+                      Item (grupo)
+                    </label>
+                    <PatGroupSelect
+                      groups={groups}
+                      value={l.groupKey}
+                      onChange={(key) => setLS(i, "groupKey", key)}
+                      onAfterSelect={() => focusQty(i)}
+                    />
+                  </div>
+                  <div className="w-28">
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">
+                      Quantidade {grupo ? `(máx. ${grupo.disponivel})` : ""}
+                    </label>
+                    <Input
+                      ref={(el) => { qtyRefs.current[i] = el; }}
+                      type="number" min="1" step="1"
+                      max={grupo?.disponivel ?? undefined}
+                      value={l.quantidade}
+                      onChange={(e) => setLS(i, "quantidade", e.target.value)}
+                    />
+                  </div>
+                  <div className="w-9">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remLinhaSaida(i)} disabled={linhasSaida.length === 1} title="Remover">
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            linhasEntrada.map((l, i) => (
+              <div key={i} className="flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[260px]">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1 h-[14px]">
+                    Item
+                    {l.item_id && <PatItemInfoHover itemId={l.item_id} />}
+                  </label>
+                  <ItemSearchSelect
+                    itens={itemOptionsEntrada}
+                    value={l.item_id}
+                    onChange={(id) => setLE(i, "item_id", id)}
+                    placeholder="Buscar por COD, ID ou nome…"
+                    showStock
+                    onAfterSelect={() => focusQty(i)}
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1 h-[14px]">Quantidade</label>
+                  <Input
+                    ref={(el) => { qtyRefs.current[i] = el; }}
+                    type="number" min="0.01" step="0.01"
+                    value={l.quantidade}
+                    onChange={(e) => setLE(i, "quantidade", e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="col-span-3">
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Quantidade</label>
-                <Input
-                  ref={(el) => { qtyRefs.current[i] = el; }}
-                  type="number" min="0.01" step="0.01"
-                  value={l.quantidade}
-                  onChange={(e) => setL(i, "quantidade", e.target.value)}
-                />
-              </div>
-              <div className="col-span-1 flex justify-end pt-5">
-                {isSaida && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remLinha(i)} disabled={linhas.length === 1} title="Remover">
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </Card>
       </div>
 
