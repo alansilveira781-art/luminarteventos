@@ -1,74 +1,74 @@
+# Plano — Notificações, Responsáveis padrão e Fluxo de Propostas
 
-## Objetivo
-1. Alinhar corretamente os formulários de **Saída** e **Devolução** do módulo Patrimônio.
-2. Tratar o cadastro como item-a-item (cada peça é uma linha em `pat_itens`), mas agrupar visualmente itens iguais (mesmo nome + especificação + dimensões + unidade + categoria) e mostrar quantidades por estado ao dar saída.
+## 1. Central de Notificações como modal
 
----
+- Transformar a rota `/notificacoes` em um **componente modal** (`NotificacoesDialog`) usando `Dialog` do shadcn, mantendo todo o conteúdo atual (filtros, lista, ações concluir/abrir/excluir).
+- Substituir o `<Link to="/notificacoes">` no `NotificationBell` e no rodapé "Ver todas" por um botão que abre o `NotificacoesDialog` por cima da tela atual, com botão **Fechar** no rodapé.
+- Manter a rota `/notificacoes` como fallback (renderiza o mesmo conteúdo), mas a navegação principal passa a ser via modal.
 
-## 1) Layout dos formulários
+## 2. Sininho — bolinha = pendentes
 
-### Saída (`Movimentacoes.tsx` — `MovForm`)
-- Substituir o grid `grid-cols-12` (8/3/1) das linhas de item por um layout que **não desalinhe** quando o label do Item tem o ícone "olho" e o de Quantidade não:
-  - Linha = `flex` horizontal: **Grupo de item** (flex-1, mín. 0), **Qtd** (w-28), **botão lixeira** (w-9), todos com `items-end` e label de mesma altura.
-- Header dos campos (Data, Responsável, Evento/Projeto, Finalidade, Previsão devolução, Observações) permanece em `grid-cols-2`, mas a previsão de devolução fica `col-span-1` ao lado de um espaço — já cabem 6 campos sem ocupar a linha inteira.
-- `DialogContent` já é `max-w-5xl` — mantém.
+- Em `NotificationBell.tsx`, trocar o critério da bolinha vermelha:
+  - **Antes:** `unread = notificações não lidas`
+  - **Depois:** `pendentes = notificações com concluida=false`
+- O número exibido passa a refletir pendentes (limite "9+"). Marcar todas como lidas continua existindo, mas a bolinha só some quando o usuário concluir a notificação.
 
-### Devolução (`Devolucoes.tsx` — `DevolucaoForm`)
-- O `SaidaCombobox` selecionado mostra um texto longo que atravessa o card. Ajustes:
-  - Card "Itens da requisição" passa a usar a mesma estrutura visual da Saída (tabela `text-xs` com colunas de larguras fixas) dentro de um wrapper `overflow-x-auto`.
-  - Inputs de "Devolver agora" com `w-24` à direita; coluna "Item" recebe `min-w-[220px] truncate`.
-  - Cabeçalho do grupo selecionado (REQ, data, responsável, evento) renderizado em um bloco próprio acima da tabela, em 2 colunas (`grid grid-cols-2 gap-x-6 gap-y-1 text-xs`) — não mais só dentro do botão do combobox.
-- Demais campos (Data, Responsável, Condição, Observações) reorganizados em `grid-cols-2` consistente.
+## 3. Aba de Configurações (Compras e Comercial)
 
----
+Criar uma nova aba **Configurações** dentro de cada módulo:
 
-## 2) Agrupamento de itens de patrimônio
+- **Compras:** nova rota `/compras/configuracoes` (sub-rota de `compras.tsx`).
+- **Comercial:** nova rota `/comercial/configuracoes` (sub-rota de `comercial.tsx`).
+- Visível apenas para admin geral ou admin do módulo (mesmo padrão usado em `comercial.validacoes`).
 
-Modelo de dados **não muda** (continua 1 linha por peça em `pat_itens`). Toda a lógica é em camada de UI/consulta.
+Conteúdo da aba: tabela "Responsável padrão por status" — uma linha para cada status do módulo, com um `Select` carregando a lista de usuários (`profiles`).
 
-### Conceito
-Um "grupo de patrimônio" é definido pela chave:
-```
-normalize(nome) | normalize(especificacao) | normalize(dimensoes) | normalize(unidade) | normalize(categoria) | normalize(subcategoria)
-```
+**Persistência:**
+- Compras: nova tabela `compras_status_defaults` (status PK + `responsavel_id` + `responsavel_nome`) com RLS por módulo.
+- Comercial: nova tabela `comercial_status_defaults` (mesma estrutura).
 
-### Novo componente `PatGroupSelect.tsx`
-Substitui o `ItemSearchSelect` no formulário de Saída do Patrimônio. Mostra cada grupo com:
-- Nome + especificação
-- `Total: N · Disponíveis: X · Em uso: Y · Danificados/Quebrados/Manutenção: Z`
-- Categoria / unidade
+**Aplicação automática** (regra "um responsável padrão por status — sobrescreve"):
+- Compras (`compras.index.tsx` → `moveStatus`): ao mover card, se existir default para o novo status, aplica `responsavel_id/nome` automaticamente (sem abrir `AvancarCardDialog`). Se não houver default, mantém o fluxo atual de perguntar.
+- Comercial (`comercial.index.tsx` → handler de move): ao mover card entre colunas, aplica o `responsavel` configurado para aquele status sobrescrevendo `card.responsavel`.
 
-Filtra `pat_itens` agrupados em memória; a quantidade "Disponíveis" é calculada como:
-```
-total_no_grupo  -  (Σ pat_movimentacoes.saida.quantidade onde saida_status ∈ ('aberta','parcialmente_devolvida') e item_id ∈ grupo)
-                +  (Σ devoluções já registradas para essas saídas)
-```
-(reaproveita a query `pat_saidas_abertas` + `pat_devolvido_por_origem` já existentes).
-Itens cuja `estado` é `DANIFICADO/QUEBRADO/EM_MANUTENCAO` entram apenas no contador correspondente, não em "Disponíveis".
+## 4. Data de envio (Comercial)
 
-### Fluxo de saída
-- Usuário escolhe **um grupo** e informa **quantidade** (ex.: 5 cadeiras).
-- Validação: `quantidade ≤ Disponíveis` no grupo.
-- Ao salvar, o sistema **aloca** N peças disponíveis daquele grupo (ordem: `cod` asc, depois `created_at`) e cria N linhas em `pat_movimentacoes` (mesma `requisicao_numero`, `tipo='saida'`, `quantidade=1` por linha) referenciando o `item_id` específico de cada peça.
-- Continua sendo possível adicionar **vários grupos** numa mesma requisição (mesmo `addLinha` atual).
+Já existe `card.dataEnvio` salvo via `EnvioDialog` ao mover para "Orçamento Enviado", e o `DetalhesDrawer` já exibe quando preenchido. Confirmar que:
+- `moveCard` em `store.ts` continua persistindo `dataEnvio` ao entrar em `orcamento_enviado`.
+- `DetalhesDrawer` mostra "Data de envio" com `fmt()` (já implementado nas linhas 64–66).
 
-### Fluxo de devolução
-- Sem mudança estrutural: a devolução continua referenciando `saida_origem_id` (linha individual). A UI agrupa visualmente as peças da requisição por grupo, mostrando "Cadeiras Tiffany — 5 saídas / 2 devolvidas / 3 abertas" e permite digitar quantos voltam; o sistema marca como devolvidas as N peças mais antigas em aberto do grupo.
+Nenhuma alteração visível no card do Kanban (conforme escolha do usuário).
 
-### Tabela "Saídas" (lista principal)
-- A subtabela expandida do grupo de saída passa a mostrar uma linha por **grupo** (não uma por peça): `Grupo · COD/IDs (resumido) · Qtd · UN`. Detalhes individuais (códigos exatos) ficam disponíveis em hover/expand secundário se necessário — opcional, decisão do usuário.
+## 5. Nova versão de proposta com wizard pré-preenchido
 
----
+Atualmente `criarNovaVersaoProposta` (em `store.ts`) já cria a versão e move o card para `projeto`, mas o usuário precisa abrir o wizard manualmente.
+
+Mudanças:
+- `DetalhesDrawer` → botão "Criar nova versão":
+  1. Chama `criarNovaVersaoProposta(atual.id)`.
+  2. Fecha o drawer.
+  3. Dispara abertura do `PropostaWizard` da página `comercial.index.tsx` passando a nova proposta como `proposta` (modo edição), já com todos os campos clonados da versão anterior (cliente, evento, ambientes, custos, resumo, responsável).
+- Como o drawer não controla o wizard, usar um **evento custom** (`window.dispatchEvent(new CustomEvent('comercial:openWizard', { detail: { propostaId } }))`) ou um callback `onCriarNovaVersao` propagado pelo componente pai. Preferência: callback explícito via prop nova `onOpenWizard(propostaId)` no `DetalhesDrawer`, ligado ao state do wizard em `comercial.index.tsx`.
 
 ## Arquivos afetados
-- **Editado**: `src/components/patrimonio/Movimentacoes.tsx` (layout + troca para `PatGroupSelect` + alocação de peças no save).
-- **Editado**: `src/components/patrimonio/Devolucoes.tsx` (layout do form e agrupamento visual por grupo).
-- **Criado**: `src/components/patrimonio/PatGroupSelect.tsx` (combobox por grupo com totais por estado).
-- **Reuso**: `PatItemInfoHover` para visualizar peças individuais ao expandir um grupo.
 
-Sem migrações de banco — toda lógica é client-side sobre `pat_itens` + `pat_movimentacoes`.
+**Criar:**
+- `src/components/NotificacoesDialog.tsx` (modal central)
+- `src/routes/compras.configuracoes.tsx`
+- `src/routes/comercial.configuracoes.tsx`
+- `supabase/migrations/...` — tabelas `compras_status_defaults` e `comercial_status_defaults` com GRANT + RLS
 
----
+**Editar:**
+- `src/components/NotificationBell.tsx` — bolinha por pendentes + abrir modal
+- `src/routes/notificacoes.tsx` — usar `NotificacoesDialog` internamente (manter rota como fallback)
+- `src/components/AppSidebar.tsx` — entradas "Configurações" em Compras e Comercial (admin only)
+- `src/routes/compras.index.tsx` — aplicar default ao mover; pular dialog se default existir
+- `src/routes/comercial.index.tsx` — aplicar default ao mover card; expor abertura do wizard via callback do drawer
+- `src/components/comercial/DetalhesDrawer.tsx` — nova prop `onOpenWizard`; usar no botão "Criar nova versão"
 
-## Pergunta antes de implementar
-Confirma que ao dar saída de "5 cadeiras Tiffany" o sistema deve **escolher automaticamente 5 peças disponíveis** (você não precisa apontar os COD específicos), correto? Ou prefere ver/escolher os COD individuais que sairão?
+## Detalhes técnicos
+
+- **RLS das novas tabelas:** `has_module_access(auth.uid(), 'compras')` / `'comercial')` para SELECT; INSERT/UPDATE/DELETE restritos a `is_module_admin(auth.uid(), ...)`.
+- **Modal de notificações:** `<Dialog>` largura `max-w-3xl`, altura limitada com `max-h-[80vh] overflow-y-auto`, rodapé com botão "Fechar".
+- **Default por status (Compras):** carregado via React Query (`compras-status-defaults`) e consultado dentro do `onDragEnd` antes de decidir entre aplicar direto ou abrir `AvancarCardDialog`.
+- **Comercial wizard pré-preenchido:** o `PropostaWizard` já aceita `proposta` para edição; basta passar a nova proposta retornada por `criarNovaVersaoProposta` (que é cópia completa da anterior).

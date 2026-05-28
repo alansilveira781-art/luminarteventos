@@ -314,6 +314,30 @@ export type Database = {
         }
         Relationships: []
       }
+      comercial_status_defaults: {
+        Row: {
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       compra_anexos: {
         Row: {
           compra_id: string
@@ -661,6 +685,30 @@ export type Database = {
           status?: Database["public"]["Enums"]["entity_status"]
           telefone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      compras_status_defaults: {
+        Row: {
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: Database["public"]["Enums"]["compra_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status: Database["public"]["Enums"]["compra_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          responsavel_id?: string | null
+          responsavel_nome?: string | null
+          status?: Database["public"]["Enums"]["compra_status"]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
