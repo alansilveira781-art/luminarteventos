@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { normalize } from "@/lib/utils";
+import { ItemSearchSelect } from "@/components/ItemSearchSelect";
+import { ComboboxCreatable } from "@/components/ComboboxCreatable";
+import { DbComboboxCreatable } from "@/components/DbComboboxCreatable";
+
 
 type Mov = {
   id: string; tipo: string; item_id: string | null; quantidade: number;
