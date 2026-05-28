@@ -37,9 +37,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Grupo Luminart" },
       { name: "description", content: "Sistema do Grupo Luminart." },
+      { name: "theme-color", content: "#0a0a0a" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Luminart" },
       { property: "og:title", content: "Grupo Luminart" },
       { name: "twitter:title", content: "Grupo Luminart" },
       { property: "og:description", content: "Sistema do Grupo Luminart." },
@@ -48,6 +52,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c82de9c7-4ebf-4824-a70c-d6b5f9243ec6" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
+
     ],
     links: [
       { rel: "stylesheet", href: appCss },
