@@ -401,7 +401,7 @@ function MovForm({ tipo, editing, itens, onSubmit, submitting }: {
       codigo: i.id_item ?? "",
       codigo_proprio: i.cod != null ? String(i.cod) : null,
       unidade: i.unidade,
-      quantidade_atual: undefined,
+      quantidade_atual: i.quantidade,
     })),
     [itens],
   );
