@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,10 @@ function totalProposta(p: Proposta) {
 }
 
 function Validacoes() {
+  const { isAdmin, modulos } = useAuth();
+  const isComercialAdmin = isAdmin || modulos.some((m) => m.slug === "comercial" && m.is_admin);
+  if (!isComercialAdmin) return <Navigate to="/comercial" />;
+
   const { propostas } = useComercial();
   const [editProposta, setEditProposta] = useState<Proposta | null>(null);
 
