@@ -59,10 +59,10 @@ const allItems: NavItem[] = [
   { title: "Dashboard", url: "/compras/dashboard", icon: BarChart3, group: "Compras", module: "compras" },
   { title: "Quadro de Compras", url: "/compras", icon: KanbanSquare, group: "Compras", module: "compras" },
   { title: "Configurações", url: "/compras/configuracoes", icon: Settings, group: "Compras", module: "compras", moduleAdminOnly: "compras" },
-  { title: "Dashboard", url: "/financeiro/dashboard", icon: BarChart3, group: "Financeiro", module: "financeiro" },
-  { title: "Quadro de Demandas", url: "/financeiro", icon: KanbanSquare, group: "Financeiro", module: "financeiro" },
-  { title: "Rotinas", url: "/financeiro/rotinas", icon: ClipboardCheck, group: "Financeiro", module: "financeiro" },
-  { title: "Conta Azul", url: "/financeiro/conta-azul", icon: Link2, group: "Financeiro", module: "financeiro" },
+  { title: "Dashboard", url: "/financeiro/dashboard", icon: BarChart3, group: "Despesas", module: "financeiro" },
+  { title: "Quadro de Demandas", url: "/financeiro", icon: KanbanSquare, group: "Despesas", module: "financeiro" },
+  { title: "Rotinas", url: "/financeiro/rotinas", icon: ClipboardCheck, group: "Despesas", module: "financeiro" },
+  { title: "Conta Azul", url: "/financeiro/conta-azul", icon: Link2, group: "Despesas", module: "financeiro" },
   { title: "Quadro de Vendas", url: "/comercial", icon: KanbanSquare, group: "Comercial", module: "comercial" },
   { title: "Propostas", url: "/comercial/propostas", icon: FileText, group: "Comercial", module: "comercial" },
   { title: "Validações", url: "/comercial/validacoes", icon: ClipboardCheck, group: "Comercial", module: "comercial", moduleAdminOnly: "comercial" },
@@ -85,7 +85,7 @@ const allItems: NavItem[] = [
   { title: "Administração", url: "/admin", icon: Shield, group: "Administração", adminOnly: true },
 ];
 
-const groups = ["Visão geral", "Estoque", "Compras", "Financeiro", "Comercial", "Contábil", "Jurídico", "Patrimônio", "Recursos Humanos", "Administração"];
+const groups = ["Visão geral", "Estoque", "Compras", "Despesas", "Comercial", "Contábil", "Jurídico", "Patrimônio", "Recursos Humanos", "Administração"];
 
 
 const ESTOQUE_ROUTES = ["/dashboard", "/estoque", "/solicitantes", "/fornecedores", "/entradas", "/saidas", "/devolucoes", "/relatorios"];
