@@ -21,8 +21,8 @@ const fmtPeriodo = (ini: string, fim: string) => {
 };
 
 export function DetalhesDrawer({
-  open, onOpenChange, card,
-}: { open: boolean; onOpenChange: (v: boolean) => void; card: ComercialCard | null }) {
+  open, onOpenChange, card, onEditProposta,
+}: { open: boolean; onOpenChange: (v: boolean) => void; card: ComercialCard | null; onEditProposta?: (p: Proposta) => void }) {
   // Subscribe to store so versions/cards atualizam em tempo real
   useComercial();
   if (!card) return null;
