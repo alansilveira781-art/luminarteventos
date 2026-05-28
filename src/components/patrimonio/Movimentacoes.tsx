@@ -320,7 +320,7 @@ export function PatrimonioMovimentacoes({ tipo, titulo, descricao }: {
                       <td className="px-2 py-1.5">
                         {isAdmin && (
                           <div className="flex gap-1">
-                            <button className="h-6 w-6 rounded hover:bg-muted inline-flex items-center justify-center" onClick={() => { setEditing({ id: m.id, linhas: [m], ...m }); setOpen(true); }}><Pencil className="h-3 w-3" /></button>
+                            <button className="h-6 w-6 rounded hover:bg-muted inline-flex items-center justify-center" onClick={() => { setEditing({ ...m, linhas: [m] }); setOpen(true); }}><Pencil className="h-3 w-3" /></button>
                             <button className="h-6 w-6 rounded hover:bg-muted text-rose-600 inline-flex items-center justify-center" onClick={() => { if (confirm("Remover?")) delGroupMut.mutate({ linhas: [m] }); }}><Trash2 className="h-3 w-3" /></button>
                           </div>
                         )}
