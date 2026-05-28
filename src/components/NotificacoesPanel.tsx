@@ -91,10 +91,14 @@ export function NotificacoesPanel({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Bell className="h-5 w-5" />
-        <h2 className="text-lg font-semibold">Notificações</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Notificações</h2>
+        </div>
+        <PushNotificationsToggle />
       </div>
+
 
       <Tabs value={filtro} onValueChange={(v) => setFiltro(v as any)}>
         <TabsList>
