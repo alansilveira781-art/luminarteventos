@@ -25,6 +25,7 @@ import { ItemSearchSelect } from "@/components/ItemSearchSelect";
 import { ItemInfoHover } from "@/components/ItemInfoHover";
 import { EntitySearchSelect } from "@/components/EntitySearchSelect";
 import { ComboboxCreatable } from "@/components/ComboboxCreatable";
+import { EventoSheetCombobox } from "@/components/EventoSheetCombobox";
 import { SolicitanteForm } from "@/components/forms/SolicitanteForm";
 import { SortableTh, useSort } from "@/components/SortableTh";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
