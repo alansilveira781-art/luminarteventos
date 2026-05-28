@@ -52,8 +52,10 @@ import { Route as ContabilNotasRouteImport } from './routes/contabil.notas'
 import { Route as ContabilConfiguracaoRouteImport } from './routes/contabil.configuracao'
 import { Route as ContabilApuracoesRouteImport } from './routes/contabil.apuracoes'
 import { Route as ComprasDashboardRouteImport } from './routes/compras.dashboard'
+import { Route as ComprasConfiguracoesRouteImport } from './routes/compras.configuracoes'
 import { Route as ComercialValidacoesRouteImport } from './routes/comercial.validacoes'
 import { Route as ComercialPropostasRouteImport } from './routes/comercial.propostas'
+import { Route as ComercialConfiguracoesRouteImport } from './routes/comercial.configuracoes'
 import { Route as ComercialClientesRouteImport } from './routes/comercial.clientes'
 import { Route as ComercialCatalogoRouteImport } from './routes/comercial.catalogo'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
@@ -281,6 +283,11 @@ const ComprasDashboardRoute = ComprasDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ComprasRoute,
 } as any)
+const ComprasConfiguracoesRoute = ComprasConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => ComprasRoute,
+} as any)
 const ComercialValidacoesRoute = ComercialValidacoesRouteImport.update({
   id: '/validacoes',
   path: '/validacoes',
@@ -289,6 +296,11 @@ const ComercialValidacoesRoute = ComercialValidacoesRouteImport.update({
 const ComercialPropostasRoute = ComercialPropostasRouteImport.update({
   id: '/propostas',
   path: '/propostas',
+  getParentRoute: () => ComercialRoute,
+} as any)
+const ComercialConfiguracoesRoute = ComercialConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => ComercialRoute,
 } as any)
 const ComercialClientesRoute = ComercialClientesRouteImport.update({
@@ -375,8 +387,10 @@ export interface FileRoutesByFullPath {
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/comercial/catalogo': typeof ComercialCatalogoRoute
   '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/configuracoes': typeof ComercialConfiguracoesRoute
   '/comercial/propostas': typeof ComercialPropostasRoute
   '/comercial/validacoes': typeof ComercialValidacoesRoute
+  '/compras/configuracoes': typeof ComprasConfiguracoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/contabil/apuracoes': typeof ContabilApuracoesRoute
   '/contabil/configuracao': typeof ContabilConfiguracaoRoute
@@ -425,8 +439,10 @@ export interface FileRoutesByTo {
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/comercial/catalogo': typeof ComercialCatalogoRoute
   '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/configuracoes': typeof ComercialConfiguracoesRoute
   '/comercial/propostas': typeof ComercialPropostasRoute
   '/comercial/validacoes': typeof ComercialValidacoesRoute
+  '/compras/configuracoes': typeof ComprasConfiguracoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/contabil/apuracoes': typeof ContabilApuracoesRoute
   '/contabil/configuracao': typeof ContabilConfiguracaoRoute
@@ -484,8 +500,10 @@ export interface FileRoutesById {
   '/admin/usuarios': typeof AdminUsuariosRoute
   '/comercial/catalogo': typeof ComercialCatalogoRoute
   '/comercial/clientes': typeof ComercialClientesRoute
+  '/comercial/configuracoes': typeof ComercialConfiguracoesRoute
   '/comercial/propostas': typeof ComercialPropostasRoute
   '/comercial/validacoes': typeof ComercialValidacoesRoute
+  '/compras/configuracoes': typeof ComprasConfiguracoesRoute
   '/compras/dashboard': typeof ComprasDashboardRoute
   '/contabil/apuracoes': typeof ContabilApuracoesRoute
   '/contabil/configuracao': typeof ContabilConfiguracaoRoute
@@ -544,8 +562,10 @@ export interface FileRouteTypes {
     | '/admin/usuarios'
     | '/comercial/catalogo'
     | '/comercial/clientes'
+    | '/comercial/configuracoes'
     | '/comercial/propostas'
     | '/comercial/validacoes'
+    | '/compras/configuracoes'
     | '/compras/dashboard'
     | '/contabil/apuracoes'
     | '/contabil/configuracao'
@@ -594,8 +614,10 @@ export interface FileRouteTypes {
     | '/admin/usuarios'
     | '/comercial/catalogo'
     | '/comercial/clientes'
+    | '/comercial/configuracoes'
     | '/comercial/propostas'
     | '/comercial/validacoes'
+    | '/compras/configuracoes'
     | '/compras/dashboard'
     | '/contabil/apuracoes'
     | '/contabil/configuracao'
@@ -652,8 +674,10 @@ export interface FileRouteTypes {
     | '/admin/usuarios'
     | '/comercial/catalogo'
     | '/comercial/clientes'
+    | '/comercial/configuracoes'
     | '/comercial/propostas'
     | '/comercial/validacoes'
+    | '/compras/configuracoes'
     | '/compras/dashboard'
     | '/contabil/apuracoes'
     | '/contabil/configuracao'
@@ -1020,6 +1044,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComprasDashboardRouteImport
       parentRoute: typeof ComprasRoute
     }
+    '/compras/configuracoes': {
+      id: '/compras/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/compras/configuracoes'
+      preLoaderRoute: typeof ComprasConfiguracoesRouteImport
+      parentRoute: typeof ComprasRoute
+    }
     '/comercial/validacoes': {
       id: '/comercial/validacoes'
       path: '/validacoes'
@@ -1032,6 +1063,13 @@ declare module '@tanstack/react-router' {
       path: '/propostas'
       fullPath: '/comercial/propostas'
       preLoaderRoute: typeof ComercialPropostasRouteImport
+      parentRoute: typeof ComercialRoute
+    }
+    '/comercial/configuracoes': {
+      id: '/comercial/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/comercial/configuracoes'
+      preLoaderRoute: typeof ComercialConfiguracoesRouteImport
       parentRoute: typeof ComercialRoute
     }
     '/comercial/clientes': {
@@ -1133,6 +1171,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface ComercialRouteChildren {
   ComercialCatalogoRoute: typeof ComercialCatalogoRoute
   ComercialClientesRoute: typeof ComercialClientesRoute
+  ComercialConfiguracoesRoute: typeof ComercialConfiguracoesRoute
   ComercialPropostasRoute: typeof ComercialPropostasRoute
   ComercialValidacoesRoute: typeof ComercialValidacoesRoute
   ComercialIndexRoute: typeof ComercialIndexRoute
@@ -1141,6 +1180,7 @@ interface ComercialRouteChildren {
 const ComercialRouteChildren: ComercialRouteChildren = {
   ComercialCatalogoRoute: ComercialCatalogoRoute,
   ComercialClientesRoute: ComercialClientesRoute,
+  ComercialConfiguracoesRoute: ComercialConfiguracoesRoute,
   ComercialPropostasRoute: ComercialPropostasRoute,
   ComercialValidacoesRoute: ComercialValidacoesRoute,
   ComercialIndexRoute: ComercialIndexRoute,
@@ -1151,11 +1191,13 @@ const ComercialRouteWithChildren = ComercialRoute._addFileChildren(
 )
 
 interface ComprasRouteChildren {
+  ComprasConfiguracoesRoute: typeof ComprasConfiguracoesRoute
   ComprasDashboardRoute: typeof ComprasDashboardRoute
   ComprasIndexRoute: typeof ComprasIndexRoute
 }
 
 const ComprasRouteChildren: ComprasRouteChildren = {
+  ComprasConfiguracoesRoute: ComprasConfiguracoesRoute,
   ComprasDashboardRoute: ComprasDashboardRoute,
   ComprasIndexRoute: ComprasIndexRoute,
 }
