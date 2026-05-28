@@ -730,21 +730,10 @@ function SaidaForm({ prefill, isEditing, itens, solicitantes, onEditSolicitante,
 
         {isEvento && (
           <FormField label="Evento / Projeto*" wide>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <ComboboxCreatable
-                  options={eventos}
-                  value={meta.evento_projeto}
-                  onChange={(v) => setM("evento_projeto", v)}
-                  placeholder="Selecione ou digite um novo…"
-                  searchPlaceholder="Buscar (sem acentos OK)…"
-                />
-              </div>
-              <Button type="button" variant="outline" size="icon" onClick={onReloadEventos} disabled={reloadingEventos} title="Recarregar lista">
-                <RefreshCw className={`h-4 w-4 ${reloadingEventos ? "animate-spin" : ""}`} />
-              </Button>
-            </div>
-            {eventosError && <p className="text-xs text-destructive mt-1">Erro: {eventosError}</p>}
+            <EventoSheetCombobox
+              value={meta.evento_projeto}
+              onChange={(v) => setM("evento_projeto", v ?? "")}
+            />
           </FormField>
         )}
 
