@@ -116,7 +116,7 @@ function QuadroVendas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards.length]);
 
-  function onDragEnd(e: DragEndEvent) {
+  async function onDragEnd(e: DragEndEvent) {
     const id = String(e.active.id);
     const overId = e.over?.id ? String(e.over.id) : null;
     if (!overId) return;
@@ -128,6 +128,21 @@ function QuadroVendas() {
     const oldIdx = CARD_STATUSES.findIndex((s) => s.key === card.status);
     const newIdx = CARD_STATUSES.findIndex((s) => s.key === status);
     if (newIdx > oldIdx) {
+      const def = statusDefaults.find((d) => d.status === status && d.responsavel_id);
+      if (def?.responsavel_id) {
+        if (def.responsavel_nome) updateCard(id, { responsavel: def.responsavel_nome });
+        moveCard(id, status);
+        const statusLabel = CARD_STATUSES.find((s) => s.key === status)?.label || status;
+        await notifyResponsavel({
+          userId: def.responsavel_id,
+          titulo: `Venda: ${statusLabel}`,
+          mensagem: `${card.clienteNome}${card.eventoNome ? ` — ${card.eventoNome}` : ""}`,
+          link: `/comercial?card=${id}`,
+          tipo: "comercial_responsavel",
+        });
+        toast.success(`Card movido. ${def.responsavel_nome ?? "Responsável"} foi notificado.`);
+        return;
+      }
       setPendingMove({ id, status });
     } else {
       moveCard(id, status);
