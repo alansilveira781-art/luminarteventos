@@ -248,7 +248,17 @@ function QuadroVendas() {
         defaultDate={cards.find((c) => c.id === envioCardId)?.dataEnvio || undefined}
         onConfirm={(data) => { if (envioCardId) moveCard(envioCardId, "orcamento_enviado", { dataEnvio: data }); setEnvioCardId(null); }}
       />
-      <DetalhesDrawer open={!!detalhesCard} onOpenChange={(v) => { if (!v) setDetalhesCard(null); }} card={detalhesCard} />
+      <DetalhesDrawer
+        open={!!detalhesCard}
+        onOpenChange={(v) => { if (!v) setDetalhesCard(null); }}
+        card={detalhesCard}
+        onEditProposta={(p) => {
+          setDetalhesCard(null);
+          setWizardCardId(p.cardId ?? null);
+          setWizardProposta(p);
+          setWizardOpen(true);
+        }}
+      />
 
       <AvancarCardDialog
         open={!!pendingMove}
