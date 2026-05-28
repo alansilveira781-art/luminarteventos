@@ -145,6 +145,21 @@ export function EventoSheetCombobox({
                         <div className="truncate text-xs text-muted-foreground">{sub}</div>
                       )}
                     </button>
+                    <button
+                      type="button"
+                      title="Copiar nome"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(r.id).then(
+                          () => toast.success("Nome copiado"),
+                          () => toast.error("Não foi possível copiar"),
+                        );
+                      }}
+                      className="mr-1 mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition hover:bg-background hover:text-foreground group-hover:opacity-100"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 );
               })
