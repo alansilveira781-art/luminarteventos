@@ -175,7 +175,7 @@ export async function syncContasPagar(from: string, to: string) {
 }
 
 export async function syncContasReceber(from: string, to: string) {
-  const logId = await logStart("contas_receber");
+  const logId = await logStart("contas_receber", from, to);
   try {
     const items = await fetchPaged(
       "/financeiro/eventos-financeiros/contas-a-receber/buscar",
