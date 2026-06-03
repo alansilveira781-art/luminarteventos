@@ -293,3 +293,30 @@ export function totaisExtrato(
   });
   return { receitas: rec, despesas: des };
 }
+
+/** Retorna os lançamentos identificados como transferências bancárias (auditoria). */
+export function transferenciasNoPeriodo(
+  pagar: ContaRow[],
+  receber: ContaRow[],
+  planos: PlanoMin[],
+  opts: MontarDreOpts,
+): { count: number; total: number; itens: { data: string | null; descricao: string | null; nome: string | null; valor: number; origem: "pagar" | "receber" }[] } {
+  const planoMap = new Map<string, PlanoMin>();
+  planos.forEach((p) => planoMap.set(p.external_id, p));
+  const itens: { data: string | null; descricao: string | null; nome: string | null; valor: number; origem: "pagar" | "receber" }[] = [];
+  const consider = (rows: ContaRow[], origem: "pagar" | "receber") => {
+    rows.forEach((c: any) => {
+      if (opts.centroCustoId && c.centro_custo_external_id !== opts.centroCustoId) return;
+      if (!passaVisao(c, opts.visao, opts.ano, opts.mes)) return;
+      const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
+      if (!isTransferencia(plano?.nome, c.descricao)) return;
+      const data = opts.visao === "realizado" ? (c.data_pagamento ?? c.data_vencimento) : c.data_vencimento;
+      const nome = origem === "pagar" ? (c.fornecedor_nome ?? null) : (c.cliente_nome ?? null);
+      itens.push({ data, descricao: c.descricao ?? null, nome, valor: Math.abs(Number(c.valor || 0)), origem });
+    });
+  };
+  consider(pagar, "pagar");
+  consider(receber, "receber");
+  const total = itens.reduce((s, x) => s + x.valor, 0);
+  return { count: itens.length, total, itens: itens.sort((a, b) => (b.data ?? "").localeCompare(a.data ?? "")) };
+}
