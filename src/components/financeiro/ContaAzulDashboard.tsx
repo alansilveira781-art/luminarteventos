@@ -97,12 +97,13 @@ function useContaAzulData() {
   const extrato = useQuery({
     queryKey: ["ca-extrato"],
     queryFn: async () => {
-      const { data } = await sb.from("ca_extrato").select("external_id,conta_bancaria,valor");
-      return (data ?? []) as Extrato[];
+      const { data } = await sb.from("ca_extrato").select("external_id,conta_bancaria,valor,data,descricao,categoria_external_id");
+      return (data ?? []) as (Extrato & { data: string | null; descricao: string | null; categoria_external_id: string | null })[];
     },
   });
   return { planos, centros, pagar, receber, extrato };
 }
+
 
 function KpiCard({
   icon: Icon, label, value, subLabel, subValue, subColor,
