@@ -148,7 +148,7 @@ export function montarDRE(
   const acumula = (rows: ContaRow[]) => {
     rows.forEach((c) => {
       if (opts.centroCustoId && c.centro_custo_external_id !== opts.centroCustoId) return;
-      if (!passaRegime(c, opts.regime, opts.ano, opts.mes)) return;
+      if (!passaVisao(c, opts.visao, opts.ano, opts.mes)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome)) return;
       const grupo = grupoDoPlanoNome(plano?.nome);
