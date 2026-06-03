@@ -82,6 +82,8 @@ function EstoquePage() {
       }
       return all;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const mut = useMutation({
