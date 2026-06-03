@@ -105,6 +105,8 @@ function RootComponent() {
 function AppShell() {
   const { session, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEstoqueRealtimeSync();
+
 
   if (loading) {
     return (
