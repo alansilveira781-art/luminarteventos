@@ -194,12 +194,12 @@ export async function syncContasReceber(from: string, to: string) {
   }
 }
 
-export async function syncExtrato(_from: string, _to: string) {
+export async function syncExtrato(from: string, to: string) {
   // A nova plataforma não expõe um endpoint único de "Extrato Bancário".
   // Como aproximação, sincronizamos a lista de Contas Financeiras
   // (banco, caixa, cartão) com saldo atual. Um extrato completo de lançamentos
   // por dia exige combinar saldo-inicial + parcelas + transferências.
-  const logId = await logStart("extrato");
+  const logId = await logStart("extrato", from, to);
   try {
     const items = await fetchPaged("/conta-financeira");
     if (items.length > 0) {
