@@ -265,6 +265,8 @@ function ContaAzulPage() {
 
       <CargaHistoricaCard canManage={canManage} connected={!!connected} />
 
+      <ReprocessarFalhasCard canManage={canManage} connected={!!connected} defaultFrom={from} defaultTo={to} />
+
       <SyncStateCard />
 
       <Card className="mt-4">
