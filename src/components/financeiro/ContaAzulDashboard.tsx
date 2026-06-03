@@ -224,7 +224,7 @@ function PainelFinanceiro() {
           <div className="border rounded-md p-3">
             <div className="text-xs uppercase text-muted-foreground">Receitas</div>
             <div className="mt-1 grid grid-cols-2 gap-x-2 tabular-nums">
-              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreCaixa.receitas)}</div>
+              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreRealizado.receitas)}</div>
               <div className="text-muted-foreground">Extrato</div><div className="text-right">{fmtMoney(extratoTot.receitas)}</div>
               <div className="font-semibold">Diferença</div>
               <div className={`text-right font-semibold ${corDiff(pctRec)}`}>{fmtMoney(diffRec)} ({fmtPct(pctRec)})</div>
@@ -233,7 +233,7 @@ function PainelFinanceiro() {
           <div className="border rounded-md p-3">
             <div className="text-xs uppercase text-muted-foreground">Despesas + Custos</div>
             <div className="mt-1 grid grid-cols-2 gap-x-2 tabular-nums">
-              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreCaixa.despesas)}</div>
+              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreRealizado.despesas)}</div>
               <div className="text-muted-foreground">Extrato</div><div className="text-right">{fmtMoney(extratoTot.despesas)}</div>
               <div className="font-semibold">Diferença</div>
               <div className={`text-right font-semibold ${corDiff(pctDes)}`}>{fmtMoney(diffDes)} ({fmtPct(pctDes)})</div>
