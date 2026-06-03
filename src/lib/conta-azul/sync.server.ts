@@ -72,18 +72,18 @@ async function upsertBatched(table: string, rows: any[], onConflict: string) {
 export async function syncPlanoContas() {
   const logId = await logStart("plano_contas");
   try {
-    // Plano de Contas = /categorias na API nova
-    const items = await fetchPaged("/categorias");
+    // Plano de Contas = /categorias na API nova.
+    // `permite_apenas_filhos` é parâmetro OBRIGATÓRIO (boolean).
+    const items = await fetchPaged("/categorias", { permite_apenas_filhos: "false" });
     if (items.length > 0) {
       const syncedAt = new Date().toISOString();
       const rows = items.map((it: any) => ({
-        external_id: String(it.id ?? it.uuid ?? it.codigo ?? it.code),
-        codigo: it.codigo ?? it.code ?? null,
-        nome: it.nome ?? it.descricao ?? it.name ?? it.description ?? "—",
-        tipo: it.tipo ?? it.type ?? it.kind ?? null,
-        pai_external_id:
-          it.id_pai ?? it.pai?.id ?? it.parent_id ? String(it.id_pai ?? it.pai?.id ?? it.parent_id) : null,
-        ativo: (it.ativo ?? it.active) !== false,
+        external_id: String(it.id),
+        codigo: it.codigo ?? null,
+        nome: it.nome ?? "—",
+        tipo: it.tipo ?? null,
+        pai_external_id: it.categoria_pai ? String(it.categoria_pai) : null,
+        ativo: true,
         synced_at: syncedAt,
       }));
       await upsertBatched("ca_plano_contas", rows, "external_id");
