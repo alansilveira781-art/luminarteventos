@@ -191,7 +191,7 @@ export function montarDRE(
       if (opts.centroCustoId && c.centro_custo_external_id !== opts.centroCustoId) return;
       if (!passaVisao(c, opts.visao, opts.ano, opts.mes)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
-      if (isTransferencia(plano?.nome)) return;
+      if (isTransferencia(plano?.nome, c.descricao)) return;
       const grupo = grupoDoPlanoNome(plano?.nome);
       const v = Math.abs(Number(c.valor || 0));
       const det = detPorGrupo.get(grupo) ?? new Map<string, number>();
