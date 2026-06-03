@@ -128,13 +128,13 @@ function PainelFinanceiro() {
   const { planos, pagar, receber, extrato } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
-  const [regime, setRegime] = useState<Regime>("caixa");
+  const [visao, setVisao] = useState<Visao>("realizado");
 
   const planosArr = planos.data ?? [];
 
   const { linhas, totais } = useMemo(
-    () => montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, regime }),
-    [pagar.data, receber.data, planosArr, ano, mes, regime],
+    () => montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, visao }),
+    [pagar.data, receber.data, planosArr, ano, mes, visao],
   );
 
   const rb = totais.RB ?? 0;
@@ -143,44 +143,45 @@ function PainelFinanceiro() {
   const rg = totais.RG ?? 0;
   const lu = totais.LU ?? 0;
 
-  // Reconciliação com extrato (sempre caixa)
+  // Reconciliação com extrato (sempre realizado)
   const extratoTot = useMemo(
     () => totaisExtrato(extrato.data ?? [], planosArr, ano, mes),
     [extrato.data, planosArr, ano, mes],
   );
-  const dreCaixa = useMemo(() => {
-    if (regime === "caixa") return { receitas: rb, despesas: rb - lu };
-    const t = montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, regime: "caixa" }).totais;
+  const dreRealizado = useMemo(() => {
+    if (visao === "realizado") return { receitas: rb, despesas: rb - lu };
+    const t = montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, visao: "realizado" }).totais;
     const r = t.RB ?? 0;
     const l = t.LU ?? 0;
     return { receitas: r, despesas: r - l };
-  }, [regime, rb, lu, pagar.data, receber.data, planosArr, ano, mes]);
+  }, [visao, rb, lu, pagar.data, receber.data, planosArr, ano, mes]);
 
-  const diffRec = dreCaixa.receitas - extratoTot.receitas;
-  const diffDes = dreCaixa.despesas - extratoTot.despesas;
+  const diffRec = dreRealizado.receitas - extratoTot.receitas;
+  const diffDes = dreRealizado.despesas - extratoTot.despesas;
   const pctRec = extratoTot.receitas ? Math.abs(diffRec) / extratoTot.receitas : 0;
   const pctDes = extratoTot.despesas ? Math.abs(diffDes) / extratoTot.despesas : 0;
   const corDiff = (p: number) => (p <= 0.01 ? "text-green-600" : p <= 0.05 ? "text-yellow-600" : "text-red-600");
 
-  // Movimentos do período (mesmo regime do DRE)
+  // Movimentos do período (mesma visão do DRE)
   const movimentos = useMemo(() => {
     const passa = (c: any) =>
-      regime === "caixa"
+      visao === "realizado"
         ? c.status === "pago" && inPeriodo(c.data_pagamento, ano, mes)
-        : inPeriodo(c.data_vencimento, ano, mes);
+        : c.status !== "pago" && inPeriodo(c.data_vencimento, ano, mes);
     return [
       ...(receber.data ?? []).filter(passa).map((c: any) => ({
-        data: regime === "caixa" ? c.data_pagamento : c.data_vencimento,
+        data: visao === "realizado" ? c.data_pagamento : c.data_vencimento,
         nome: c.cliente_nome, descricao: c.descricao, valor: Number(c.valor || 0),
       })),
       ...(pagar.data ?? []).filter(passa).map((c: any) => ({
-        data: regime === "caixa" ? c.data_pagamento : c.data_vencimento,
+        data: visao === "realizado" ? c.data_pagamento : c.data_vencimento,
         nome: c.fornecedor_nome, descricao: c.descricao, valor: -Number(c.valor || 0),
       })),
     ].sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
-  }, [pagar.data, receber.data, regime, ano, mes]);
+  }, [pagar.data, receber.data, visao, ano, mes]);
 
   const totalMov = movimentos.reduce((s, m) => s + m.valor, 0);
+
 
   return (
     <div className="space-y-4">
