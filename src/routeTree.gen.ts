@@ -67,6 +67,7 @@ import { Route as ApiPublicOpcoesPagamentoRouteImport } from './routes/api/publi
 import { Route as ApiContaazulSyncRouteImport } from './routes/api/contaazul/sync'
 import { Route as ApiContaazulStatusRouteImport } from './routes/api/contaazul/status'
 import { Route as ApiContaazulScheduleRouteImport } from './routes/api/contaazul/schedule'
+import { Route as ApiContaazulReprocessarFalhasRouteImport } from './routes/api/contaazul/reprocessar-falhas'
 import { Route as ApiContaazulHistoricoRouteImport } from './routes/api/contaazul/historico'
 import { Route as ApiPublicContaazulCronRouteImport } from './routes/api/public/contaazul/cron'
 import { Route as ApiContaazulOauthPrepareRouteImport } from './routes/api/contaazul/oauth.prepare'
@@ -363,6 +364,12 @@ const ApiContaazulScheduleRoute = ApiContaazulScheduleRouteImport.update({
   path: '/api/contaazul/schedule',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiContaazulReprocessarFalhasRoute =
+  ApiContaazulReprocessarFalhasRouteImport.update({
+    id: '/api/contaazul/reprocessar-falhas',
+    path: '/api/contaazul/reprocessar-falhas',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiContaazulHistoricoRoute = ApiContaazulHistoricoRouteImport.update({
   id: '/api/contaazul/historico',
   path: '/api/contaazul/historico',
@@ -440,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/patrimonio/': typeof PatrimonioIndexRoute
   '/rh/': typeof RhIndexRoute
   '/api/contaazul/historico': typeof ApiContaazulHistoricoRoute
+  '/api/contaazul/reprocessar-falhas': typeof ApiContaazulReprocessarFalhasRoute
   '/api/contaazul/schedule': typeof ApiContaazulScheduleRoute
   '/api/contaazul/status': typeof ApiContaazulStatusRoute
   '/api/contaazul/sync': typeof ApiContaazulSyncRoute
@@ -496,6 +504,7 @@ export interface FileRoutesByTo {
   '/patrimonio': typeof PatrimonioIndexRoute
   '/rh': typeof RhIndexRoute
   '/api/contaazul/historico': typeof ApiContaazulHistoricoRoute
+  '/api/contaazul/reprocessar-falhas': typeof ApiContaazulReprocessarFalhasRoute
   '/api/contaazul/schedule': typeof ApiContaazulScheduleRoute
   '/api/contaazul/status': typeof ApiContaazulStatusRoute
   '/api/contaazul/sync': typeof ApiContaazulSyncRoute
@@ -561,6 +570,7 @@ export interface FileRoutesById {
   '/patrimonio/': typeof PatrimonioIndexRoute
   '/rh/': typeof RhIndexRoute
   '/api/contaazul/historico': typeof ApiContaazulHistoricoRoute
+  '/api/contaazul/reprocessar-falhas': typeof ApiContaazulReprocessarFalhasRoute
   '/api/contaazul/schedule': typeof ApiContaazulScheduleRoute
   '/api/contaazul/status': typeof ApiContaazulStatusRoute
   '/api/contaazul/sync': typeof ApiContaazulSyncRoute
@@ -627,6 +637,7 @@ export interface FileRouteTypes {
     | '/patrimonio/'
     | '/rh/'
     | '/api/contaazul/historico'
+    | '/api/contaazul/reprocessar-falhas'
     | '/api/contaazul/schedule'
     | '/api/contaazul/status'
     | '/api/contaazul/sync'
@@ -683,6 +694,7 @@ export interface FileRouteTypes {
     | '/patrimonio'
     | '/rh'
     | '/api/contaazul/historico'
+    | '/api/contaazul/reprocessar-falhas'
     | '/api/contaazul/schedule'
     | '/api/contaazul/status'
     | '/api/contaazul/sync'
@@ -747,6 +759,7 @@ export interface FileRouteTypes {
     | '/patrimonio/'
     | '/rh/'
     | '/api/contaazul/historico'
+    | '/api/contaazul/reprocessar-falhas'
     | '/api/contaazul/schedule'
     | '/api/contaazul/status'
     | '/api/contaazul/sync'
@@ -782,6 +795,7 @@ export interface RootRouteChildren {
   EstoqueAReceberRoute: typeof EstoqueAReceberRoute
   EstoqueIndexRoute: typeof EstoqueIndexRoute
   ApiContaazulHistoricoRoute: typeof ApiContaazulHistoricoRoute
+  ApiContaazulReprocessarFalhasRoute: typeof ApiContaazulReprocessarFalhasRoute
   ApiContaazulScheduleRoute: typeof ApiContaazulScheduleRoute
   ApiContaazulStatusRoute: typeof ApiContaazulStatusRoute
   ApiContaazulSyncRoute: typeof ApiContaazulSyncRoute
@@ -1201,6 +1215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiContaazulScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/contaazul/reprocessar-falhas': {
+      id: '/api/contaazul/reprocessar-falhas'
+      path: '/api/contaazul/reprocessar-falhas'
+      fullPath: '/api/contaazul/reprocessar-falhas'
+      preLoaderRoute: typeof ApiContaazulReprocessarFalhasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/contaazul/historico': {
       id: '/api/contaazul/historico'
       path: '/api/contaazul/historico'
@@ -1391,6 +1412,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueAReceberRoute: EstoqueAReceberRoute,
   EstoqueIndexRoute: EstoqueIndexRoute,
   ApiContaazulHistoricoRoute: ApiContaazulHistoricoRoute,
+  ApiContaazulReprocessarFalhasRoute: ApiContaazulReprocessarFalhasRoute,
   ApiContaazulScheduleRoute: ApiContaazulScheduleRoute,
   ApiContaazulStatusRoute: ApiContaazulStatusRoute,
   ApiContaazulSyncRoute: ApiContaazulSyncRoute,
