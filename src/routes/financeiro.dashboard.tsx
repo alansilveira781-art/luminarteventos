@@ -218,6 +218,11 @@ function FinanceiroDashboard() {
 
           <UberDashboard from={uberFrom} to={uberTo} />
         </TabsContent>
+
+        <TabsContent value="contaazul" className="mt-0">
+          <PageHeader title="Financeiro (Conta Azul)" description="Painel, análise por evento e fluxo de caixa" />
+          <ContaAzulDashboard />
+        </TabsContent>
       </Tabs>
     </>
   );
