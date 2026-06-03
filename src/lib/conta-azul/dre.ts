@@ -124,22 +124,7 @@ function passaVisao(row: ContaRow, visao: Visao, ano: number, mes: number): bool
 }
 
 
-function inPeriodoStr(date: string | null, ano: number, mes: number): boolean {
-  if (!date) return false;
-  const y = Number(date.slice(0, 4));
-  const m = Number(date.slice(5, 7));
-  if (y !== ano) return false;
-  if (mes > 0 && m !== mes) return false;
-  return true;
-}
 
-function passaRegime(row: ContaRow, regime: Regime, ano: number, mes: number): boolean {
-  if (regime === "caixa") {
-    if (row.status !== "pago") return false;
-    return inPeriodoStr(row.data_pagamento, ano, mes);
-  }
-  return inPeriodoStr(row.data_vencimento, ano, mes);
-}
 
 function isTransferencia(planoNome: string | undefined | null): boolean {
   if (!planoNome) return false;
