@@ -256,6 +256,12 @@ function ContaAzulPage() {
         </Card>
       </div>
 
+      <SyncAutomaticoCard canManage={canManage} />
+
+      <CargaHistoricaCard canManage={canManage} connected={!!connected} />
+
+      <SyncStateCard />
+
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base">Histórico de sincronizações</CardTitle>
