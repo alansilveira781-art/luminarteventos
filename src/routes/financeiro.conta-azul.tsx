@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Link2, RefreshCw, Unplug, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Link2, RefreshCw, Unplug, CheckCircle2, XCircle, Loader2, Pencil, Lock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/financeiro/conta-azul")({
@@ -333,6 +334,7 @@ function SyncAutomaticoCard({ canManage }: { canManage: boolean }) {
   });
   const [rows, setRows] = useState<Array<{ horario: string; ativo: boolean }>>([]);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (sched.data) {
@@ -351,6 +353,7 @@ function SyncAutomaticoCard({ canManage }: { canManage: boolean }) {
       if (!res.ok) throw new Error(await res.text());
       toast.success("Horários salvos");
       qc.invalidateQueries({ queryKey: ["ca-schedule"] });
+      setEditing(false);
     } catch (e: any) {
       toast.error(`Erro: ${e?.message ?? e}`);
     } finally {
@@ -366,28 +369,61 @@ function SyncAutomaticoCard({ canManage }: { canManage: boolean }) {
 
   return (
     <Card className="mt-4">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Sincronização automática (D-1)</CardTitle>
+        {!editing ? (
+          <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={!canManage}>
+            <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setEditing(false);
+                if (sched.data) setRows(sched.data.map((s) => ({ horario: String(s.horario).slice(0, 5), ativo: s.ativo })));
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+              Salvar
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Os horários abaixo (fuso América/Fortaleza) disparam uma sincronização incremental de D-1 até hoje. Máx. 3 horários.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {display.slice(0, 3).map((r, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Input type="time" value={r.horario} onChange={(e) => update(i, { horario: e.target.value })} className="w-32" />
-              <label className="flex items-center gap-1 text-xs">
-                <input type="checkbox" checked={r.ativo} onChange={(e) => update(i, { ativo: e.target.checked })} />
-                Ativo
-              </label>
-            </div>
-          ))}
-        </div>
-        <Button onClick={save} disabled={!canManage || saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-          Salvar horários
-        </Button>
+        {!editing ? (
+          <div className="flex flex-wrap gap-2">
+            {display.slice(0, 3).map((r, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${r.ativo ? "bg-muted/40" : "opacity-50"}`}
+              >
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-mono">{r.horario}</span>
+                <span className="text-xs text-muted-foreground">{r.ativo ? "ativo" : "inativo"}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {display.slice(0, 3).map((r, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input type="time" value={r.horario} onChange={(e) => update(i, { horario: e.target.value })} className="w-32" />
+                <label className="flex items-center gap-1 text-xs">
+                  <input type="checkbox" checked={r.ativo} onChange={(e) => update(i, { ativo: e.target.checked })} />
+                  Ativo
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -396,21 +432,56 @@ function SyncAutomaticoCard({ canManage }: { canManage: boolean }) {
 function CargaHistoricaCard({ canManage, connected }: { canManage: boolean; connected: boolean }) {
   const [from, setFrom] = useState("2023-01-01");
   const [to, setTo] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 1);
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
     return d.toISOString().slice(0, 10);
   });
   const [jobId, setJobId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const toastedRef = (typeof window !== "undefined" ? (window as any) : ({} as any));
+
+  // Recupera o último job ao montar (resiliente a reload)
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("ca_sync_jobs")
+        .select("id, date_from, date_to")
+        .eq("tipo", "historico")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) {
+        setJobId(data.id);
+        if (data.date_from) setFrom(data.date_from);
+        if (data.date_to) setTo(data.date_to);
+      }
+    })();
+  }, []);
 
   const job = useQuery({
     queryKey: ["ca-job", jobId],
     enabled: !!jobId,
-    refetchInterval: 3000,
+    refetchInterval: (q) => {
+      const s = (q.state.data as any)?.status;
+      return s === "ok" || s === "erro" ? false : 3000;
+    },
     queryFn: async () => {
       const { data } = await (supabase as any).from("ca_sync_jobs").select("*").eq("id", jobId).maybeSingle();
       return data as any;
     },
   });
+
+  // Toast quando termina
+  useEffect(() => {
+    const s = job.data?.status;
+    if (!s || !jobId) return;
+    const key = `ca_job_toast_${jobId}`;
+    if (toastedRef[key] === s) return;
+    toastedRef[key] = s;
+    if (s === "ok") toast.success("Carga histórica concluída com sucesso");
+    if (s === "erro") toast.error(`Carga histórica falhou: ${job.data?.mensagem ?? "erro"}`);
+  }, [job.data?.status, jobId, job.data?.mensagem, toastedRef]);
 
   async function start() {
     setBusy(true);
@@ -421,8 +492,9 @@ function CargaHistoricaCard({ canManage, connected }: { canManage: boolean; conn
         body: JSON.stringify({ from, to }),
       });
       if (!res.ok) throw new Error(await res.text());
-      const { jobId } = await res.json();
-      setJobId(jobId);
+      const { jobId: newId } = await res.json();
+      setJobId(newId);
+      setEditing(false);
       toast.success("Carga histórica iniciada em background");
     } catch (e: any) {
       toast.error(`Erro: ${e?.message ?? e}`);
@@ -432,34 +504,78 @@ function CargaHistoricaCard({ canManage, connected }: { canManage: boolean; conn
   }
 
   const progress = job.data?.progress ?? {};
-  const status = job.data?.status;
+  const status = job.data?.status as string | undefined;
+  const total = Number(progress.total_meses ?? 0);
+  const done = Number(progress.concluidos ?? 0);
+  const pct = total > 0 ? Math.round((done / total) * 100) : status === "ok" ? 100 : 0;
+  const isRunning = !!jobId && status !== "ok" && status !== "erro";
 
   return (
     <Card className="mt-4">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Carga histórica</CardTitle>
+        {!editing ? (
+          <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={!canManage || isRunning}>
+            <Pencil className="h-3.5 w-3.5 mr-1" /> Editar período
+          </Button>
+        ) : (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Fechar</Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-3 max-w-md">
-          <div className="space-y-1">
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        {!editing ? (
+          <div className="flex flex-wrap gap-2 text-sm">
+            <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">De</span>
+              <span className="font-mono">{from}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Até</span>
+              <span className="font-mono">{to}</span>
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            <div className="space-y-1">
+              <Label className="text-xs">De</Label>
+              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Até</Label>
+              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            </div>
           </div>
-        </div>
-        <Button onClick={start} disabled={!canManage || !connected || busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-          Rodar carga histórica
+        )}
+        <Button onClick={start} disabled={!canManage || !connected || busy || isRunning}>
+          {busy || isRunning ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+          {isRunning ? "Em execução…" : "Rodar carga histórica"}
         </Button>
         {jobId && (
-          <div className="text-xs text-muted-foreground">
-            Status: <span className={status === "ok" ? "text-green-600" : status === "erro" ? "text-red-600" : ""}>{status ?? "em andamento"}</span>
-            {progress.total_meses ? ` — ${progress.concluidos ?? 0}/${progress.total_meses} meses` : null}
-            {progress.mes_atual ? ` (atual: ${progress.mes_atual})` : null}
-            {job.data?.mensagem ? ` · ${job.data.mensagem}` : null}
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium">
+                Status:{" "}
+                <span className={status === "ok" ? "text-green-600" : status === "erro" ? "text-red-600" : "text-blue-600"}>
+                  {status === "ok" ? "Concluído" : status === "erro" ? "Erro" : "Em andamento"}
+                </span>
+              </span>
+              <span className="text-muted-foreground">
+                {total > 0 ? `${done}/${total} meses` : "preparando…"}
+                {progress.mes_atual ? ` · atual: ${progress.mes_atual}` : ""}
+              </span>
+            </div>
+            <Progress value={pct} />
+            {job.data?.mensagem && (
+              <p className="text-xs text-muted-foreground">{job.data.mensagem}</p>
+            )}
+            {job.data?.started_at && (
+              <p className="text-[11px] text-muted-foreground">
+                Iniciado em {new Date(job.data.started_at).toLocaleString("pt-BR")}
+                {job.data?.finished_at ? ` · Finalizado em ${new Date(job.data.finished_at).toLocaleString("pt-BR")}` : ""}
+              </p>
+            )}
           </div>
         )}
       </CardContent>
