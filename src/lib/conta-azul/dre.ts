@@ -155,10 +155,22 @@ function passaVisao(row: ContaRow, visao: Visao, ano: number, mes: number): bool
 
 
 
-function isTransferencia(planoNome: string | undefined | null): boolean {
-  if (!planoNome) return false;
-  const n = planoNome.toLowerCase();
-  return n.includes("transferência") || n.includes("transferencia") || n.includes("saldo conta") || n.includes("saldo inicial");
+const TRANSFER_DESC_PATTERNS: RegExp[] = [
+  /^\s*transfer[eê]ncia\s+entre\s+(contas|empresas|bancos)/i,
+  /^\s*transfer[eê]ncia\s+banc[aá]ria/i,
+  /^\s*ajuste\s+de\s+saldo/i,
+  /^\s*saldo\s+inicial/i,
+  /^\s*aplica[cç][aã]o\s+(financeira|cdb|autom[aá]tica)/i,
+  /^\s*resgate\s+de\s+aplica[cç][aã]o/i,
+];
+
+export function isTransferencia(planoNome: string | undefined | null, descricao?: string | null): boolean {
+  if (planoNome) {
+    const n = planoNome.toLowerCase();
+    if (n.includes("transferência") || n.includes("transferencia") || n.includes("saldo conta") || n.includes("saldo inicial")) return true;
+  }
+  if (descricao && TRANSFER_DESC_PATTERNS.some((re) => re.test(descricao))) return true;
+  return false;
 }
 
 export function montarDRE(
