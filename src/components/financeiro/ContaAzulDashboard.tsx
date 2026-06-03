@@ -10,7 +10,7 @@ import {
   ComposedChart, Line, Legend,
 } from "recharts";
 import { PiggyBank as Piggy, TrendingDown, Building2, BarChart3, Sprout } from "lucide-react";
-import { montarDRE, totaisExtrato, type Regime } from "@/lib/conta-azul/dre";
+import { montarDRE, totaisExtrato, type Visao } from "@/lib/conta-azul/dre";
 
 
 const sb = supabase as any;
@@ -128,13 +128,13 @@ function PainelFinanceiro() {
   const { planos, pagar, receber, extrato } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
-  const [regime, setRegime] = useState<Regime>("caixa");
+  const [visao, setVisao] = useState<Visao>("realizado");
 
   const planosArr = planos.data ?? [];
 
   const { linhas, totais } = useMemo(
-    () => montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, regime }),
-    [pagar.data, receber.data, planosArr, ano, mes, regime],
+    () => montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, visao }),
+    [pagar.data, receber.data, planosArr, ano, mes, visao],
   );
 
   const rb = totais.RB ?? 0;
@@ -143,55 +143,57 @@ function PainelFinanceiro() {
   const rg = totais.RG ?? 0;
   const lu = totais.LU ?? 0;
 
-  // Reconciliação com extrato (sempre caixa)
+  // Reconciliação com extrato (sempre realizado)
   const extratoTot = useMemo(
     () => totaisExtrato(extrato.data ?? [], planosArr, ano, mes),
     [extrato.data, planosArr, ano, mes],
   );
-  const dreCaixa = useMemo(() => {
-    if (regime === "caixa") return { receitas: rb, despesas: rb - lu };
-    const t = montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, regime: "caixa" }).totais;
+  const dreRealizado = useMemo(() => {
+    if (visao === "realizado") return { receitas: rb, despesas: rb - lu };
+    const t = montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, visao: "realizado" }).totais;
     const r = t.RB ?? 0;
     const l = t.LU ?? 0;
     return { receitas: r, despesas: r - l };
-  }, [regime, rb, lu, pagar.data, receber.data, planosArr, ano, mes]);
+  }, [visao, rb, lu, pagar.data, receber.data, planosArr, ano, mes]);
 
-  const diffRec = dreCaixa.receitas - extratoTot.receitas;
-  const diffDes = dreCaixa.despesas - extratoTot.despesas;
+  const diffRec = dreRealizado.receitas - extratoTot.receitas;
+  const diffDes = dreRealizado.despesas - extratoTot.despesas;
   const pctRec = extratoTot.receitas ? Math.abs(diffRec) / extratoTot.receitas : 0;
   const pctDes = extratoTot.despesas ? Math.abs(diffDes) / extratoTot.despesas : 0;
   const corDiff = (p: number) => (p <= 0.01 ? "text-green-600" : p <= 0.05 ? "text-yellow-600" : "text-red-600");
 
-  // Movimentos do período (mesmo regime do DRE)
+  // Movimentos do período (mesma visão do DRE)
   const movimentos = useMemo(() => {
     const passa = (c: any) =>
-      regime === "caixa"
+      visao === "realizado"
         ? c.status === "pago" && inPeriodo(c.data_pagamento, ano, mes)
-        : inPeriodo(c.data_vencimento, ano, mes);
+        : c.status !== "pago" && inPeriodo(c.data_vencimento, ano, mes);
     return [
       ...(receber.data ?? []).filter(passa).map((c: any) => ({
-        data: regime === "caixa" ? c.data_pagamento : c.data_vencimento,
+        data: visao === "realizado" ? c.data_pagamento : c.data_vencimento,
         nome: c.cliente_nome, descricao: c.descricao, valor: Number(c.valor || 0),
       })),
       ...(pagar.data ?? []).filter(passa).map((c: any) => ({
-        data: regime === "caixa" ? c.data_pagamento : c.data_vencimento,
+        data: visao === "realizado" ? c.data_pagamento : c.data_vencimento,
         nome: c.fornecedor_nome, descricao: c.descricao, valor: -Number(c.valor || 0),
       })),
     ].sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
-  }, [pagar.data, receber.data, regime, ano, mes]);
+  }, [pagar.data, receber.data, visao, ano, mes]);
 
   const totalMov = movimentos.reduce((s, m) => s + m.valor, 0);
+
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-end justify-end">
         <div>
-          <label className="text-xs text-muted-foreground block mb-1">Regime</label>
-          <ToggleGroup type="single" value={regime} onValueChange={(v) => v && setRegime(v as Regime)} size="sm">
-            <ToggleGroupItem value="caixa">Caixa</ToggleGroupItem>
-            <ToggleGroupItem value="competencia">Competência</ToggleGroupItem>
+          <label className="text-xs text-muted-foreground block mb-1">Visão</label>
+          <ToggleGroup type="single" value={visao} onValueChange={(v) => v && setVisao(v as Visao)} size="sm">
+            <ToggleGroupItem value="realizado">Realizado</ToggleGroupItem>
+            <ToggleGroupItem value="projetado">Projetado</ToggleGroupItem>
           </ToggleGroup>
         </div>
+
         <div className="w-32">
           <label className="text-xs text-muted-foreground">Ano</label>
           <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -217,12 +219,12 @@ function PainelFinanceiro() {
       </div>
 
       <Card className="p-4">
-        <div className="text-sm font-semibold mb-3">Conferência vs Extrato (caixa)</div>
+        <div className="text-sm font-semibold mb-3">Conferência vs Extrato (realizado)</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div className="border rounded-md p-3">
             <div className="text-xs uppercase text-muted-foreground">Receitas</div>
             <div className="mt-1 grid grid-cols-2 gap-x-2 tabular-nums">
-              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreCaixa.receitas)}</div>
+              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreRealizado.receitas)}</div>
               <div className="text-muted-foreground">Extrato</div><div className="text-right">{fmtMoney(extratoTot.receitas)}</div>
               <div className="font-semibold">Diferença</div>
               <div className={`text-right font-semibold ${corDiff(pctRec)}`}>{fmtMoney(diffRec)} ({fmtPct(pctRec)})</div>
@@ -231,7 +233,7 @@ function PainelFinanceiro() {
           <div className="border rounded-md p-3">
             <div className="text-xs uppercase text-muted-foreground">Despesas + Custos</div>
             <div className="mt-1 grid grid-cols-2 gap-x-2 tabular-nums">
-              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreCaixa.despesas)}</div>
+              <div className="text-muted-foreground">DRE</div><div className="text-right">{fmtMoney(dreRealizado.despesas)}</div>
               <div className="text-muted-foreground">Extrato</div><div className="text-right">{fmtMoney(extratoTot.despesas)}</div>
               <div className="font-semibold">Diferença</div>
               <div className={`text-right font-semibold ${corDiff(pctDes)}`}>{fmtMoney(diffDes)} ({fmtPct(pctDes)})</div>
@@ -299,7 +301,7 @@ function AnaliseDetalhada() {
   const { centros, pagar, receber, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
-  const [regime, setRegime] = useState<Regime>("caixa");
+  const [visao, setVisao] = useState<Visao>("realizado");
   const [centroId, setCentroId] = useState<string>("");
 
   const ccs = centros.data ?? [];
@@ -310,10 +312,11 @@ function AnaliseDetalhada() {
   const { linhas, totais } = useMemo(
     () =>
       montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, {
-        ano, mes, regime, centroCustoId: centroId || undefined,
+        ano, mes, visao, centroCustoId: centroId || undefined,
       }),
-    [pagar.data, receber.data, planosArr, ano, mes, regime, centroId],
+    [pagar.data, receber.data, planosArr, ano, mes, visao, centroId],
   );
+
 
   const rb = totais.RB ?? 0;
   const rl = totais.RL ?? 0;
@@ -332,12 +335,14 @@ function AnaliseDetalhada() {
           </Select>
         </div>
         <div>
-          <label className="text-xs text-muted-foreground block mb-1">Regime</label>
-          <ToggleGroup type="single" value={regime} onValueChange={(v) => v && setRegime(v as Regime)} size="sm">
-            <ToggleGroupItem value="caixa">Caixa</ToggleGroupItem>
-            <ToggleGroupItem value="competencia">Competência</ToggleGroupItem>
+
+          <label className="text-xs text-muted-foreground block mb-1">Visão</label>
+          <ToggleGroup type="single" value={visao} onValueChange={(v) => v && setVisao(v as Visao)} size="sm">
+            <ToggleGroupItem value="realizado">Realizado</ToggleGroupItem>
+            <ToggleGroupItem value="projetado">Projetado</ToggleGroupItem>
           </ToggleGroup>
         </div>
+
         <div className="w-32">
           <label className="text-xs text-muted-foreground">Ano</label>
           <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>

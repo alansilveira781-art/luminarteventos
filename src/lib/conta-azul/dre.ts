@@ -84,13 +84,13 @@ export type ContaRow = {
 
 export type PlanoMin = { external_id: string; nome: string };
 
-export type Regime = "caixa" | "competencia";
+export type Visao = "realizado" | "projetado";
 
 export type MontarDreOpts = {
   ano: number;
   /** 0 = ano todo */
   mes: number;
-  regime: Regime;
+  visao: Visao;
   centroCustoId?: string;
 };
 
@@ -112,13 +112,19 @@ function inPeriodoStr(date: string | null, ano: number, mes: number): boolean {
   return true;
 }
 
-function passaRegime(row: ContaRow, regime: Regime, ano: number, mes: number): boolean {
-  if (regime === "caixa") {
+function passaVisao(row: ContaRow, visao: Visao, ano: number, mes: number): boolean {
+  if (visao === "realizado") {
+    // Já pago (caixa efetivo) — usa data de pagamento
     if (row.status !== "pago") return false;
     return inPeriodoStr(row.data_pagamento, ano, mes);
   }
+  // Projetado: ainda não pago (em aberto ou atrasado) — usa data de vencimento
+  if (row.status === "pago") return false;
   return inPeriodoStr(row.data_vencimento, ano, mes);
 }
+
+
+
 
 function isTransferencia(planoNome: string | undefined | null): boolean {
   if (!planoNome) return false;
@@ -142,7 +148,7 @@ export function montarDRE(
   const acumula = (rows: ContaRow[]) => {
     rows.forEach((c) => {
       if (opts.centroCustoId && c.centro_custo_external_id !== opts.centroCustoId) return;
-      if (!passaRegime(c, opts.regime, opts.ano, opts.mes)) return;
+      if (!passaVisao(c, opts.visao, opts.ano, opts.mes)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome)) return;
       const grupo = grupoDoPlanoNome(plano?.nome);
