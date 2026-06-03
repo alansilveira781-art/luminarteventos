@@ -161,7 +161,7 @@ function DemandasKanban() {
         </div>
       ) : (
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="flex gap-3 overflow-auto pb-4 max-h-[calc(100vh-140px)] items-start">
+        <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-4 items-stretch h-[calc(100dvh-200px)] min-h-[420px]">
           {DEMANDA_STATUSES.map((s) => (
             <Column key={s.key} statusKey={s.key} label={s.label} color={s.color} count={byStatus[s.key]?.length ?? 0}>
               {(byStatus[s.key] ?? []).map((c) => (
@@ -192,7 +192,7 @@ function Column({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-shrink-0 w-72 rounded-lg border bg-muted/30 ${isOver ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+      className={`flex-shrink-0 w-72 rounded-lg border bg-muted/30 flex flex-col ${isOver ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
     >
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
@@ -201,7 +201,7 @@ function Column({
         </div>
         <span className="text-[10px] text-muted-foreground">{count}</span>
       </div>
-      <div className="p-2 space-y-2 min-h-[120px]">{children}</div>
+      <div className="p-2 space-y-2 flex-1 overflow-y-auto min-h-[120px]">{children}</div>
     </div>
   );
 }
