@@ -458,11 +458,14 @@ function SolicitarPage() {
                           />
                           <div className="grid grid-cols-3 gap-2">
                             <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
+                              type="text"
+                              inputMode="decimal"
                               value={it.quantidade}
-                              onChange={(e) => updateItem(idx, { quantidade: e.target.value })}
+                              onFocus={(e) => e.currentTarget.select()}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^\d,.-]/g, "");
+                                updateItem(idx, { quantidade: v });
+                              }}
                               placeholder="Qtd"
                             />
                             <Input
@@ -471,12 +474,10 @@ function SolicitarPage() {
                               onChange={(e) => updateItem(idx, { unidade: e.target.value })}
                               placeholder="Un."
                             />
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={it.valor_unitario}
-                              onChange={(e) => updateItem(idx, { valor_unitario: e.target.value })}
+                            <MoneyInput
+                              hidePrefix
+                              value={Number(String(it.valor_unitario).replace(",", ".")) || 0}
+                              onChange={(n) => updateItem(idx, { valor_unitario: String(n) })}
                               placeholder="Vlr unit."
                             />
                           </div>
