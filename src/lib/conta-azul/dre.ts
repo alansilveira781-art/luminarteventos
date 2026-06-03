@@ -286,7 +286,7 @@ export function totaisExtrato(
   extrato.forEach((e) => {
     if (!inPeriodoStr(e.data, ano, mes)) return;
     const plano = e.categoria_external_id ? planoMap.get(e.categoria_external_id) : undefined;
-    if (isTransferencia(plano?.nome) || isTransferencia(e.descricao)) return;
+    if (isTransferencia(plano?.nome, e.descricao)) return;
     const v = Number(e.valor || 0);
     if (v >= 0) rec += v;
     else des += -v;
