@@ -244,6 +244,8 @@ export type Database = {
       }
       ca_sync_log: {
         Row: {
+          date_from: string | null
+          date_to: string | null
           finished_at: string | null
           id: string
           mensagem: string | null
@@ -253,6 +255,8 @@ export type Database = {
           status: string
         }
         Insert: {
+          date_from?: string | null
+          date_to?: string | null
           finished_at?: string | null
           id?: string
           mensagem?: string | null
@@ -262,6 +266,8 @@ export type Database = {
           status?: string
         }
         Update: {
+          date_from?: string | null
+          date_to?: string | null
           finished_at?: string | null
           id?: string
           mensagem?: string | null

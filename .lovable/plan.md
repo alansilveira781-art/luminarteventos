@@ -1,25 +1,42 @@
-## Problema encontrado
+# Reexecutar meses com falha na carga histórica
 
-Os cadastros do Estoque **estão sim sendo salvos** corretamente no banco (verifiquei: 652 fornecedores e 46 solicitantes, todos com status "ativo"). O problema é apenas de **cache do navegador**: o formulário de Entradas/Saídas carrega a lista de fornecedores/solicitantes uma vez e nunca atualiza, mesmo depois que você cadastra uma pessoa nova na tela de cadastro.
+## Diagnóstico
 
-Diagnóstico técnico (em uma frase): as queries `fornecedores-select` e `solicitantes-select` não têm `staleTime: 0` e as telas de cadastro invalidam chaves diferentes (`fornecedores` em vez de `fornecedores-select`), então o dropdown fica com dado velho até dar F5.
+A carga histórica (jan/2023 → jun/2026) terminou com status **ok**, mas vários meses falharam silenciosamente porque a API do Conta Azul devolveu **503 — "Estamos passando por uma instabilidade"** (visto em `ca_sync_log`). O `processNextHistoricoChunk` engole erros mês a mês (`try{}catch{}`) e avança, então o job marca "concluído" mesmo quando alguns meses não trouxeram nada.
 
-> Observação importante: as tabelas do **Estoque** (`fornecedores`, `solicitantes`) são **diferentes** das tabelas do módulo **Compras** (`compras_fornecedores`, `compras_solicitantes`). Hoje são cadastros separados de propósito (Compras tem 10 solicitantes e 36 fornecedores próprios). Este plano **não unifica** os dois — só corrige a sincronização dentro do Estoque. Se quiser unificar Estoque + Compras depois, podemos fazer em um segundo passo (é uma mudança maior, com migração de dados).
+Resultado: existem buracos em `ca_contas_pagar` / `ca_contas_receber` correspondentes aos meses que caíram em 503 (ou outros erros transitórios).
 
-## O que vai mudar
+## O que vou fazer
 
-1. **`src/routes/entradas.tsx`** — fazer o dropdown de fornecedor sempre buscar o que há de mais novo:
-   - Adicionar `staleTime: 0` e `refetchOnMount: "always"` na query `fornecedores-select`.
-2. **`src/routes/saidas.tsx`** — mesma coisa para o dropdown de solicitantes:
-   - Adicionar `staleTime: 0` e `refetchOnMount: "always"` na query `solicitantes-select`.
-3. **`src/routes/devolucoes.tsx`** — mesma correção para o dropdown de solicitantes.
-4. **`src/routes/fornecedores.tsx`** (tela de cadastro) — quando criar/editar/excluir/importar, invalidar **também** a chave `fornecedores-select` (hoje só invalida `fornecedores`).
-5. **`src/routes/solicitantes.tsx`** (tela de cadastro) — mesma coisa: invalidar **também** `solicitantes-select`.
+1. **Registrar o mês no log de erro**
+   - `ca_sync_log` ganha colunas `date_from` / `date_to` (nullable) preenchidas por `syncContasPagar` / `syncContasReceber` / `syncExtrato`, para sabermos exatamente qual mês falhou.
 
-## Resultado esperado
+2. **Endpoint de reprocessamento**
+   - Novo `POST /api/contaazul/reprocessar-falhas` (admin do módulo financeiro).
+   - Busca em `ca_sync_log` os registros com `status='erro'` dos recursos `contas_pagar`, `contas_receber`, `extrato` dentro de um intervalo `from`/`to` informado, deduplica por (recurso, mês) e roda novamente apenas esses meses. Cada retry chama o mesmo `syncContasPagar(mFrom, mTo)` etc. e gera um novo registro em `ca_sync_log` (ok ou erro).
+   - Retorna `{ tentados, sucesso, falhas: [{recurso, mes, mensagem}] }`.
 
-- Cadastrar fornecedor em **Estoque › Fornecedores** → abrir **Estoque › Entradas** → o fornecedor já aparece na lista sem precisar recarregar a página.
-- Mesma coisa para Solicitantes em Saídas e Devoluções.
-- Edições e exclusões também refletem na hora.
+3. **UI na página Conta Azul**
+   - Novo card **"Meses com falha"** em `src/routes/financeiro.conta-azul.tsx`:
+     - Lista os erros agrupados por (recurso, mês), com a mensagem original.
+     - Botão **"Reprocessar todos"** chama o endpoint acima para o intervalo do último job histórico.
+     - Botão **"Reprocessar"** por linha (um mês específico).
+   - Atualiza após a resposta e mostra toast com o resumo.
 
-Não mexe em nada da lógica de negócio, nem do módulo Compras, nem do Financeiro/Conta Azul.
+4. **(Opcional, mesma migração) Índice**
+   - `create index on ca_sync_log (recurso, status, date_from)` para a busca ficar rápida.
+
+## Por que assim e não simplesmente "rodar tudo de novo"
+
+Rodar a carga histórica inteira (42 meses) de novo gasta muitas chamadas à API do Conta Azul, demora minutos e pode bater no mesmo 503. Reprocessar só os meses que falharam é mais rápido, idempotente (upsert por `external_id`, sem duplicar) e te dá visibilidade de quais meses ainda têm gap.
+
+## Arquivos afetados
+
+- `supabase/migrations/*` — adicionar colunas `date_from`/`date_to` em `ca_sync_log` + índice
+- `src/lib/conta-azul/sync.server.ts` — gravar mês no log; nova função `reprocessarFalhas(from, to)`
+- `src/routes/api/contaazul/reprocessar-falhas.ts` — novo endpoint
+- `src/routes/financeiro.conta-azul.tsx` — card "Meses com falha" + ações
+
+## Observação sobre o log antigo
+
+Erros registrados **antes** da migração não têm `date_from`/`date_to`. Para esses, vou tentar extrair o mês da própria URL salva em `mensagem` (regex em `data_vencimento_de=YYYY-MM-DD`) como fallback, para não perder os erros já existentes.
