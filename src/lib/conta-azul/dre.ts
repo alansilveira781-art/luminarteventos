@@ -84,13 +84,13 @@ export type ContaRow = {
 
 export type PlanoMin = { external_id: string; nome: string };
 
-export type Regime = "caixa" | "competencia";
+export type Visao = "realizado" | "projetado";
 
 export type MontarDreOpts = {
   ano: number;
   /** 0 = ano todo */
   mes: number;
-  regime: Regime;
+  visao: Visao;
   centroCustoId?: string;
 };
 
@@ -102,6 +102,27 @@ export type DreRowOut = {
   kind: "header" | "detail" | "calc";
   indent?: number;
 };
+
+function inPeriodoStr(date: string | null, ano: number, mes: number): boolean {
+  if (!date) return false;
+  const y = Number(date.slice(0, 4));
+  const m = Number(date.slice(5, 7));
+  if (y !== ano) return false;
+  if (mes > 0 && m !== mes) return false;
+  return true;
+}
+
+function passaVisao(row: ContaRow, visao: Visao, ano: number, mes: number): boolean {
+  if (visao === "realizado") {
+    // Já pago (caixa efetivo) — usa data de pagamento
+    if (row.status !== "pago") return false;
+    return inPeriodoStr(row.data_pagamento, ano, mes);
+  }
+  // Projetado: ainda não pago (em aberto ou atrasado) — usa data de vencimento
+  if (row.status === "pago") return false;
+  return inPeriodoStr(row.data_vencimento, ano, mes);
+}
+
 
 function inPeriodoStr(date: string | null, ano: number, mes: number): boolean {
   if (!date) return false;
