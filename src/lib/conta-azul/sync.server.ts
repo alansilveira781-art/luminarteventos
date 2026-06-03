@@ -7,10 +7,16 @@ const PAGE_SIZE = 100;
 const MAX_PAGES = 50; // safety cap (50 * 100 = 5000 itens por recurso)
 const UPSERT_BATCH = 500;
 
-async function logStart(recurso: string): Promise<string> {
+async function logStart(recurso: string, from?: string, to?: string): Promise<string> {
   const { data, error } = await sb
     .from("ca_sync_log")
-    .insert({ recurso, status: "em_andamento", started_at: new Date().toISOString() })
+    .insert({
+      recurso,
+      status: "em_andamento",
+      started_at: new Date().toISOString(),
+      date_from: from ?? null,
+      date_to: to ?? null,
+    })
     .select("id")
     .single();
   if (error) throw error;
