@@ -50,7 +50,7 @@ async function fetchPaged(
     const result = await caFetch(`${path}${sep}${params.toString()}`);
     const items: any[] = Array.isArray(result)
       ? result
-      : (result?.items ?? result?.content ?? result?.data ?? []);
+      : (result?.itens ?? result?.items ?? result?.content ?? result?.data ?? []);
     if (!items || items.length === 0) break;
     all.push(...items);
     const total = Number(result?.itens_totais ?? result?.total ?? NaN);
@@ -72,18 +72,18 @@ async function upsertBatched(table: string, rows: any[], onConflict: string) {
 export async function syncPlanoContas() {
   const logId = await logStart("plano_contas");
   try {
-    // Plano de Contas = /categorias na API nova
-    const items = await fetchPaged("/categorias");
+    // Plano de Contas = /categorias na API nova.
+    // `permite_apenas_filhos` é parâmetro OBRIGATÓRIO (boolean).
+    const items = await fetchPaged("/categorias", { permite_apenas_filhos: "false" });
     if (items.length > 0) {
       const syncedAt = new Date().toISOString();
       const rows = items.map((it: any) => ({
-        external_id: String(it.id ?? it.uuid ?? it.codigo ?? it.code),
-        codigo: it.codigo ?? it.code ?? null,
-        nome: it.nome ?? it.descricao ?? it.name ?? it.description ?? "—",
-        tipo: it.tipo ?? it.type ?? it.kind ?? null,
-        pai_external_id:
-          it.id_pai ?? it.pai?.id ?? it.parent_id ? String(it.id_pai ?? it.pai?.id ?? it.parent_id) : null,
-        ativo: (it.ativo ?? it.active) !== false,
+        external_id: String(it.id),
+        codigo: it.codigo ?? null,
+        nome: it.nome ?? "—",
+        tipo: it.tipo ?? null,
+        pai_external_id: it.categoria_pai ? String(it.categoria_pai) : null,
+        ativo: true,
         synced_at: syncedAt,
       }));
       await upsertBatched("ca_plano_contas", rows, "external_id");
@@ -121,10 +121,31 @@ export async function syncCentrosCusto() {
 function normalizeStatus(s?: string) {
   if (!s) return null;
   const u = s.toUpperCase();
-  // API nova: PENDENTE | QUITADO | CANCELADO | RENEGOCIADO | ATRASADO
-  if (u.includes("QUIT") || u.includes("PAID") || u.includes("PAGO")) return "pago";
-  if (u.includes("ATRAS") || u.includes("OVERDUE")) return "atrasado";
+  // Enum oficial v2: PERDIDO | RECEBIDO | EM_ABERTO | RENEGOCIADO | RECEBIDO_PARCIAL | ATRASADO
+  if (u === "RECEBIDO" || u === "PAGO" || u === "QUITADO") return "pago";
+  if (u === "ATRASADO" || u === "PERDIDO" || u === "OVERDUE") return "atrasado";
   return "em_aberto";
+}
+
+function mapEvento(it: any, syncedAt: string, pessoaKey: "fornecedor_nome" | "cliente_nome") {
+  const pessoaNome =
+    pessoaKey === "fornecedor_nome"
+      ? (it.fornecedor?.nome ?? null)
+      : (it.cliente?.nome ?? it.fornecedor?.nome ?? null);
+  return {
+    external_id: String(it.id),
+    descricao: it.descricao ?? null,
+    [pessoaKey]: pessoaNome,
+    categoria_external_id: it.categorias?.[0]?.id ? String(it.categorias[0].id) : null,
+    centro_custo_external_id: it.centros_custo?.[0]?.id ? String(it.centros_custo[0].id) : null,
+    valor: Number(it.total ?? 0),
+    data_vencimento: it.data_vencimento ?? null,
+    data_pagamento: it.data_pagamento ?? null,
+    status: normalizeStatus(it.status_traduzido ?? it.status),
+    documento: it.numero_documento ?? null,
+    observacoes: it.observacoes ?? null,
+    synced_at: syncedAt,
+  };
 }
 
 export async function syncContasPagar(from: string, to: string) {
@@ -132,29 +153,11 @@ export async function syncContasPagar(from: string, to: string) {
   try {
     const items = await fetchPaged(
       "/financeiro/eventos-financeiros/contas-a-pagar/buscar",
-      { data_vencimento_inicio: from, data_vencimento_fim: to },
+      { data_vencimento_de: from, data_vencimento_ate: to },
     );
     if (items.length > 0) {
       const syncedAt = new Date().toISOString();
-      const rows = items.map((it: any) => ({
-        external_id: String(it.id ?? it.uuid ?? it.id_parcela ?? it.id_evento),
-        descricao: it.descricao ?? it.description ?? it.title ?? null,
-        fornecedor_nome:
-          it.fornecedor?.nome ?? it.pessoa?.nome ?? it.person?.name ?? it.contact?.name ?? null,
-        categoria_external_id:
-          it.categoria?.id ?? it.id_categoria ? String(it.categoria?.id ?? it.id_categoria) : null,
-        centro_custo_external_id:
-          it.centro_de_custo?.id ?? it.id_centro_de_custo
-            ? String(it.centro_de_custo?.id ?? it.id_centro_de_custo)
-            : null,
-        valor: Number(it.valor ?? it.value ?? it.amount ?? 0),
-        data_vencimento: it.data_vencimento ?? it.due_date ?? null,
-        data_pagamento: it.data_pagamento ?? it.payment_date ?? null,
-        status: normalizeStatus(it.status),
-        documento: it.documento ?? it.document ?? null,
-        observacoes: it.observacoes ?? it.notes ?? null,
-        synced_at: syncedAt,
-      }));
+      const rows = items.map((it: any) => mapEvento(it, syncedAt, "fornecedor_nome"));
       await upsertBatched("ca_contas_pagar", rows, "external_id");
     }
     await logFinish(logId, "ok", items.length);
@@ -170,29 +173,11 @@ export async function syncContasReceber(from: string, to: string) {
   try {
     const items = await fetchPaged(
       "/financeiro/eventos-financeiros/contas-a-receber/buscar",
-      { data_vencimento_inicio: from, data_vencimento_fim: to },
+      { data_vencimento_de: from, data_vencimento_ate: to },
     );
     if (items.length > 0) {
       const syncedAt = new Date().toISOString();
-      const rows = items.map((it: any) => ({
-        external_id: String(it.id ?? it.uuid ?? it.id_parcela ?? it.id_evento),
-        descricao: it.descricao ?? it.description ?? it.title ?? null,
-        cliente_nome:
-          it.cliente?.nome ?? it.pessoa?.nome ?? it.person?.name ?? it.contact?.name ?? null,
-        categoria_external_id:
-          it.categoria?.id ?? it.id_categoria ? String(it.categoria?.id ?? it.id_categoria) : null,
-        centro_custo_external_id:
-          it.centro_de_custo?.id ?? it.id_centro_de_custo
-            ? String(it.centro_de_custo?.id ?? it.id_centro_de_custo)
-            : null,
-        valor: Number(it.valor ?? it.value ?? it.amount ?? 0),
-        data_vencimento: it.data_vencimento ?? it.due_date ?? null,
-        data_pagamento: it.data_pagamento ?? it.payment_date ?? null,
-        status: normalizeStatus(it.status),
-        documento: it.documento ?? it.document ?? null,
-        observacoes: it.observacoes ?? it.notes ?? null,
-        synced_at: syncedAt,
-      }));
+      const rows = items.map((it: any) => mapEvento(it, syncedAt, "cliente_nome"));
       await upsertBatched("ca_contas_receber", rows, "external_id");
     }
     await logFinish(logId, "ok", items.length);
