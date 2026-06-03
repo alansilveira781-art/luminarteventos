@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   ComposedChart, Line, Legend,
 } from "recharts";
-import { Piggy, TrendingDown, Building2, BarChart3, Sprout } from "lucide-react";
+import { PiggyBank as Piggy, TrendingDown, Building2, BarChart3, Sprout } from "lucide-react";
 
 const sb = supabase as any;
 
