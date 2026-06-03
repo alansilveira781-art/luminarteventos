@@ -2170,23 +2170,16 @@ export type Database = {
       }
     }
     Views: {
-      profiles_public: {
-        Row: {
-          display_name: string | null
-          id: string | null
-        }
-        Insert: {
-          display_name?: string | null
-          id?: string | null
-        }
-        Update: {
-          display_name?: string | null
-          id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      get_profile_names: {
+        Args: { _ids: string[] }
+        Returns: {
+          display_name: string
+          id: string
+        }[]
+      }
       has_module_access: {
         Args: { _slug: string; _user_id: string }
         Returns: boolean
