@@ -121,11 +121,12 @@ function FinanceiroDashboard() {
     <>
       <Tabs
         value={tab}
-        onValueChange={(v) => navigate({ search: { tab: v as "financeiro" | "uber" }, replace: true })}
+        onValueChange={(v) => navigate({ search: { tab: v as "financeiro" | "uber" | "contaazul" }, replace: true })}
         className="w-full"
       >
         <TabsList className="mb-4">
           <TabsTrigger value="financeiro">Despesas</TabsTrigger>
+          <TabsTrigger value="contaazul">Financeiro (Conta Azul)</TabsTrigger>
           <TabsTrigger value="uber">Uber</TabsTrigger>
         </TabsList>
 
