@@ -301,7 +301,7 @@ function AnaliseDetalhada() {
   const { centros, pagar, receber, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
-  const [regime, setRegime] = useState<Regime>("caixa");
+  const [visao, setVisao] = useState<Visao>("realizado");
   const [centroId, setCentroId] = useState<string>("");
 
   const ccs = centros.data ?? [];
@@ -312,10 +312,11 @@ function AnaliseDetalhada() {
   const { linhas, totais } = useMemo(
     () =>
       montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, {
-        ano, mes, regime, centroCustoId: centroId || undefined,
+        ano, mes, visao, centroCustoId: centroId || undefined,
       }),
-    [pagar.data, receber.data, planosArr, ano, mes, regime, centroId],
+    [pagar.data, receber.data, planosArr, ano, mes, visao, centroId],
   );
+
 
   const rb = totais.RB ?? 0;
   const rl = totais.RL ?? 0;
