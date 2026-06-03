@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar, AppTopBar } from "@/components/AppSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { useEstoqueRealtimeSync } from "@/hooks/useEstoqueRealtimeSync";
 
 import appCss from "../styles.css?url";
 
@@ -104,6 +105,8 @@ function RootComponent() {
 function AppShell() {
   const { session, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEstoqueRealtimeSync();
+
 
   if (loading) {
     return (

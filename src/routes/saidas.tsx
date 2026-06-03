@@ -240,6 +240,7 @@ function SaidasPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["saidas"] });
       qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["itens-select"] });
       qc.invalidateQueries({ queryKey: ["itens-select-saida"] });
       qc.invalidateQueries({ queryKey: ["dashboard-itens"] });
       qc.invalidateQueries({ queryKey: ["dashboard-movs"] });
