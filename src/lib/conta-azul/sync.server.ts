@@ -50,7 +50,7 @@ async function fetchPaged(
     const result = await caFetch(`${path}${sep}${params.toString()}`);
     const items: any[] = Array.isArray(result)
       ? result
-      : (result?.items ?? result?.content ?? result?.data ?? []);
+      : (result?.itens ?? result?.items ?? result?.content ?? result?.data ?? []);
     if (!items || items.length === 0) break;
     all.push(...items);
     const total = Number(result?.itens_totais ?? result?.total ?? NaN);
