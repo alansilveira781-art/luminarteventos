@@ -10,7 +10,7 @@ import {
   ComposedChart, Line, Legend,
 } from "recharts";
 import { PiggyBank as Piggy, TrendingDown, Building2, BarChart3, Sprout } from "lucide-react";
-import { montarDRE, totaisExtrato, type Visao } from "@/lib/conta-azul/dre";
+import { montarDRE, totaisExtrato, transferenciasNoPeriodo, type Visao } from "@/lib/conta-azul/dre";
 
 
 const sb = supabase as any;
@@ -126,15 +126,27 @@ function KpiCard({
 
 function PainelFinanceiro() {
   const { planos, pagar, receber, extrato } = useContaAzulData();
-  const [ano, setAno] = useState(new Date().getFullYear());
+
+  // Ano default: último ano com lançamentos sincronizados
+  const anoDefault = useMemo(() => {
+    const all = [
+      ...(receber.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
+      ...(pagar.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
+    ].filter(Boolean) as string[];
+    if (!all.length) return new Date().getFullYear();
+    return Math.max(...all.map((d) => Number(d.slice(0, 4))));
+  }, [receber.data, pagar.data]);
+
+  const [ano, setAno] = useState<number | null>(null);
+  const anoEfetivo = ano ?? anoDefault;
   const [mes, setMes] = useState(0);
   const [visao, setVisao] = useState<Visao>("realizado");
 
   const planosArr = planos.data ?? [];
 
   const { linhas, totais } = useMemo(
-    () => montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, visao }),
-    [pagar.data, receber.data, planosArr, ano, mes, visao],
+    () => montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano: anoEfetivo, mes, visao }),
+    [pagar.data, receber.data, planosArr, anoEfetivo, mes, visao],
   );
 
   const rb = totais.RB ?? 0;
@@ -143,18 +155,24 @@ function PainelFinanceiro() {
   const rg = totais.RG ?? 0;
   const lu = totais.LU ?? 0;
 
+  // Transferências ignoradas (auditoria)
+  const transf = useMemo(
+    () => transferenciasNoPeriodo(pagar.data ?? [], receber.data ?? [], planosArr, { ano: anoEfetivo, mes, visao }),
+    [pagar.data, receber.data, planosArr, anoEfetivo, mes, visao],
+  );
+
   // Reconciliação com extrato (sempre realizado)
   const extratoTot = useMemo(
-    () => totaisExtrato(extrato.data ?? [], planosArr, ano, mes),
-    [extrato.data, planosArr, ano, mes],
+    () => totaisExtrato(extrato.data ?? [], planosArr, anoEfetivo, mes),
+    [extrato.data, planosArr, anoEfetivo, mes],
   );
   const dreRealizado = useMemo(() => {
     if (visao === "realizado") return { receitas: rb, despesas: rb - lu };
-    const t = montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano, mes, visao: "realizado" }).totais;
+    const t = montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, { ano: anoEfetivo, mes, visao: "realizado" }).totais;
     const r = t.RB ?? 0;
     const l = t.LU ?? 0;
     return { receitas: r, despesas: r - l };
-  }, [visao, rb, lu, pagar.data, receber.data, planosArr, ano, mes]);
+  }, [visao, rb, lu, pagar.data, receber.data, planosArr, anoEfetivo, mes]);
 
   const diffRec = dreRealizado.receitas - extratoTot.receitas;
   const diffDes = dreRealizado.despesas - extratoTot.despesas;
@@ -166,8 +184,8 @@ function PainelFinanceiro() {
   const movimentos = useMemo(() => {
     const passa = (c: any) =>
       visao === "realizado"
-        ? c.status === "pago" && inPeriodo(c.data_pagamento, ano, mes)
-        : c.status !== "pago" && inPeriodo(c.data_vencimento, ano, mes);
+        ? c.status === "pago" && inPeriodo(c.data_pagamento, anoEfetivo, mes)
+        : c.status !== "pago" && inPeriodo(c.data_vencimento, anoEfetivo, mes);
     return [
       ...(receber.data ?? []).filter(passa).map((c: any) => ({
         data: visao === "realizado" ? c.data_pagamento : c.data_vencimento,
@@ -178,7 +196,7 @@ function PainelFinanceiro() {
         nome: c.fornecedor_nome, descricao: c.descricao, valor: -Number(c.valor || 0),
       })),
     ].sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
-  }, [pagar.data, receber.data, visao, ano, mes]);
+  }, [pagar.data, receber.data, visao, anoEfetivo, mes]);
 
   const totalMov = movimentos.reduce((s, m) => s + m.valor, 0);
 
@@ -196,7 +214,7 @@ function PainelFinanceiro() {
 
         <div className="w-32">
           <label className="text-xs text-muted-foreground">Ano</label>
-          <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
+          <Select value={String(anoEfetivo)} onValueChange={(v) => setAno(Number(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
           </Select>
@@ -217,6 +235,71 @@ function PainelFinanceiro() {
         <KpiCard icon={BarChart3} label="Result. Gerencial" value={fmtMoney(rg)} subLabel="% RB" subValue={fmtPct(rb ? rg / rb : 0)} subColor={rg >= 0 ? "text-green-600" : "text-red-600"} />
         <KpiCard icon={Sprout} label="Lucro" value={fmtMoney(lu)} subLabel="% RB" subValue={fmtPct(rb ? lu / rb : 0)} subColor={lu >= 0 ? "text-green-600" : "text-red-600"} />
       </div>
+
+      {/* DRE detalhado (largura total, sem rolagem interna) */}
+      <Card className="p-0 overflow-hidden">
+        <div className="grid grid-cols-[1fr,180px,80px] text-xs uppercase text-muted-foreground bg-muted/50 px-3 py-2 font-semibold">
+          <div>Demonstrativo de Resultado (DRE)</div>
+          <div className="text-right">Valores</div>
+          <div className="text-right">% RB</div>
+        </div>
+        <div>
+          {linhas.map((row) => {
+            const isDetail = row.kind === "detail";
+            const isCalc = row.kind === "calc";
+            return (
+              <div
+                key={row.id}
+                className={`grid grid-cols-[1fr,180px,80px] px-3 py-1.5 border-t border-border ${
+                  isCalc
+                    ? "font-semibold bg-muted/40 text-sm"
+                    : isDetail
+                      ? "text-xs text-muted-foreground"
+                      : "font-semibold text-sm"
+                }`}
+              >
+                <div className={`truncate ${isDetail ? "pl-8" : ""}`} title={row.label.trim()}>
+                  {row.label.trim()}
+                </div>
+                <div className={`text-right tabular-nums ${row.valor < 0 ? "text-red-600" : ""}`}>{fmtMoney(row.valor)}</div>
+                <div className="text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Transferências bancárias ignoradas (auditoria) */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-semibold">Transferências bancárias ignoradas no DRE</div>
+          <div className="text-xs text-muted-foreground">
+            {transf.count} lançamento(s) · <span className="font-semibold text-foreground">{fmtMoney(transf.total)}</span>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          Movimentações de capital entre contas (transferências, ajustes de saldo, aplicações/resgates) não são receita nem despesa e são excluídas do demonstrativo.
+        </p>
+        {transf.count > 0 && (
+          <div className="border rounded-md overflow-hidden">
+            <div className="grid grid-cols-[100px,1fr,140px] text-xs uppercase text-muted-foreground bg-muted/40 px-3 py-1.5 font-semibold">
+              <div>Data</div><div>Descrição</div><div className="text-right">Valor</div>
+            </div>
+            <div className="max-h-[220px] overflow-y-auto">
+              {transf.itens.slice(0, 100).map((t, i) => (
+                <div key={i} className="grid grid-cols-[100px,1fr,140px] px-3 py-1 text-xs border-t border-border">
+                  <div className="text-muted-foreground">{t.data?.slice(0, 10) ?? "—"}</div>
+                  <div className="truncate">
+                    <span className="font-medium">{t.descricao ?? "—"}</span>
+                    {t.nome && <span className="text-muted-foreground"> · {t.nome}</span>}
+                  </div>
+                  <div className="text-right tabular-nums">{fmtMoney(t.valor)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="p-4">
         <div className="text-sm font-semibold mb-3">Conferência vs Extrato (realizado)</div>
@@ -249,49 +332,27 @@ function PainelFinanceiro() {
         </div>
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        <Card className="p-0 overflow-hidden">
-          <div className="grid grid-cols-[1fr,140px,80px] text-xs uppercase text-muted-foreground bg-muted/50 px-3 py-2 font-semibold">
-            <div>Demonstrativo</div><div className="text-right">Valores</div><div className="text-right">%</div>
-          </div>
-          <div className="max-h-[520px] overflow-y-auto">
-            {linhas.map((row) => (
-              <div
-                key={row.id}
-                className={`grid grid-cols-[1fr,140px,80px] px-3 py-1.5 text-sm border-t border-border ${
-                  row.kind === "calc" ? "font-semibold bg-muted/40" : row.kind === "header" ? "font-semibold" : ""
-                }`}
-              >
-                <div className="truncate" title={row.label}>{row.label}</div>
-                <div className={`text-right tabular-nums ${row.valor < 0 ? "text-red-600" : ""}`}>{fmtMoney(row.valor)}</div>
-                <div className="text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</div>
+      <Card className="p-0 overflow-hidden">
+        <div className="grid grid-cols-[110px,1fr,140px] text-xs uppercase text-muted-foreground bg-muted/50 px-3 py-2 font-semibold">
+          <div>Data</div><div>Fornecedor/Cliente · Descrição</div><div className="text-right">Valor</div>
+        </div>
+        <div className="max-h-[520px] overflow-y-auto">
+          {movimentos.slice(0, 300).map((m, i) => (
+            <div key={i} className="grid grid-cols-[110px,1fr,140px] px-3 py-1.5 text-sm border-t border-border">
+              <div className="text-muted-foreground">{m.data?.slice(0, 10) ?? "—"}</div>
+              <div className="truncate">
+                <span className="font-medium">{m.nome ?? "—"}</span>
+                {m.descricao && <span className="text-muted-foreground"> · {m.descricao}</span>}
               </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-0 overflow-hidden">
-          <div className="grid grid-cols-[110px,1fr,140px] text-xs uppercase text-muted-foreground bg-muted/50 px-3 py-2 font-semibold">
-            <div>Data</div><div>Fornecedor/Cliente · Descrição</div><div className="text-right">Valor</div>
-          </div>
-          <div className="max-h-[520px] overflow-y-auto">
-            {movimentos.slice(0, 300).map((m, i) => (
-              <div key={i} className="grid grid-cols-[110px,1fr,140px] px-3 py-1.5 text-sm border-t border-border">
-                <div className="text-muted-foreground">{m.data?.slice(0, 10) ?? "—"}</div>
-                <div className="truncate">
-                  <span className="font-medium">{m.nome ?? "—"}</span>
-                  {m.descricao && <span className="text-muted-foreground"> · {m.descricao}</span>}
-                </div>
-                <div className={`text-right tabular-nums ${m.valor < 0 ? "text-red-600" : "text-green-700"}`}>{fmtMoney(m.valor)}</div>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-[1fr,140px] px-3 py-2 text-sm font-semibold bg-muted/40 border-t">
-            <div>Total ({movimentos.length} lançamentos)</div>
-            <div className={`text-right tabular-nums ${totalMov < 0 ? "text-red-600" : "text-green-700"}`}>{fmtMoney(totalMov)}</div>
-          </div>
-        </Card>
-      </div>
+              <div className={`text-right tabular-nums ${m.valor < 0 ? "text-red-600" : "text-green-700"}`}>{fmtMoney(m.valor)}</div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-[1fr,140px] px-3 py-2 text-sm font-semibold bg-muted/40 border-t">
+          <div>Total ({movimentos.length} lançamentos)</div>
+          <div className={`text-right tabular-nums ${totalMov < 0 ? "text-red-600" : "text-green-700"}`}>{fmtMoney(totalMov)}</div>
+        </div>
+      </Card>
     </div>
   );
 }
