@@ -2,10 +2,10 @@
 // IMPORTANT: never import this file from client code.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const AUTH_BASE = "https://api.contaazul.com";
+const AUTH_BASE = "https://auth.contaazul.com";
 const TOKEN_URL = `${AUTH_BASE}/oauth2/token`;
-const AUTHORIZE_URL = `${AUTH_BASE}/auth/authorize`;
-const API_BASE = `${AUTH_BASE}/v1`;
+const AUTHORIZE_URL = `${AUTH_BASE}/oauth2/authorize`;
+const API_BASE = `https://api.contaazul.com/v1`;
 
 export function getClientCreds() {
   const id = process.env.CONTA_AZUL_CLIENT_ID;
@@ -16,7 +16,7 @@ export function getClientCreds() {
 
 // Full scope set needed to read Plano de Contas, Centros de Custo,
 // Contas a Pagar/Receber e Extrato Bancário.
-const DEFAULT_SCOPES = "sales finance accounts cost-centers bank-statements";
+const DEFAULT_SCOPES = "openid profile aws.cognito.signin.user.admin";
 
 export function buildAuthorizeUrl(redirectUri: string, state: string, scope = DEFAULT_SCOPES) {
   const { id } = getClientCreds();
