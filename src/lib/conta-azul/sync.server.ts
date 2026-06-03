@@ -442,3 +442,92 @@ function monthsBetween(from: string, to: string): Array<[string, string]> {
   }
   return result;
 }
+
+/** Lista meses com falha no log de sincronização (deduplicado por recurso+mês).
+ *  Para registros antigos sem date_from, tenta extrair a data da URL salva
+ *  em `mensagem` via regex. */
+export type FalhaItem = {
+  recurso: "contas_pagar" | "contas_receber" | "extrato";
+  mes_from: string;
+  mes_to: string;
+  mensagem: string | null;
+  ultima_falha: string;
+};
+
+export async function listarFalhas(from: string, to: string): Promise<FalhaItem[]> {
+  const { data, error } = await sb
+    .from("ca_sync_log")
+    .select("recurso,status,mensagem,date_from,date_to,started_at")
+    .eq("status", "erro")
+    .in("recurso", ["contas_pagar", "contas_receber", "extrato"])
+    .order("started_at", { ascending: false })
+    .limit(2000);
+  if (error) throw error;
+
+  const byKey = new Map<string, FalhaItem>();
+  for (const row of (data ?? []) as any[]) {
+    let dFrom: string | null = row.date_from ?? null;
+    let dTo: string | null = row.date_to ?? null;
+    if (!dFrom && typeof row.mensagem === "string") {
+      const m = row.mensagem.match(/data_vencimento_de=(\d{4}-\d{2}-\d{2}).*?data_vencimento_ate=(\d{4}-\d{2}-\d{2})/);
+      if (m) { dFrom = m[1]; dTo = m[2]; }
+    }
+    if (!dFrom || !dTo) continue;
+    if (dFrom < from || dTo > to) continue;
+    // Normaliza para o mês (1º dia → último dia)
+    const d = new Date(dFrom + "T00:00:00Z");
+    const mStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+    const mEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
+    const mesFrom = mStart.toISOString().slice(0, 10);
+    const mesTo = mEnd.toISOString().slice(0, 10);
+    const key = `${row.recurso}|${mesFrom}`;
+    if (byKey.has(key)) continue; // primeira (mais recente) ganha
+    byKey.set(key, {
+      recurso: row.recurso,
+      mes_from: mesFrom,
+      mes_to: mesTo,
+      mensagem: row.mensagem ?? null,
+      ultima_falha: row.started_at,
+    });
+  }
+
+  // Filtra os meses que já tiveram sucesso DEPOIS do último erro
+  const result: FalhaItem[] = [];
+  for (const item of byKey.values()) {
+    const { data: ok } = await sb
+      .from("ca_sync_log")
+      .select("id")
+      .eq("recurso", item.recurso)
+      .eq("status", "ok")
+      .eq("date_from", item.mes_from)
+      .gt("started_at", item.ultima_falha)
+      .limit(1);
+    if (!ok || ok.length === 0) result.push(item);
+  }
+  result.sort((a, b) => (a.mes_from < b.mes_from ? -1 : a.mes_from > b.mes_from ? 1 : a.recurso.localeCompare(b.recurso)));
+  return result;
+}
+
+export async function reprocessarFalhas(
+  from: string,
+  to: string,
+  alvo?: Array<{ recurso: FalhaItem["recurso"]; mes_from: string; mes_to: string }>,
+): Promise<{ tentados: number; sucesso: number; falhas: Array<{ recurso: string; mes: string; mensagem: string }> }> {
+  const itens = alvo && alvo.length > 0
+    ? alvo
+    : (await listarFalhas(from, to)).map((f) => ({ recurso: f.recurso, mes_from: f.mes_from, mes_to: f.mes_to }));
+
+  let sucesso = 0;
+  const falhas: Array<{ recurso: string; mes: string; mensagem: string }> = [];
+  for (const it of itens) {
+    try {
+      if (it.recurso === "contas_pagar") await syncContasPagar(it.mes_from, it.mes_to);
+      else if (it.recurso === "contas_receber") await syncContasReceber(it.mes_from, it.mes_to);
+      else if (it.recurso === "extrato") await syncExtrato(it.mes_from, it.mes_to);
+      sucesso += 1;
+    } catch (e: any) {
+      falhas.push({ recurso: it.recurso, mes: it.mes_from, mensagem: String(e?.message ?? e) });
+    }
+  }
+  return { tentados: itens.length, sucesso, falhas };
+}
