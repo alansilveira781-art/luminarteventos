@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { PiggyBank as Piggy, TrendingDown, Building2, BarChart3, Sprout, Users, X, ChevronRight, ChevronDown } from "lucide-react";
 import { DRE_STRUCTURE, grupoDoPlanoNome, isTransferencia, type DreGroupId } from "@/lib/conta-azul/dre";
-import { montarDRE, totaisExtrato, transferenciasNoPeriodo, type Visao } from "@/lib/conta-azul/dre";
+import { montarDRE, type Visao } from "@/lib/conta-azul/dre";
 
 
 const sb = supabase as any;
