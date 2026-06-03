@@ -16,7 +16,7 @@ export function getClientCreds() {
 
 // Full scope set needed to read Plano de Contas, Centros de Custo,
 // Contas a Pagar/Receber e Extrato Bancário.
-const DEFAULT_SCOPES = "sales finance accounts cost-centers bank-statements";
+const DEFAULT_SCOPES = "openid profile aws.cognito.signin.user.admin";
 
 export function buildAuthorizeUrl(redirectUri: string, state: string, scope = DEFAULT_SCOPES) {
   const { id } = getClientCreds();
