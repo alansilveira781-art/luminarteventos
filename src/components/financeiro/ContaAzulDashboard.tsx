@@ -335,7 +335,7 @@ function AnaliseDetalhada() {
           </Select>
         </div>
         <div>
-        <div>
+
           <label className="text-xs text-muted-foreground block mb-1">Visão</label>
           <ToggleGroup type="single" value={visao} onValueChange={(v) => v && setVisao(v as Visao)} size="sm">
             <ToggleGroupItem value="realizado">Realizado</ToggleGroupItem>
