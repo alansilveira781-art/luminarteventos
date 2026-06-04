@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Bell, Check } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ export function NotificationBell() {
   const { data = [] } = useQuery({
     queryKey: ["notificacoes", user?.id],
     enabled: !!user,
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await sb
         .from("notificacoes")
@@ -39,22 +40,6 @@ export function NotificationBell() {
       return (data ?? []) as Notif[];
     },
   });
-
-  useEffect(() => {
-    if (!user) return;
-    const ch = supabase
-      .channel(`notif-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notificacoes", filter: `user_id=eq.${user.id}` },
-        () => {
-          qc.invalidateQueries({ queryKey: ["notificacoes", user.id] });
-          qc.invalidateQueries({ queryKey: ["notificacoes-all", user.id] });
-        },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [user, qc]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["notificacoes", user?.id] });
