@@ -103,7 +103,7 @@ function EstoquePage() {
       qc.invalidateQueries({ queryKey: ["itens-select-saida"] });
       qc.invalidateQueries({ queryKey: ["itens-busca"] });
       qc.invalidateQueries({ queryKey: ["dashboard-itens"] });
-      toast.success("Item salvo");
+      toast.success(editing ? "Alterações salvas" : "Item registrado");
       setEditing(null);
       setCreating(false);
       setDuplicating(null);
