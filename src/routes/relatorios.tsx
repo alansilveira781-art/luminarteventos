@@ -22,6 +22,7 @@ type ReportId =
   | "entradas"
   | "devolucoes"
   | "estoque"
+  | "estoque_negativo"
   | "solicitantes"
   | "fornecedores"
   | "gastos_mes"
@@ -33,12 +34,14 @@ const REPORTS: { id: ReportId; label: string; description: string; needsPeriod: 
   { id: "entradas", label: "Entradas", description: "Lista de itens recebidos com fornecedor, NF e valor.", needsPeriod: true },
   { id: "devolucoes", label: "Devoluções", description: "Itens devolvidos vinculados às saídas originais.", needsPeriod: true },
   { id: "estoque", label: "Posição de estoque", description: "Quantidade atual de cada item, valor total e status.", needsPeriod: false },
+  { id: "estoque_negativo", label: "Itens com estoque negativo", description: "Itens cujo saldo atual está abaixo de zero — precisam de ajuste/contagem.", needsPeriod: false },
   { id: "solicitantes", label: "Solicitantes", description: "Cadastro completo dos solicitantes ativos.", needsPeriod: false },
   { id: "fornecedores", label: "Fornecedores", description: "Cadastro completo dos fornecedores.", needsPeriod: false },
   { id: "gastos_mes", label: "Gastos por mês", description: "Total comprado por mês no período selecionado.", needsPeriod: true },
   { id: "gastos_categoria", label: "Gastos por categoria", description: "Total comprado por categoria de item.", needsPeriod: true },
   { id: "saidas_evento", label: "Saídas por evento", description: "Quantidade e valor das saídas agrupadas por evento/projeto.", needsPeriod: true },
 ];
+
 
 function RelatoriosPage() {
   const hoje = new Date();
@@ -241,6 +244,16 @@ async function loadReport(id: ReportId, dataIni: string, dataFim: string): Promi
     const { data } = await supabase.from("itens").select("*").order("nome").limit(5000);
     return data ?? [];
   }
+  if (id === "estoque_negativo") {
+    const { data } = await supabase
+      .from("itens")
+      .select("*")
+      .lt("quantidade_atual", 0)
+      .order("quantidade_atual", { ascending: true })
+      .limit(5000);
+    return data ?? [];
+  }
+
   if (id === "solicitantes") {
     const { data } = await supabase.from("solicitantes").select("*").order("nome").limit(5000);
     return data ?? [];
@@ -330,6 +343,20 @@ function formatReport(id: ReportId, rows: any[]): { headers: string[]; body: any
       ];
     });
     return { headers, body, totals: ["TOTAL", "", "", "", sumQ, sumMin, "", fmtBRL(sumT), "", ""] };
+  }
+  if (id === "estoque_negativo") {
+    const headers = ["Código", "Item", "Categoria", "Un", "Qtd atual", "Mín", "Localização", "Status"];
+    let sumQ = 0;
+    const body = rows.map((r) => {
+      const q = Number(r.quantidade_atual);
+      sumQ += q;
+      return [
+        r.codigo, r.nome, r.categoria ?? "—", r.unidade,
+        q, Number(r.quantidade_minima),
+        r.localizacao ?? "—", r.status,
+      ];
+    });
+    return { headers, body, totals: ["TOTAL", "", "", "", sumQ, "", "", ""] };
   }
   if (id === "solicitantes") {
     return {
