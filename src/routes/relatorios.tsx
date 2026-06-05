@@ -344,6 +344,20 @@ function formatReport(id: ReportId, rows: any[]): { headers: string[]; body: any
     });
     return { headers, body, totals: ["TOTAL", "", "", "", sumQ, sumMin, "", fmtBRL(sumT), "", ""] };
   }
+  if (id === "estoque_negativo") {
+    const headers = ["Código", "Item", "Categoria", "Un", "Qtd atual", "Mín", "Localização", "Status"];
+    let sumQ = 0;
+    const body = rows.map((r) => {
+      const q = Number(r.quantidade_atual);
+      sumQ += q;
+      return [
+        r.codigo, r.nome, r.categoria ?? "—", r.unidade,
+        q, Number(r.quantidade_minima),
+        r.localizacao ?? "—", r.status,
+      ];
+    });
+    return { headers, body, totals: ["TOTAL", "", "", "", sumQ, "", "", ""] };
+  }
   if (id === "solicitantes") {
     return {
       headers: ["Nome", "Setor", "Cargo", "Telefone", "Email", "Status"],
