@@ -241,9 +241,20 @@ async function loadReport(id: ReportId, dataIni: string, dataFim: string): Promi
     return data ?? [];
   }
   if (id === "estoque") {
+  if (id === "estoque") {
     const { data } = await supabase.from("itens").select("*").order("nome").limit(5000);
     return data ?? [];
   }
+  if (id === "estoque_negativo") {
+    const { data } = await supabase
+      .from("itens")
+      .select("*")
+      .lt("quantidade_atual", 0)
+      .order("quantidade_atual", { ascending: true })
+      .limit(5000);
+    return data ?? [];
+  }
+
   if (id === "solicitantes") {
     const { data } = await supabase.from("solicitantes").select("*").order("nome").limit(5000);
     return data ?? [];
