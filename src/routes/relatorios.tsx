@@ -241,7 +241,6 @@ async function loadReport(id: ReportId, dataIni: string, dataFim: string): Promi
     return data ?? [];
   }
   if (id === "estoque") {
-  if (id === "estoque") {
     const { data } = await supabase.from("itens").select("*").order("nome").limit(5000);
     return data ?? [];
   }
