@@ -60,7 +60,7 @@ function SolicitantesPage() {
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); qc.invalidateQueries({ queryKey: ["solicitantes-select"] }); toast.success("Salvo"); setOpen(false); setEditing(null); },
+    onSuccess: (_d, vars: any) => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); qc.invalidateQueries({ queryKey: ["solicitantes-select"] }); toast.success(vars?.id ? "Solicitante atualizado" : "Solicitante cadastrado"); setOpen(false); setEditing(null); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -69,7 +69,7 @@ function SolicitantesPage() {
       const { error } = await supabase.from("solicitantes").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); qc.invalidateQueries({ queryKey: ["solicitantes-select"] }); toast.success("Removido"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["solicitantes"] }); qc.invalidateQueries({ queryKey: ["solicitantes-select"] }); toast.success("Solicitante removido"); },
     onError: (e: any) => toast.error(e.message),
   });
 
