@@ -61,10 +61,22 @@ function normTxt(s: string | null | undefined): string {
     .trim();
 }
 
-/** Remove prefixo de data tipo "2026.03.03 - " ou "2026-03-03 - " do nome do centro. */
+/** Remove prefixos como "01/2025 - ", "108/2025 - ", "2026.03.03 - " do nome do centro. */
 function centroNeedle(nome: string | null | undefined): string {
-  const stripped = (nome ?? "").replace(/^\s*\d{2,4}[.\-/]\d{2}[.\-/]\d{2}\s*[-–—]\s*/, "");
-  return normTxt(stripped);
+  let s = (nome ?? "").trim();
+  // remove "YYYY.MM.DD - " ou "YYYY-MM-DD - "
+  s = s.replace(/^\s*\d{2,4}[.\-/]\d{2}[.\-/]\d{2}\s*[-–—]\s*/, "");
+  // remove "NN/YYYY - " ou "NNN/YYYY - "
+  s = s.replace(/^\s*\d{1,4}\/\d{2,4}\s*[-–—]\s*/, "");
+  return normTxt(s);
+}
+
+/** Tokens significativos (len>=3, sem números puros) para casamento robusto. */
+function needleTokens(needle: string): string[] {
+  return needle
+    .split(/[^a-z0-9]+/i)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3 && !/^\d+$/.test(t));
 }
 
 function rowMatchesText(c: any, needle: string): boolean {
@@ -72,7 +84,10 @@ function rowMatchesText(c: any, needle: string): boolean {
   const hay = normTxt(
     [c.descricao, c.observacoes, c.fornecedor_nome, c.cliente_nome].filter(Boolean).join(" | "),
   );
-  return hay.includes(needle);
+  if (hay.includes(needle)) return true;
+  const tokens = needleTokens(needle);
+  if (tokens.length === 0) return false;
+  return tokens.every((t) => hay.includes(t));
 }
 
 export function ContaAzulDashboard() {
