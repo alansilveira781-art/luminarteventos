@@ -41,6 +41,7 @@ export type Demanda = {
   valor_total?: number | null;
   observacoes?: string | null;
   motivo_negacao?: string | null;
+  categoria_external_id?: string | null;
 };
 
 export function DemandaDialog({
@@ -72,6 +73,14 @@ export function DemandaDialog({
     queryFn: async () => {
       const { data } = await sb.from("compras_solicitantes").select("id,nome").eq("status", "ativo").order("nome");
       return (data ?? []) as { id: string; nome: string }[];
+    },
+  });
+
+  const { data: planoContas = [] } = useQuery({
+    queryKey: ["plano-contas-prefix"],
+    queryFn: async () => {
+      const { data } = await sb.from("ca_plano_contas").select("external_id,nome").order("nome");
+      return ((data ?? []) as { external_id: string; nome: string }[]).filter((p) => /^[A-Z]{2,3}\s*-/.test(p.nome ?? ""));
     },
   });
 
