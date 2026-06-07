@@ -111,8 +111,8 @@ function useContaAzulData(ano?: number, mes?: number) {
   const { inicio, fim } = buildPeriodo(a, m);
   const orFilter = `and(data_pagamento.gte.${inicio},data_pagamento.lte.${fim}),and(data_pagamento.is.null,data_vencimento.gte.${inicio},data_vencimento.lte.${fim})`;
 
-  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status";
-  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status";
+  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
+  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
 
   const pagar = useQuery({
     queryKey: ["ca-pagar", hasPeriodo ? a : "all", hasPeriodo ? m : "all"],
