@@ -4,14 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   ComposedChart, Line, Legend,
 } from "recharts";
-import { PiggyBank as Piggy, TrendingDown, Building2, BarChart3, Sprout, Users, X, ChevronRight, ChevronDown } from "lucide-react";
+import { PiggyBank as Piggy, Building2, BarChart3, Sprout, Users, X, ChevronRight, ChevronDown } from "lucide-react";
 import { DRE_STRUCTURE, grupoDoPlanoNome, isTransferencia, buildPrefixIndex, type DreGroupId, type DreLine } from "@/lib/conta-azul/dre";
-import { montarDRE, type Visao } from "@/lib/conta-azul/dre";
 import { useDreEstrutura } from "@/hooks/useDreEstrutura";
 
 
@@ -46,6 +44,7 @@ const MESES = [
 
 function inPeriodo(date: string | null, ano: number, mes: number) {
   if (!date) return false;
+  if (!ano) return true;
   const d = new Date(date);
   if (d.getFullYear() !== ano) return false;
   if (mes > 0 && d.getMonth() + 1 !== mes) return false;
@@ -152,7 +151,7 @@ function KpiCard({
         <div className="text-sm font-semibold text-muted-foreground">{label}</div>
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
-      <div className="text-2xl font-bold mt-2 tabular-nums">{value}</div>
+      <div className="text-xl font-bold mt-2 tabular-nums">{value}</div>
       {subLabel && (
         <div className="mt-3 text-xs text-muted-foreground border-t pt-2">
           {subLabel}: <span className={subColor ?? "text-foreground"}>{subValue}</span>
@@ -459,6 +458,7 @@ function calcularDRECaixa(
   ano: number,
   mes: number,
   estrutura: DreLine[] = DRE_STRUCTURE,
+  centroCustoId?: string,
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
@@ -467,6 +467,7 @@ function calcularDRECaixa(
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento ?? c.data_vencimento, ano, mes)) return;
+      if (centroCustoId && c.centro_custo_external_id !== centroCustoId) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
       const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
@@ -500,104 +501,275 @@ function calcularDRECaixa(
 
 
 function AnaliseDetalhada() {
-  const [ano, setAno] = useState(new Date().getFullYear());
-  const [mes, setMes] = useState(0);
-  const { centros, pagar, receber, planos } = useContaAzulData(ano, mes);
-  const [visao, setVisao] = useState<Visao>("realizado");
+  const { centros, pagar, receber, planos } = useContaAzulData();
   const [centroId, setCentroId] = useState<string>("");
+  const [centroSearch, setCentroSearch] = useState("");
+  const [centroOpen, setCentroOpen] = useState(false);
+  const [categoriaSel, setCategoriaSel] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const ccs = centros.data ?? [];
-  useMemoSetDefault(centroId, setCentroId, ccs);
-
   const planosArr = planos.data ?? [];
+  const planoMap = useMemo(() => {
+    const m = new Map<string, { nome: string }>();
+    planosArr.forEach((p) => m.set(p.external_id, { nome: p.nome }));
+    return m;
+  }, [planosArr]);
 
   const dreEstrutura = useDreEstrutura().data ?? DRE_STRUCTURE;
-  const { linhas, totais } = useMemo(
-    () =>
-      montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, {
-        ano, mes, visao, centroCustoId: centroId || undefined,
-      }, dreEstrutura),
-    [pagar.data, receber.data, planosArr, ano, mes, visao, centroId, dreEstrutura],
+
+  // Sem filtro de ano/mês → ano=0 ignora período
+  const { totais, grupos } = useMemo(
+    () => calcularDRECaixa(pagar.data ?? [], receber.data ?? [], planoMap, 0, 0, dreEstrutura, centroId || undefined),
+    [pagar.data, receber.data, planoMap, dreEstrutura, centroId],
   );
 
-
   const rb = totais.RB ?? 0;
-  const rl = totais.RL ?? 0;
-  const ro = totais.RO ?? 0;
-  const rg = totais.RG ?? 0;
-  const lu = totais.LU ?? 0;
+  const pv = (totais.AC ?? 0) + (totais.DM ?? 0) + (totais.DC ?? 0);
+  const desp = (totais.DS ?? 0) + (totais.DA ?? 0) + (totais.DT ?? 0);
+  const custos = (totais.CV ?? 0) + (totais.CD ?? 0) + (totais.CI ?? 0);
+  const lucro = totais.LU ?? 0;
+
+  const lancamentos = useMemo<LancRow[]>(() => {
+    const list: LancRow[] = [];
+    const push = (rows: any[], isReceber: boolean) => {
+      rows.forEach((c) => {
+        if (c.status !== "pago") return;
+        if (centroId && c.centro_custo_external_id !== centroId) return;
+        const dataRef = c.data_pagamento ?? c.data_vencimento;
+        const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
+        if (isTransferencia(plano?.nome, c.descricao)) return;
+        const v = Number(c.valor || 0);
+        list.push({
+          data: dataRef,
+          nome: isReceber ? c.cliente_nome : c.fornecedor_nome,
+          descricao: c.descricao,
+          valor: isReceber ? v : -v,
+          categoria_external_id: c.categoria_external_id,
+        });
+      });
+    };
+    push(receber.data ?? [], true);
+    push(pagar.data ?? [], false);
+    return list.sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
+  }, [pagar.data, receber.data, planoMap, centroId]);
+
+  const lancFiltrados = useMemo(
+    () => (categoriaSel ? lancamentos.filter((l) => l.categoria_external_id === categoriaSel) : lancamentos),
+    [lancamentos, categoriaSel],
+  );
+  const totalLanc = lancFiltrados.reduce((s, l) => s + l.valor, 0);
+  const categoriaSelNome = categoriaSel ? planoMap.get(categoriaSel)?.nome ?? "" : "";
+
+  const linhasDre = useMemo(() => {
+    const out: { kind: "header" | "calc" | "detail"; id: string; label: string; valor: number; pct: number; catId?: string; groupId?: DreGroupId }[] = [];
+    const pct = (v: number) => (rb > 0 ? v / rb : 0);
+    for (const line of dreEstrutura) {
+      const v = totais[line.id] ?? 0;
+      if (line.kind === "sum") {
+        out.push({ kind: "header", id: line.id, label: GROUP_LABEL[line.id] ?? line.label, valor: v, pct: pct(v), groupId: line.id });
+        if (!collapsed[line.id]) {
+          const det = grupos.get(line.id);
+          if (det) {
+            Array.from(det.entries())
+              .sort((a, b) => (planoMap.get(a[0])?.nome ?? "").localeCompare(planoMap.get(b[0])?.nome ?? "", "pt-BR"))
+              .forEach(([catId, valor]) => {
+                const signed = valor * line.sign;
+                out.push({
+                  kind: "detail",
+                  id: `${line.id}:${catId}`,
+                  label: planoMap.get(catId)?.nome ?? "Sem categoria",
+                  valor: signed,
+                  pct: pct(signed),
+                  catId,
+                });
+              });
+          }
+        }
+      } else {
+        out.push({ kind: "calc", id: line.id, label: GROUP_LABEL[line.id] ?? line.label, valor: v, pct: pct(v) });
+      }
+    }
+    return out;
+  }, [totais, grupos, collapsed, planoMap, rb, dreEstrutura]);
+
+  const toggleGroup = (id: string) => setCollapsed((c) => ({ ...c, [id]: !c[id] }));
+  const onClickCategoria = (catId: string) =>
+    setCategoriaSel((cur) => (cur === catId ? null : catId));
+
+  const centroSelNome = centroId ? ccs.find((c) => c.external_id === centroId)?.nome ?? "" : "";
+  const ccsFiltrados = useMemo(() => {
+    const q = centroSearch.trim().toLowerCase();
+    if (!q) return ccs;
+    return ccs.filter((c) => c.nome.toLowerCase().includes(q));
+  }, [ccs, centroSearch]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 items-end justify-end">
-        <div className="min-w-[280px]">
+      <div className="flex flex-wrap gap-3 items-end justify-between">
+        <h2 className="text-xl font-bold">Análise Detalhada</h2>
+        <div className="relative w-[360px]">
           <label className="text-xs text-muted-foreground">Evento/Projeto</label>
-          <Select value={centroId} onValueChange={setCentroId}>
-            <SelectTrigger><SelectValue placeholder="Selecione um projeto" /></SelectTrigger>
-            <SelectContent>{ccs.map((c) => <SelectItem key={c.external_id} value={c.external_id}>{c.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div>
-
-          <label className="text-xs text-muted-foreground block mb-1">Visão</label>
-          <ToggleGroup type="single" value={visao} onValueChange={(v) => v && setVisao(v as Visao)} size="sm">
-            <ToggleGroupItem value="realizado">Realizado</ToggleGroupItem>
-            <ToggleGroupItem value="projetado">Projetado</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-
-        <div className="w-32">
-          <label className="text-xs text-muted-foreground">Ano</label>
-          <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div className="w-40">
-          <label className="text-xs text-muted-foreground">Mês</label>
-          <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{MESES.map((m, i) => <SelectItem key={i} value={String(i)}>{m}</SelectItem>)}</SelectContent>
-          </Select>
+          <button
+            type="button"
+            onClick={() => setCentroOpen((o) => !o)}
+            className="w-full h-9 px-3 rounded-md border bg-transparent text-sm text-left flex items-center justify-between"
+          >
+            <span className={centroId ? "" : "text-muted-foreground"}>
+              {centroSelNome || "Selecione um projeto…"}
+            </span>
+            <span className="text-muted-foreground text-xs">▾</span>
+          </button>
+          {centroOpen && (
+            <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md">
+              <div className="p-2 border-b">
+                <input
+                  autoFocus
+                  value={centroSearch}
+                  onChange={(e) => setCentroSearch(e.target.value)}
+                  placeholder="Buscar evento/projeto…"
+                  className="w-full h-8 px-2 text-sm bg-transparent outline-none border rounded"
+                />
+              </div>
+              <div className="max-h-[280px] overflow-y-auto p-1">
+                {centroId && (
+                  <button
+                    className="w-full text-left px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent rounded-sm"
+                    onClick={() => { setCentroId(""); setCentroOpen(false); }}
+                  >— Limpar seleção —</button>
+                )}
+                {ccsFiltrados.length === 0 ? (
+                  <div className="px-2 py-4 text-center text-sm text-muted-foreground">Nenhum encontrado.</div>
+                ) : ccsFiltrados.map((c) => (
+                  <button
+                    key={c.external_id}
+                    className={`w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded-sm ${c.external_id === centroId ? "bg-accent" : ""}`}
+                    onClick={() => { setCentroId(c.external_id); setCentroOpen(false); setCentroSearch(""); }}
+                  >{c.nome}</button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KpiCard icon={Piggy} label="Receita Bruta" value={fmtMoney(rb)} />
-        <KpiCard icon={TrendingDown} label="Receita Líquida" value={fmtMoney(rl)} subLabel="% RB" subValue={fmtPct(rb ? rl / rb : 0)} />
-        <KpiCard icon={Building2} label="Result. Operação" value={fmtMoney(ro)} subColor={ro >= 0 ? "text-green-600" : "text-red-600"} />
-        <KpiCard icon={BarChart3} label="Result. Gerencial" value={fmtMoney(rg)} subColor={rg >= 0 ? "text-green-600" : "text-red-600"} />
-        <KpiCard icon={Sprout} label="Lucro" value={fmtMoney(lu)} subLabel="% Lucro" subValue={fmtPct(rb ? lu / rb : 0)} subColor={lu >= 0 ? "text-green-600" : "text-red-600"} />
+        <KpiCard
+          icon={Piggy} label="Receita Bruta" value={fmtMoney(rb)}
+        />
+        <KpiCard
+          icon={Users} label="Pot. de Vendas" value={fmtMoney(pv)}
+          subLabel="% PV" subValue={fmtPct(rb ? pv / rb : 0)}
+          subColor={pv >= 0 ? "text-emerald-600" : "text-rose-600"}
+        />
+        <KpiCard
+          icon={Building2} label="Despesas" value={fmtMoney(desp)}
+          subLabel="% Despesa" subValue={fmtPct(rb ? desp / rb : 0)}
+          subColor="text-rose-600"
+        />
+        <KpiCard
+          icon={BarChart3} label="Custos" value={fmtMoney(custos)}
+          subLabel="% Custos" subValue={fmtPct(rb ? custos / rb : 0)}
+          subColor="text-rose-600"
+        />
+        <KpiCard
+          icon={Sprout} label="Lucro" value={fmtMoney(lucro)}
+          subLabel="% Lucro" subValue={fmtPct(rb ? lucro / rb : 0)}
+          subColor={lucro >= 0 ? "text-emerald-600" : "text-rose-600"}
+        />
       </div>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="grid grid-cols-[1fr,160px,80px] text-xs uppercase text-muted-foreground bg-muted/50 px-3 py-2 font-semibold">
-          <div>Demonstrativo</div><div className="text-right">Valores</div><div className="text-right">%</div>
-        </div>
-        <div className="max-h-[560px] overflow-y-auto">
-          {linhas.map((row) => (
-            <div
-              key={row.id}
-              className={`grid grid-cols-[1fr,160px,80px] px-3 py-1.5 text-sm border-t border-border ${
-                row.kind === "calc" ? "font-semibold bg-muted/40" : row.kind === "header" ? "font-semibold" : ""
-              }`}
-            >
-              <div className="truncate" title={row.label}>{row.label}</div>
-              <div className={`text-right tabular-nums ${row.valor < 0 ? "text-red-600" : ""}`}>{fmtMoney(row.valor)}</div>
-              <div className="text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <Card className="p-0 overflow-hidden lg:col-span-2">
+          <div className="grid grid-cols-[1fr,140px,70px] text-xs uppercase text-muted-foreground bg-muted/60 px-3 py-2 font-semibold">
+            <div>Demonstrativo</div>
+            <div className="text-right">Valores</div>
+            <div className="text-right">%</div>
+          </div>
+          <div>
+            {linhasDre.map((row) => {
+              if (row.kind === "header") {
+                const isOpen = !collapsed[row.id];
+                return (
+                  <button
+                    key={row.id}
+                    onClick={() => toggleGroup(row.id)}
+                    className="grid grid-cols-[1fr,140px,70px] w-full px-3 py-1.5 border-t border-border font-semibold text-sm hover:bg-muted/40 text-left"
+                  >
+                    <div className="flex items-center gap-1 truncate">
+                      {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+                      <span className="truncate">{row.label}</span>
+                    </div>
+                    <div className={`text-right tabular-nums ${row.valor < 0 ? "text-rose-600" : ""}`}>{fmtMoney(row.valor)}</div>
+                    <div className="text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</div>
+                  </button>
+                );
+              }
+              if (row.kind === "calc") {
+                return (
+                  <div key={row.id} className="grid grid-cols-[1fr,140px,70px] px-3 py-1.5 border-t border-border font-bold bg-muted/30 text-sm">
+                    <div className="truncate">{row.label}</div>
+                    <div className={`text-right tabular-nums ${row.valor < 0 ? "text-rose-600" : ""}`}>{fmtMoney(row.valor)}</div>
+                    <div className="text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</div>
+                  </div>
+                );
+              }
+              const isSel = row.catId === categoriaSel;
+              return (
+                <button
+                  key={row.id}
+                  onClick={() => row.catId && onClickCategoria(row.catId)}
+                  className={`grid grid-cols-[1fr,140px,70px] w-full px-3 py-1 border-t border-border text-xs text-left hover:bg-accent ${isSel ? "bg-accent" : ""}`}
+                >
+                  <div className="pl-7 truncate" title={row.label}>{row.label}</div>
+                  <div className={`text-right tabular-nums ${row.valor < 0 ? "text-rose-600" : ""}`}>{fmtMoney(row.valor)}</div>
+                  <div className="text-right tabular-nums text-muted-foreground">{fmtPct(row.pct)}</div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="p-0 overflow-hidden lg:col-span-3">
+          <div className="flex items-center justify-between bg-muted/60 px-3 py-2">
+            <div className="text-xs uppercase text-muted-foreground font-semibold">
+              Lançamentos {categoriaSel ? <>· filtro: <span className="text-foreground normal-case">{categoriaSelNome}</span></> : <span className="normal-case">· todos do projeto</span>}
             </div>
-          ))}
-        </div>
-      </Card>
+            {categoriaSel && (
+              <button onClick={() => setCategoriaSel(null)} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" /> limpar
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-[110px,1fr,1.4fr,130px] text-xs uppercase text-muted-foreground bg-muted/30 px-3 py-2 font-semibold">
+            <div>Data movimento</div>
+            <div>Nome do fornecedor/cliente</div>
+            <div>Descrição</div>
+            <div className="text-right">Valor Total</div>
+          </div>
+          <div className="max-h-[600px] overflow-y-auto">
+            {lancFiltrados.length === 0 && (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                {centroId ? "Nenhum lançamento neste projeto." : "Selecione um evento/projeto para ver os lançamentos."}
+              </div>
+            )}
+            {lancFiltrados.slice(0, 1000).map((l, i) => (
+              <div key={i} className="grid grid-cols-[110px,1fr,1.4fr,130px] px-3 py-1.5 text-sm border-t border-border">
+                <div className="text-muted-foreground">{l.data?.slice(0, 10) ?? "—"}</div>
+                <div className="truncate">{l.nome ?? "—"}</div>
+                <div className="truncate text-muted-foreground" title={l.descricao ?? ""}>{l.descricao ?? "—"}</div>
+                <div className={`text-right tabular-nums ${l.valor < 0 ? "text-rose-600" : "text-emerald-700"}`}>{fmtMoney(l.valor)}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-[1fr,130px] px-3 py-2 text-sm font-bold bg-muted/40 border-t">
+            <div>Total ({lancFiltrados.length})</div>
+            <div className={`text-right tabular-nums ${totalLanc < 0 ? "text-rose-600" : "text-emerald-700"}`}>{fmtMoney(totalLanc)}</div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
-}
-
-
-function useMemoSetDefault(current: string, setter: (v: string) => void, items: CentroCusto[]) {
-  useMemo(() => {
-    if (!current && items.length > 0) setter(items[0].external_id);
-  }, [current, items, setter]);
 }
 
 function FluxoCaixa() {
