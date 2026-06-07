@@ -498,18 +498,17 @@ function calcularDRECaixa(
   mes: number,
   estrutura: DreLine[] = DRE_STRUCTURE,
   centroCustoId?: string,
-  matchText?: string,
+  idsPermitidos?: Set<string>,
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
   const prefixIndex = buildPrefixIndex(estrutura);
-  const needle = matchText ? normTxt(matchText) : "";
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento ?? c.data_vencimento, ano, mes)) return;
       if (centroCustoId && c.centro_custo_external_id && c.centro_custo_external_id !== centroCustoId) return;
-      if (needle && !rowMatchesText(c, needle)) return;
+      if (idsPermitidos && !(c.centro_custo_external_id && idsPermitidos.has(c.centro_custo_external_id))) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
       const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
@@ -524,6 +523,7 @@ function calcularDRECaixa(
   };
   acumula(pagar);
   acumula(receber);
+
 
   const totais: Partial<Record<DreGroupId, number>> = {};
   const getVal = (id: DreGroupId): number => {
