@@ -445,13 +445,15 @@ function calcularDRECaixa(
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
+  const prefixIndex = buildPrefixIndex(estrutura);
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento, ano, mes)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
-      const g = grupoDoPlanoNome(plano?.nome);
+      const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
+      if (!g) return;
       const v = Math.abs(Number(c.valor || 0));
       const k = c.categoria_external_id ?? "_";
       const det = grupos.get(g) ?? new Map<string, number>();
