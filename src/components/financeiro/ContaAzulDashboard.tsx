@@ -601,9 +601,9 @@ function useMemoSetDefault(current: string, setter: (v: string) => void, items: 
 }
 
 function FluxoCaixa() {
-  const { pagar, receber, extrato, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const { pagar, receber, extrato, planos } = useContaAzulData(ano, mes);
   const [aba, setAba] = useState<"receber" | "pagar">("receber");
 
   const planoMap = useMemo(() => {
