@@ -13,6 +13,8 @@ import {
 import { DEMANDA_STATUSES, TIPO_DEMANDA_OPTIONS } from "@/lib/demandas";
 import { UberDashboard } from "@/components/financeiro/UberDashboard";
 import { ContaAzulDashboard } from "@/components/financeiro/ContaAzulDashboard";
+import { grupoDoPlanoNome, buildPrefixIndex, DRE_STRUCTURE, type DreGroupId } from "@/lib/conta-azul/dre";
+import { useDreEstrutura } from "@/hooks/useDreEstrutura";
 
 const sb = supabase as any;
 const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
@@ -54,7 +56,7 @@ function FinanceiroDashboard() {
     queryFn: async () => {
       const { data } = await sb
         .from("demandas")
-        .select("id,status,fornecedor,tipo_demanda,condicao_pagamento,valor_total,data_compra,data_solicitacao,created_at");
+        .select("id,status,fornecedor,tipo_demanda,condicao_pagamento,valor_total,data_compra,data_solicitacao,created_at,categoria_external_id");
       return ((data ?? []) as any[]).filter((c) => {
         const ref = (c.data_compra || c.data_solicitacao || c.created_at)?.slice(0, 10);
         return ref >= from && ref <= to;
@@ -62,6 +64,17 @@ function FinanceiroDashboard() {
     },
     enabled: tab === "financeiro",
   });
+
+  const { data: planoContas = [] } = useQuery({
+    queryKey: ["plano-contas-dash"],
+    queryFn: async () => {
+      const { data } = await sb.from("ca_plano_contas").select("external_id,nome");
+      return (data ?? []) as { external_id: string; nome: string }[];
+    },
+    enabled: tab === "financeiro",
+  });
+
+  const { data: dreEstrutura = DRE_STRUCTURE } = useDreEstrutura();
 
   const stats = useMemo(() => {
     const total = demandas.reduce((s, c) => s + Number(c.valor_total || 0), 0);
