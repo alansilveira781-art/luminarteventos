@@ -892,7 +892,9 @@ function AnaliseDetalhada() {
             <div className="text-right">Valor Total</div>
           </div>
           <div className="max-h-[600px] overflow-y-auto">
-            {lancFiltrados.length === 0 && (
+            {isLoadingLanc ? (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">Carregando lançamentos…</div>
+            ) : lancFiltrados.length === 0 && (
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                 {centroId ? "Nenhum lançamento neste projeto." : "Selecione um evento/projeto para ver os lançamentos."}
               </div>
