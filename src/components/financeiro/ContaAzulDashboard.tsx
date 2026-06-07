@@ -439,7 +439,7 @@ function calcularDRECaixa(
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
-      if (!inPeriodo(c.data_pagamento, ano, mes)) return;
+      if (!inPeriodo(c.data_pagamento ?? c.data_vencimento, ano, mes)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
       const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
