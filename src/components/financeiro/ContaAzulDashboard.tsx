@@ -152,7 +152,7 @@ function KpiCard({
         <div className="text-sm font-semibold text-muted-foreground">{label}</div>
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
-      <div className="text-2xl font-bold mt-2 tabular-nums">{value}</div>
+      <div className="text-xl font-bold mt-2 tabular-nums">{value}</div>
       {subLabel && (
         <div className="mt-3 text-xs text-muted-foreground border-t pt-2">
           {subLabel}: <span className={subColor ?? "text-foreground"}>{subValue}</span>
