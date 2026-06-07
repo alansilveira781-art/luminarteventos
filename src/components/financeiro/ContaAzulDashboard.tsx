@@ -503,13 +503,12 @@ function calcularDRECaixa(
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
   const prefixIndex = buildPrefixIndex(estrutura);
-  const needle = matchText ? normTxt(matchText) : "";
+  void matchText;
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento ?? c.data_vencimento, ano, mes)) return;
-      if (centroCustoId && c.centro_custo_external_id && c.centro_custo_external_id !== centroCustoId) return;
-      if (needle && !rowMatchesText(c, needle)) return;
+      if (centroCustoId && c.centro_custo_external_id !== centroCustoId) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
       const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
