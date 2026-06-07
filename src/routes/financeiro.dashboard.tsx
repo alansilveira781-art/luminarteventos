@@ -128,6 +128,40 @@ function FinanceiroDashboard() {
     return Array.from(map.entries()).map(([k, v]) => ({ nome: labels[k] ?? k, valor: v }));
   }, [demandas]);
 
+  // DRE: classifica cada demanda pelo prefixo da categoria do plano de contas.
+  const dreAgg = useMemo(() => {
+    const planoMap = new Map(planoContas.map((p) => [p.external_id, p]));
+    const prefixIndex = buildPrefixIndex(dreEstrutura);
+    const totalPorGrupo = new Map<DreGroupId, number>();
+    const detPorGrupo = new Map<DreGroupId, Map<string, number>>();
+    let semCategoria = 0;
+    demandas.forEach((c: any) => {
+      const v = Number(c.valor_total || 0);
+      if (!v) return;
+      const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
+      const grupo = grupoDoPlanoNome(plano?.nome, prefixIndex);
+      if (!grupo) { semCategoria += v; return; }
+      totalPorGrupo.set(grupo, (totalPorGrupo.get(grupo) ?? 0) + v);
+      const det = detPorGrupo.get(grupo) ?? new Map<string, number>();
+      const k = c.categoria_external_id ?? "_";
+      det.set(k, (det.get(k) ?? 0) + v);
+      detPorGrupo.set(grupo, det);
+    });
+    const linhas = dreEstrutura
+      .filter((l) => l.kind === "sum" && (l.sign === -1))
+      .map((l) => ({
+        id: l.id,
+        label: l.label,
+        valor: totalPorGrupo.get(l.id) ?? 0,
+        detalhes: Array.from((detPorGrupo.get(l.id) ?? new Map()).entries())
+          .map(([catId, val]) => ({ nome: planoMap.get(catId)?.nome ?? "Sem categoria", valor: val as number }))
+          .sort((a, b) => b.valor - a.valor),
+      }))
+      .filter((l) => l.valor > 0);
+    const totalClassificado = linhas.reduce((s, l) => s + l.valor, 0);
+    return { linhas, semCategoria, totalClassificado };
+  }, [demandas, planoContas, dreEstrutura]);
+
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
