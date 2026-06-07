@@ -636,6 +636,8 @@ function AnaliseDetalhada() {
   const custos = (totais.CV ?? 0) + (totais.CD ?? 0) + (totais.CI ?? 0);
   const lucro = totais.LU ?? 0;
 
+  const isLoadingLanc = !!centroId && (pagar.isLoading || receber.isLoading);
+
   const lancamentos = useMemo<LancRow[]>(() => {
     const list: LancRow[] = [];
     const push = (rows: any[], isReceber: boolean) => {
