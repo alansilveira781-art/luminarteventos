@@ -180,6 +180,19 @@ export function DemandaDialog({
                   </SelectContent>
                 </Select>
               </FormField>
+              <FormField label="Categoria (DRE)">
+                <Select
+                  value={form.categoria_external_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, categoria_external_id: v || null })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione a categoria do plano de contas…" /></SelectTrigger>
+                  <SelectContent className="max-h-80">
+                    {planoContas.map((p) => (
+                      <SelectItem key={p.external_id} value={p.external_id}>{p.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
               <FormField label="Solicitante">
                 <SelectCreatable
                   table="compras_solicitantes"
