@@ -199,20 +199,12 @@ const GROUP_LABEL: Record<string, string> = {
 };
 
 function PainelFinanceiro() {
-  const { planos, pagar, receber } = useContaAzulData();
-
-  const anoDefault = useMemo(() => {
-    const all = [
-      ...(receber.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
-      ...(pagar.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
-    ].filter(Boolean) as string[];
-    if (!all.length) return new Date().getFullYear();
-    return Math.max(...all.map((d) => Number(d.slice(0, 4))));
-  }, [receber.data, pagar.data]);
-
-  const [ano, setAno] = useState<number | null>(null);
-  const anoEfetivo = ano ?? anoDefault;
+  const [ano, setAno] = useState<number>(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const anoEfetivo = ano;
+
+  const { planos, pagar, receber } = useContaAzulData(anoEfetivo, mes);
+
   const [categoriaSel, setCategoriaSel] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
