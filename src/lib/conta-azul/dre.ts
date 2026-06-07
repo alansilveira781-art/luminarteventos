@@ -64,41 +64,25 @@ const PREFIX_INDEX: Record<string, DreGroupId> = (() => {
   return m;
 })();
 
-/** Override por nome (chave normalizada: lowercase, sem acentos, trim) para contas sem prefixo padrão. */
-const NOME_OVERRIDE: Record<string, DreGroupId> = {
-  "irrf": "DT",
-  "iss": "DT",
-  "pis/cofins/csll": "DT",
-  "impostos retidos em vendas": "DT",
-  "descontos incondicionais concedidos": "DR",
-  "descontos incondicionais obtidos": "OE",
-  "descontos financeiros concedidos": "DF",
-  "descontos financeiros obtidos": "RF_REC",
-  "juros pagos": "DF",
-  "juros recebidos": "RF_REC",
-  "tarifas": "DF",
-  "multas pagas": "DF",
-  "multas recebidas": "OE",
-  "fretes pagos": "OS",
-  "fretes recebidos": "OE",
-  "perdas": "CD",
-  "compra": "OS",
-  "receitas a identificar": "OE",
-};
-
-function normalizaNome(s: string): string {
-  return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+/** Constrói um índice prefixo → grupo a partir de uma estrutura DRE arbitrária (ex.: vinda do banco). */
+export function buildPrefixIndex(estrutura: DreLine[]): Record<string, DreGroupId> {
+  const m: Record<string, DreGroupId> = {};
+  estrutura.forEach((l) => l.prefixes?.forEach((p) => (m[p] = l.id)));
+  return m;
 }
 
-/** Extrai o grupo do DRE a partir do nome do plano de contas. Retorna "SC" se desconhecido. */
-export function grupoDoPlanoNome(nome: string | null | undefined): DreGroupId {
-  if (!nome) return "SC";
-  const norm = normalizaNome(nome);
-  if (NOME_OVERRIDE[norm]) return NOME_OVERRIDE[norm];
+/** Extrai o grupo do DRE a partir do prefixo do nome do plano de contas ("XX - Nome").
+ * Retorna null quando não há prefixo reconhecido — o lançamento deve ser ignorado. */
+export function grupoDoPlanoNome(
+  nome: string | null | undefined,
+  prefixIndex: Record<string, DreGroupId> = PREFIX_INDEX,
+): DreGroupId | null {
+  if (!nome) return null;
   const match = nome.trim().match(/^([A-Z]{2,3})\s*-/);
-  if (!match) return "SC";
-  return PREFIX_INDEX[match[1]] ?? "SC";
+  if (!match) return null;
+  return prefixIndex[match[1]] ?? null;
 }
+
 
 export type ContaRow = {
   valor: number | string | null;
