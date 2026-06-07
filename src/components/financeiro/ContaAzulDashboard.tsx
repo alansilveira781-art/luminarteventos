@@ -492,12 +492,13 @@ function AnaliseDetalhada() {
 
   const planosArr = planos.data ?? [];
 
+  const dreEstrutura = useDreEstrutura().data ?? DRE_STRUCTURE;
   const { linhas, totais } = useMemo(
     () =>
       montarDRE(pagar.data ?? [], receber.data ?? [], planosArr, {
         ano, mes, visao, centroCustoId: centroId || undefined,
-      }),
-    [pagar.data, receber.data, planosArr, ano, mes, visao, centroId],
+      }, dreEstrutura),
+    [pagar.data, receber.data, planosArr, ano, mes, visao, centroId, dreEstrutura],
   );
 
 
