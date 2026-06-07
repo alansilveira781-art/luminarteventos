@@ -247,6 +247,40 @@ function FinanceiroDashboard() {
               </ResponsiveContainer>
             </ChartCard>
           </div>
+
+          <Card className="p-4 mt-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="text-sm font-semibold">Demonstrativo de Despesas (DRE)</div>
+              <div className="text-xs text-muted-foreground">
+                Classificado: <span className="font-medium text-foreground">{fmt(dreAgg.totalClassificado)}</span>
+                {dreAgg.semCategoria > 0 && (
+                  <> · Sem categoria: <span className="font-medium text-foreground">{fmt(dreAgg.semCategoria)}</span></>
+                )}
+              </div>
+            </div>
+            {dreAgg.linhas.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-6 text-center">
+                Nenhuma demanda com categoria do plano de contas no período.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {dreAgg.linhas.map((l) => (
+                  <div key={l.id}>
+                    <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                      <div className="text-sm font-medium">{l.label}</div>
+                      <div className="text-sm font-semibold tabular-nums">{fmt(l.valor)}</div>
+                    </div>
+                    {l.detalhes.map((d, i) => (
+                      <div key={i} className="flex items-center justify-between py-1 pl-6 text-xs text-muted-foreground">
+                        <div className="truncate pr-3">{d.nome}</div>
+                        <div className="tabular-nums">{fmt(d.valor)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </TabsContent>
 
         <TabsContent value="uber" className="mt-0">
