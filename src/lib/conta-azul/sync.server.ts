@@ -283,11 +283,82 @@ async function logRatioProbe(items: any[], tipo: "pagar" | "receber") {
   } catch {}
 }
 
+const _detailProbeLogged: Record<"pagar" | "receber", boolean> = { pagar: false, receber: false };
+async function logDetailProbe(detail: any, tipo: "pagar" | "receber") {
+  if (_detailProbeLogged[tipo]) return;
+  _detailProbeLogged[tipo] = true;
+  try {
+    await sb.from("ca_sync_log").insert({
+      recurso: `probe_rateio_detalhe_${tipo}`,
+      status: "ok",
+      started_at: new Date().toISOString(),
+      finished_at: new Date().toISOString(),
+      qtd_registros: 0,
+      mensagem: JSON.stringify(detail).slice(0, 8000),
+    });
+  } catch {}
+}
+
+function isRateado(it: any): boolean {
+  const ccs = Array.isArray(it.centros_de_custo) ? it.centros_de_custo : [];
+  const cats = Array.isArray(it.categorias) ? it.categorias : [];
+  return ccs.length >= 2 || cats.length >= 2;
+}
+
+/** Para itens com rateio (>=2 centros OU >=2 categorias), busca o endpoint
+ *  de detalhe para obter o `valor` real de cada fatia (a listagem não traz). */
+async function enrichItemsWithDetail(items: any[], tipo: "pagar" | "receber"): Promise<any[]> {
+  const detailBase = tipo === "pagar"
+    ? "/financeiro/eventos-financeiros/contas-a-pagar"
+    : "/financeiro/eventos-financeiros/contas-a-receber";
+  const idxs = items.map((it, i) => (isRateado(it) ? i : -1)).filter((i) => i >= 0);
+  if (idxs.length === 0) return items;
+
+  const CONCURRENCY = 5;
+  const out = items.slice();
+  let cursor = 0;
+  let detalheFalhas = 0;
+
+  async function worker() {
+    while (true) {
+      const my = cursor++;
+      if (my >= idxs.length) return;
+      const i = idxs[my];
+      const id = items[i]?.id;
+      if (!id) continue;
+      try {
+        const detail = await caFetch(`${detailBase}/${id}`);
+        await logDetailProbe(detail, tipo);
+        out[i] = { ...items[i], ...detail };
+      } catch {
+        detalheFalhas++;
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, idxs.length) }, () => worker()));
+
+  if (detalheFalhas > 0) {
+    try {
+      await sb.from("ca_sync_log").insert({
+        recurso: `detalhe_rateio_${tipo}`,
+        status: "ok",
+        started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
+        qtd_registros: detalheFalhas,
+        mensagem: `Falhas ao buscar detalhe de ${detalheFalhas}/${idxs.length} lançamentos rateados (fallback divisão igual).`,
+      });
+    } catch {}
+  }
+  return out;
+}
+
 async function persistRateios(items: any[], tipo: "pagar" | "receber", syncedAt: string) {
   await logRatioProbe(items, tipo);
+  const enriched = await enrichItemsWithDetail(items, tipo);
   const allRateios: any[] = [];
   const lancIds: string[] = [];
-  for (const it of items) {
+  for (const it of enriched) {
     const rs = buildRateios(it, tipo, syncedAt);
     if (rs.length > 0) {
       allRateios.push(...rs);
