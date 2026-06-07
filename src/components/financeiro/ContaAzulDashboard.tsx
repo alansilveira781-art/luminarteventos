@@ -25,6 +25,7 @@ type ContaPagar = {
   data_vencimento: string | null;
   data_pagamento: string | null;
   status: string | null;
+  observacoes?: string | null;
 };
 type ContaReceber = ContaPagar & { cliente_nome: string | null };
 type PlanoConta = { external_id: string; nome: string; tipo: string | null; codigo: string | null; pai_external_id: string | null };
