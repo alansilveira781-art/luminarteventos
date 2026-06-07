@@ -498,18 +498,17 @@ function calcularDRECaixa(
   mes: number,
   estrutura: DreLine[] = DRE_STRUCTURE,
   centroCustoId?: string,
-  matchText?: string,
+  idsPermitidos?: Set<string>,
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
   const prefixIndex = buildPrefixIndex(estrutura);
-  const needle = matchText ? normTxt(matchText) : "";
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento ?? c.data_vencimento, ano, mes)) return;
       if (centroCustoId && c.centro_custo_external_id && c.centro_custo_external_id !== centroCustoId) return;
-      if (needle && !rowMatchesText(c, needle)) return;
+      if (idsPermitidos && !(c.centro_custo_external_id && idsPermitidos.has(c.centro_custo_external_id))) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
       const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
@@ -524,6 +523,7 @@ function calcularDRECaixa(
   };
   acumula(pagar);
   acumula(receber);
+
 
   const totais: Partial<Record<DreGroupId, number>> = {};
   const getVal = (id: DreGroupId): number => {
@@ -560,16 +560,28 @@ function AnaliseDetalhada() {
 
   const dreEstrutura = useDreEstrutura().data ?? DRE_STRUCTURE;
 
-  const centroNomeSel = centroId ? ccs.find((c) => c.external_id === centroId)?.nome ?? "" : "";
-  const matchText = centroNomeSel ? centroNeedle(centroNomeSel) : "";
+  const nomePorCentroId = useMemo(() => {
+    const m = new Map<string, string>();
+    ccs.forEach((c) => m.set(c.external_id, normTxt(c.nome)));
+    return m;
+  }, [ccs]);
 
-  // Sem filtro de ano/mês → ano=0 ignora período. Filtro por texto (nome do evento).
+  const nomeCentroSel = centroId ? (nomePorCentroId.get(centroId) ?? "") : "";
+
+  const idsDoEvento = useMemo(() => {
+    if (!nomeCentroSel) return undefined;
+    return new Set(
+      ccs.filter((c) => normTxt(c.nome) === nomeCentroSel).map((c) => c.external_id),
+    );
+  }, [ccs, nomeCentroSel]);
+
+  // Sem filtro de ano/mês → ano=0 ignora período. Filtro pelo nome do centro de custo (todos os IDs com o mesmo nome).
   const { totais, grupos } = useMemo(
     () => calcularDRECaixa(
       pagar.data ?? [], receber.data ?? [], planoMap, 0, 0, dreEstrutura,
-      undefined, matchText || undefined,
+      undefined, idsDoEvento,
     ),
-    [pagar.data, receber.data, planoMap, dreEstrutura, matchText],
+    [pagar.data, receber.data, planoMap, dreEstrutura, idsDoEvento],
   );
 
   const rb = totais.RB ?? 0;
@@ -580,11 +592,15 @@ function AnaliseDetalhada() {
 
   const lancamentos = useMemo<LancRow[]>(() => {
     const list: LancRow[] = [];
-    const needle = matchText ? normTxt(matchText) : "";
     const push = (rows: any[], isReceber: boolean) => {
       rows.forEach((c) => {
         if (c.status !== "pago") return;
-        if (needle && !rowMatchesText(c, needle)) return;
+        if (nomeCentroSel) {
+          const nomeCC = c.centro_custo_external_id
+            ? nomePorCentroId.get(c.centro_custo_external_id)
+            : undefined;
+          if (nomeCC !== nomeCentroSel) return;
+        }
         const dataRef = c.data_pagamento ?? c.data_vencimento;
         const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
         if (isTransferencia(plano?.nome, c.descricao)) return;
@@ -601,7 +617,8 @@ function AnaliseDetalhada() {
     push(receber.data ?? [], true);
     push(pagar.data ?? [], false);
     return list.sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
-  }, [pagar.data, receber.data, planoMap, matchText]);
+  }, [pagar.data, receber.data, planoMap, nomeCentroSel, nomePorCentroId]);
+
 
   const lancFiltrados = useMemo(
     () => (categoriaSel ? lancamentos.filter((l) => l.categoria_external_id === categoriaSel) : lancamentos),
