@@ -576,47 +576,117 @@ function AnaliseDetalhada() {
 
   const dreEstrutura = useDreEstrutura().data ?? DRE_STRUCTURE;
 
-  const nomeCentroSel = centroId ? normTxt(ccs.find((c) => c.external_id === centroId)?.nome ?? "") : "";
+  // Filtro exato pelo external_id do centro selecionado — sem agrupamento por nome.
+  const enabled = !!centroId;
 
-  // Resolve nome → todos os IDs com o mesmo nome (mesmo evento pode ter vários centros).
-  const centroIds = useMemo(() => {
-    if (!nomeCentroSel) return [] as string[];
-    return ccs.filter((c) => normTxt(c.nome) === nomeCentroSel).map((c) => c.external_id);
-  }, [ccs, nomeCentroSel]);
-
-  const idsKey = useMemo(() => [...centroIds].sort().join(","), [centroIds]);
-  const enabled = centroIds.length > 0;
-
-  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
-  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
-
-  const pagar = useQuery({
-    queryKey: ["ca-pagar-cc", idsKey],
+  // 1. Carrega rateios desse centro (1 linha por fatia).
+  const rateios = useQuery({
+    queryKey: ["ca-rateios-cc", centroId],
     enabled,
-    queryFn: () =>
-      fetchPaged<ContaPagar>((from, to) =>
-        sb.from("ca_contas_pagar").select(pagarCols)
-          .in("centro_custo_external_id", centroIds)
-          .range(from, to),
-      ),
-  });
-  const receber = useQuery({
-    queryKey: ["ca-receber-cc", idsKey],
-    enabled,
-    queryFn: () =>
-      fetchPaged<ContaReceber>((from, to) =>
-        sb.from("ca_contas_receber").select(receberCols)
-          .in("centro_custo_external_id", centroIds)
-          .range(from, to),
-      ),
+    queryFn: async () => {
+      const cols = "lancamento_external_id,tipo,categoria_external_id,valor,ordem";
+      const { data, error } = await sb
+        .from("ca_lancamento_rateios")
+        .select(cols)
+        .eq("centro_custo_external_id", centroId);
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        lancamento_external_id: string;
+        tipo: "pagar" | "receber";
+        categoria_external_id: string | null;
+        valor: number;
+        ordem: number;
+      }>;
+    },
   });
 
-  // Servidor já filtrou pelo centro de custo — sem filtro client-side por nome/ID.
+  const rateiosData = rateios.data ?? [];
+  const lancPagarIds = useMemo(
+    () => Array.from(new Set(rateiosData.filter((r) => r.tipo === "pagar").map((r) => r.lancamento_external_id))),
+    [rateiosData],
+  );
+  const lancReceberIds = useMemo(
+    () => Array.from(new Set(rateiosData.filter((r) => r.tipo === "receber").map((r) => r.lancamento_external_id))),
+    [rateiosData],
+  );
+  const pagarKey = useMemo(() => [...lancPagarIds].sort().join(","), [lancPagarIds]);
+  const receberKey = useMemo(() => [...lancReceberIds].sort().join(","), [lancReceberIds]);
+
+  const pagarCols = "external_id,descricao,fornecedor_nome,data_vencimento,data_pagamento,status,observacoes";
+  const receberCols = "external_id,descricao,cliente_nome,data_vencimento,data_pagamento,status,observacoes";
+
+  // 2. Enriquece com campos descritivos dos lançamentos-pai (em chunks pra .in() não estourar).
+  const pagarParents = useQuery({
+    queryKey: ["ca-pagar-parents", pagarKey],
+    enabled: enabled && lancPagarIds.length > 0,
+    queryFn: async () => {
+      const out: any[] = [];
+      for (let i = 0; i < lancPagarIds.length; i += 500) {
+        const chunk = lancPagarIds.slice(i, i + 500);
+        const { data, error } = await sb.from("ca_contas_pagar").select(pagarCols).in("external_id", chunk);
+        if (error) throw error;
+        out.push(...(data ?? []));
+      }
+      return out;
+    },
+  });
+  const receberParents = useQuery({
+    queryKey: ["ca-receber-parents", receberKey],
+    enabled: enabled && lancReceberIds.length > 0,
+    queryFn: async () => {
+      const out: any[] = [];
+      for (let i = 0; i < lancReceberIds.length; i += 500) {
+        const chunk = lancReceberIds.slice(i, i + 500);
+        const { data, error } = await sb.from("ca_contas_receber").select(receberCols).in("external_id", chunk);
+        if (error) throw error;
+        out.push(...(data ?? []));
+      }
+      return out;
+    },
+  });
+
+  // 3. Monta linhas sintéticas (1 por fatia): herdam descrição/datas/status do pai
+  //    e usam valor + categoria da fatia. Quantidade de rateios por lancamento_external_id
+  //    determina o badge "Rateado".
+  const { pagarRows, receberRows, rateadoCount } = useMemo(() => {
+    const pPar = new Map<string, any>();
+    (pagarParents.data ?? []).forEach((p: any) => pPar.set(p.external_id, p));
+    const rPar = new Map<string, any>();
+    (receberParents.data ?? []).forEach((p: any) => rPar.set(p.external_id, p));
+    const counts = new Map<string, number>(); // "tipo|lanc_id" -> total de rateios desse lançamento
+    rateiosData.forEach((r) => {
+      const k = `${r.tipo}|${r.lancamento_external_id}`;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    });
+    const pagarRows: any[] = [];
+    const receberRows: any[] = [];
+    rateiosData.forEach((r) => {
+      const par = r.tipo === "pagar" ? pPar.get(r.lancamento_external_id) : rPar.get(r.lancamento_external_id);
+      if (!par) return;
+      const row = {
+        external_id: `${r.lancamento_external_id}#${r.ordem}`,
+        descricao: par.descricao,
+        fornecedor_nome: par.fornecedor_nome ?? null,
+        cliente_nome: par.cliente_nome ?? null,
+        categoria_external_id: r.categoria_external_id,
+        centro_custo_external_id: centroId,
+        valor: r.valor,
+        data_vencimento: par.data_vencimento,
+        data_pagamento: par.data_pagamento,
+        status: par.status,
+        observacoes: par.observacoes,
+        _rateado: (counts.get(`${r.tipo}|${r.lancamento_external_id}`) ?? 1) > 1,
+      };
+      if (r.tipo === "pagar") pagarRows.push(row);
+      else receberRows.push(row);
+    });
+    return { pagarRows, receberRows, rateadoCount: counts };
+  }, [rateiosData, pagarParents.data, receberParents.data, centroId]);
+
+  // Servidor já fatiou pelo centro de custo — sem filtro client-side adicional.
   const { totais, grupos } = useMemo(
-    () => calcularDRECaixa(
-      pagar.data ?? [], receber.data ?? [], planoMap, 0, 0, dreEstrutura,
-    ),
-    [pagar.data, receber.data, planoMap, dreEstrutura],
+    () => calcularDRECaixa(pagarRows, receberRows, planoMap, 0, 0, dreEstrutura),
+    [pagarRows, receberRows, planoMap, dreEstrutura],
   );
 
   const rb = totais.RB ?? 0;
@@ -625,7 +695,7 @@ function AnaliseDetalhada() {
   const custos = (totais.CV ?? 0) + (totais.CD ?? 0) + (totais.CI ?? 0);
   const lucro = totais.LU ?? 0;
 
-  const isLoadingLanc = enabled && (pagar.isLoading || receber.isLoading);
+  const isLoadingLanc = enabled && (rateios.isLoading || pagarParents.isLoading || receberParents.isLoading);
 
   const lancamentos = useMemo<LancRow[]>(() => {
     const list: LancRow[] = [];
@@ -639,16 +709,17 @@ function AnaliseDetalhada() {
         list.push({
           data: dataRef,
           nome: isReceber ? c.cliente_nome : c.fornecedor_nome,
-          descricao: c.descricao,
+          descricao: (c._rateado ? "[Rateado] " : "") + (c.descricao ?? ""),
           valor: isReceber ? v : -v,
           categoria_external_id: c.categoria_external_id,
         });
       });
     };
-    push(receber.data ?? [], true);
-    push(pagar.data ?? [], false);
+    push(receberRows, true);
+    push(pagarRows, false);
     return list.sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
-  }, [pagar.data, receber.data, planoMap]);
+  }, [pagarRows, receberRows, planoMap]);
+
 
 
 
