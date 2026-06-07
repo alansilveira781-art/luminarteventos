@@ -441,6 +441,7 @@ function calcularDRECaixa(
   planoMap: Map<string, { nome: string }>,
   ano: number,
   mes: number,
+  estrutura: DreLine[] = DRE_STRUCTURE,
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
@@ -465,14 +466,15 @@ function calcularDRECaixa(
   const totais: Partial<Record<DreGroupId, number>> = {};
   const getVal = (id: DreGroupId): number => {
     if (totais[id] !== undefined) return totais[id]!;
-    const line = DRE_STRUCTURE.find((l) => l.id === id)!;
+    const line = estrutura.find((l) => l.id === id);
+    if (!line) { totais[id] = 0; return 0; }
     let v = 0;
     if (line.kind === "sum") v = (totalSum.get(id) ?? 0) * line.sign;
     else if (line.formula) v = line.formula.reduce((s, f) => s + getVal(f), 0);
     totais[id] = v;
     return v;
   };
-  DRE_STRUCTURE.forEach((l) => getVal(l.id));
+  estrutura.forEach((l) => getVal(l.id));
   return { totais, grupos };
 }
 
