@@ -10,7 +10,7 @@ import {
   ComposedChart, Line, Legend,
 } from "recharts";
 import { PiggyBank as Piggy, TrendingDown, Building2, BarChart3, Sprout, Users, X, ChevronRight, ChevronDown } from "lucide-react";
-import { DRE_STRUCTURE, grupoDoPlanoNome, isTransferencia, type DreGroupId, type DreLine } from "@/lib/conta-azul/dre";
+import { DRE_STRUCTURE, grupoDoPlanoNome, isTransferencia, buildPrefixIndex, type DreGroupId, type DreLine } from "@/lib/conta-azul/dre";
 import { montarDRE, type Visao } from "@/lib/conta-azul/dre";
 import { useDreEstrutura } from "@/hooks/useDreEstrutura";
 
@@ -269,19 +269,6 @@ function PainelFinanceiro() {
         out.push({ kind: "calc", id: line.id, label: GROUP_LABEL[line.id] ?? line.label, valor: v, pct: pct(v) });
       }
     }
-    // Sem classificação
-    const sc = grupos.get("SC");
-    if (sc && sc.size > 0) {
-      const total = Array.from(sc.values()).reduce((s, v) => s + v, 0);
-      out.push({ kind: "header", id: "SC", label: GROUP_LABEL.SC, valor: total, pct: pct(total), groupId: "SC" });
-      if (!collapsed.SC) {
-        Array.from(sc.entries())
-          .sort((a, b) => (planoMap.get(a[0])?.nome ?? "").localeCompare(planoMap.get(b[0])?.nome ?? "", "pt-BR"))
-          .forEach(([catId, valor]) => {
-            out.push({ kind: "detail", id: `SC:${catId}`, label: planoMap.get(catId)?.nome ?? "Sem categoria", valor, pct: pct(valor), catId });
-          });
-      }
-    }
     return out;
   }, [totais, grupos, collapsed, planoMap, rb, dreEstrutura]);
 
@@ -445,13 +432,15 @@ function calcularDRECaixa(
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
+  const prefixIndex = buildPrefixIndex(estrutura);
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento, ano, mes)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
-      const g = grupoDoPlanoNome(plano?.nome);
+      const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
+      if (!g) return;
       const v = Math.abs(Number(c.valor || 0));
       const k = c.categoria_external_id ?? "_";
       const det = grupos.get(g) ?? new Map<string, number>();
