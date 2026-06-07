@@ -641,7 +641,7 @@ function AnaliseDetalhada() {
   const onClickCategoria = (catId: string) =>
     setCategoriaSel((cur) => (cur === catId ? null : catId));
 
-  const centroSelNome = centroNomeSel;
+  const centroSelNome = centroId ? ccs.find((c) => c.external_id === centroId)?.nome ?? "" : "";
   const ccsFiltrados = useMemo(() => {
     const q = centroSearch.trim().toLowerCase();
     if (!q) return ccs;
