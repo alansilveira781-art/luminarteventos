@@ -67,7 +67,7 @@ export function ContaAzulDashboard() {
   );
 }
 
-function useContaAzulData() {
+function useContaAzulData(ano?: number, mes?: number) {
   const planos = useQuery({
     queryKey: ["ca-plano"],
     queryFn: async () => {
@@ -82,15 +82,30 @@ function useContaAzulData() {
       return (data ?? []) as CentroCusto[];
     },
   });
+
+  // Período: cobre o ano corrente E o ano anterior (para comparativo YoY).
+  // Filtro server-side por data_pagamento (regime caixa) OU data_vencimento quando data_pagamento é null.
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const anoBase = ano ?? new Date().getFullYear();
+  const mesBase = mes ?? 0;
+  const inicio = mesBase > 0
+    ? `${anoBase - 1}-${pad(mesBase)}-01`
+    : `${anoBase - 1}-01-01`;
+  const fim = mesBase > 0
+    ? `${anoBase}-${pad(mesBase)}-${pad(new Date(anoBase, mesBase, 0).getDate())}`
+    : `${anoBase}-12-31`;
+  const filtroPeriodo = `and(data_pagamento.gte.${inicio},data_pagamento.lte.${fim}),and(data_pagamento.is.null,data_vencimento.gte.${inicio},data_vencimento.lte.${fim})`;
+
   const pagar = useQuery({
-    queryKey: ["ca-pagar"],
+    queryKey: ["ca-pagar", anoBase, mesBase],
     queryFn: async () => {
       const all: ContaPagar[] = [];
       const pageSize = 1000;
       for (let from = 0; ; from += pageSize) {
         const { data, error } = await sb
           .from("ca_contas_pagar")
-          .select("*")
+          .select("external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status")
+          .or(filtroPeriodo)
           .range(from, from + pageSize - 1);
         if (error || !data || data.length === 0) break;
         all.push(...(data as ContaPagar[]));
@@ -100,14 +115,15 @@ function useContaAzulData() {
     },
   });
   const receber = useQuery({
-    queryKey: ["ca-receber"],
+    queryKey: ["ca-receber", anoBase, mesBase],
     queryFn: async () => {
       const all: ContaReceber[] = [];
       const pageSize = 1000;
       for (let from = 0; ; from += pageSize) {
         const { data, error } = await sb
           .from("ca_contas_receber")
-          .select("*")
+          .select("external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status")
+          .or(filtroPeriodo)
           .range(from, from + pageSize - 1);
         if (error || !data || data.length === 0) break;
         all.push(...(data as ContaReceber[]));
@@ -183,20 +199,12 @@ const GROUP_LABEL: Record<string, string> = {
 };
 
 function PainelFinanceiro() {
-  const { planos, pagar, receber } = useContaAzulData();
-
-  const anoDefault = useMemo(() => {
-    const all = [
-      ...(receber.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
-      ...(pagar.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
-    ].filter(Boolean) as string[];
-    if (!all.length) return new Date().getFullYear();
-    return Math.max(...all.map((d) => Number(d.slice(0, 4))));
-  }, [receber.data, pagar.data]);
-
-  const [ano, setAno] = useState<number | null>(null);
-  const anoEfetivo = ano ?? anoDefault;
+  const [ano, setAno] = useState<number>(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const anoEfetivo = ano;
+
+  const { planos, pagar, receber } = useContaAzulData(anoEfetivo, mes);
+
   const [categoriaSel, setCategoriaSel] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -493,9 +501,9 @@ function calcularDRECaixa(
 
 
 function AnaliseDetalhada() {
-  const { centros, pagar, receber, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const { centros, pagar, receber, planos } = useContaAzulData(ano, mes);
   const [visao, setVisao] = useState<Visao>("realizado");
   const [centroId, setCentroId] = useState<string>("");
 
@@ -594,9 +602,9 @@ function useMemoSetDefault(current: string, setter: (v: string) => void, items: 
 }
 
 function FluxoCaixa() {
-  const { pagar, receber, extrato, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const { pagar, receber, extrato, planos } = useContaAzulData(ano, 0);
   const [aba, setAba] = useState<"receber" | "pagar">("receber");
 
   const planoMap = useMemo(() => {
