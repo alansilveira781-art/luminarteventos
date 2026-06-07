@@ -67,7 +67,29 @@ export function ContaAzulDashboard() {
   );
 }
 
-function useContaAzulData() {
+function buildPeriodo(ano: number, mes: number) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const inicio = mes > 0 ? `${ano}-${pad(mes)}-01` : `${ano}-01-01`;
+  const fim =
+    mes > 0
+      ? `${ano}-${pad(mes)}-${pad(new Date(ano, mes, 0).getDate())}`
+      : `${ano}-12-31`;
+  return { inicio, fim };
+}
+
+async function fetchPaged<T>(build: (from: number, to: number) => any): Promise<T[]> {
+  const all: T[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await build(from, from + pageSize - 1);
+    if (error || !data || data.length === 0) break;
+    all.push(...(data as T[]));
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
+function useContaAzulData(ano?: number, mes?: number) {
   const planos = useQuery({
     queryKey: ["ca-plano"],
     queryFn: async () => {
@@ -82,39 +104,33 @@ function useContaAzulData() {
       return (data ?? []) as CentroCusto[];
     },
   });
+
+  const hasPeriodo = typeof ano === "number";
+  const a = ano ?? new Date().getFullYear();
+  const m = mes ?? 0;
+  const { inicio, fim } = buildPeriodo(a, m);
+  const orFilter = `and(data_pagamento.gte.${inicio},data_pagamento.lte.${fim}),and(data_pagamento.is.null,data_vencimento.gte.${inicio},data_vencimento.lte.${fim})`;
+
+  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status";
+  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status";
+
   const pagar = useQuery({
-    queryKey: ["ca-pagar"],
-    queryFn: async () => {
-      const all: ContaPagar[] = [];
-      const pageSize = 1000;
-      for (let from = 0; ; from += pageSize) {
-        const { data, error } = await sb
-          .from("ca_contas_pagar")
-          .select("*")
-          .range(from, from + pageSize - 1);
-        if (error || !data || data.length === 0) break;
-        all.push(...(data as ContaPagar[]));
-        if (data.length < pageSize) break;
-      }
-      return all;
-    },
+    queryKey: ["ca-pagar", hasPeriodo ? a : "all", hasPeriodo ? m : "all"],
+    queryFn: () =>
+      fetchPaged<ContaPagar>((from, to) => {
+        let q = sb.from("ca_contas_pagar").select(pagarCols);
+        if (hasPeriodo) q = q.or(orFilter);
+        return q.range(from, to);
+      }),
   });
   const receber = useQuery({
-    queryKey: ["ca-receber"],
-    queryFn: async () => {
-      const all: ContaReceber[] = [];
-      const pageSize = 1000;
-      for (let from = 0; ; from += pageSize) {
-        const { data, error } = await sb
-          .from("ca_contas_receber")
-          .select("*")
-          .range(from, from + pageSize - 1);
-        if (error || !data || data.length === 0) break;
-        all.push(...(data as ContaReceber[]));
-        if (data.length < pageSize) break;
-      }
-      return all;
-    },
+    queryKey: ["ca-receber", hasPeriodo ? a : "all", hasPeriodo ? m : "all"],
+    queryFn: () =>
+      fetchPaged<ContaReceber>((from, to) => {
+        let q = sb.from("ca_contas_receber").select(receberCols);
+        if (hasPeriodo) q = q.or(orFilter);
+        return q.range(from, to);
+      }),
   });
   const extrato = useQuery({
     queryKey: ["ca-extrato"],
@@ -183,20 +199,11 @@ const GROUP_LABEL: Record<string, string> = {
 };
 
 function PainelFinanceiro() {
-  const { planos, pagar, receber } = useContaAzulData();
-
-  const anoDefault = useMemo(() => {
-    const all = [
-      ...(receber.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
-      ...(pagar.data ?? []).map((c: any) => c.data_pagamento || c.data_vencimento),
-    ].filter(Boolean) as string[];
-    if (!all.length) return new Date().getFullYear();
-    return Math.max(...all.map((d) => Number(d.slice(0, 4))));
-  }, [receber.data, pagar.data]);
-
-  const [ano, setAno] = useState<number | null>(null);
-  const anoEfetivo = ano ?? anoDefault;
+  const [ano, setAno] = useState<number>(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const anoEfetivo = ano;
+  const { planos, pagar, receber } = useContaAzulData(anoEfetivo, mes);
+
   const [categoriaSel, setCategoriaSel] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -493,9 +500,9 @@ function calcularDRECaixa(
 
 
 function AnaliseDetalhada() {
-  const { centros, pagar, receber, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const { centros, pagar, receber, planos } = useContaAzulData(ano, mes);
   const [visao, setVisao] = useState<Visao>("realizado");
   const [centroId, setCentroId] = useState<string>("");
 
@@ -594,9 +601,9 @@ function useMemoSetDefault(current: string, setter: (v: string) => void, items: 
 }
 
 function FluxoCaixa() {
-  const { pagar, receber, extrato, planos } = useContaAzulData();
   const [ano, setAno] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(0);
+  const { pagar, receber, extrato, planos } = useContaAzulData(ano, mes);
   const [aba, setAba] = useState<"receber" | "pagar">("receber");
 
   const planoMap = useMemo(() => {
