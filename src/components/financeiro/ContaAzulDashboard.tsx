@@ -25,6 +25,7 @@ type ContaPagar = {
   data_vencimento: string | null;
   data_pagamento: string | null;
   status: string | null;
+  observacoes?: string | null;
 };
 type ContaReceber = ContaPagar & { cliente_nome: string | null };
 type PlanoConta = { external_id: string; nome: string; tipo: string | null; codigo: string | null; pai_external_id: string | null };
@@ -49,6 +50,29 @@ function inPeriodo(date: string | null, ano: number, mes: number) {
   if (d.getFullYear() !== ano) return false;
   if (mes > 0 && d.getMonth() + 1 !== mes) return false;
   return true;
+}
+
+function normTxt(s: string | null | undefined): string {
+  return (s ?? "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/** Remove prefixo de data tipo "2026.03.03 - " ou "2026-03-03 - " do nome do centro. */
+function centroNeedle(nome: string | null | undefined): string {
+  const stripped = (nome ?? "").replace(/^\s*\d{2,4}[.\-/]\d{2}[.\-/]\d{2}\s*[-–—]\s*/, "");
+  return normTxt(stripped);
+}
+
+function rowMatchesText(c: any, needle: string): boolean {
+  if (!needle) return true;
+  const hay = normTxt(
+    [c.descricao, c.observacoes, c.fornecedor_nome, c.cliente_nome].filter(Boolean).join(" | "),
+  );
+  return hay.includes(needle);
 }
 
 export function ContaAzulDashboard() {
@@ -110,8 +134,8 @@ function useContaAzulData(ano?: number, mes?: number) {
   const { inicio, fim } = buildPeriodo(a, m);
   const orFilter = `and(data_pagamento.gte.${inicio},data_pagamento.lte.${fim}),and(data_pagamento.is.null,data_vencimento.gte.${inicio},data_vencimento.lte.${fim})`;
 
-  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status";
-  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status";
+  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
+  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
 
   const pagar = useQuery({
     queryKey: ["ca-pagar", hasPeriodo ? a : "all", hasPeriodo ? m : "all"],
@@ -459,15 +483,18 @@ function calcularDRECaixa(
   mes: number,
   estrutura: DreLine[] = DRE_STRUCTURE,
   centroCustoId?: string,
+  matchText?: string,
 ): { totais: Partial<Record<DreGroupId, number>>; grupos: Map<DreGroupId, Map<string, number>> } {
   const grupos = new Map<DreGroupId, Map<string, number>>();
   const totalSum = new Map<DreGroupId, number>();
   const prefixIndex = buildPrefixIndex(estrutura);
+  const needle = matchText ? normTxt(matchText) : "";
   const acumula = (rows: any[]) => {
     rows.forEach((c) => {
       if (c.status !== "pago") return;
       if (!inPeriodo(c.data_pagamento ?? c.data_vencimento, ano, mes)) return;
-      if (centroCustoId && c.centro_custo_external_id !== centroCustoId) return;
+      if (centroCustoId && c.centro_custo_external_id && c.centro_custo_external_id !== centroCustoId) return;
+      if (needle && !rowMatchesText(c, needle)) return;
       const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
       if (isTransferencia(plano?.nome, c.descricao)) return;
       const g = grupoDoPlanoNome(plano?.nome, prefixIndex);
@@ -518,10 +545,16 @@ function AnaliseDetalhada() {
 
   const dreEstrutura = useDreEstrutura().data ?? DRE_STRUCTURE;
 
+  const centroNomeSel = centroId ? ccs.find((c) => c.external_id === centroId)?.nome ?? "" : "";
+  const matchText = centroNomeSel ? centroNeedle(centroNomeSel) : "";
+
   // Sem filtro de ano/mês → ano=0 ignora período
   const { totais, grupos } = useMemo(
-    () => calcularDRECaixa(pagar.data ?? [], receber.data ?? [], planoMap, 0, 0, dreEstrutura, centroId || undefined),
-    [pagar.data, receber.data, planoMap, dreEstrutura, centroId],
+    () => calcularDRECaixa(
+      pagar.data ?? [], receber.data ?? [], planoMap, 0, 0, dreEstrutura,
+      centroId || undefined, matchText || undefined,
+    ),
+    [pagar.data, receber.data, planoMap, dreEstrutura, centroId, matchText],
   );
 
   const rb = totais.RB ?? 0;
@@ -535,7 +568,8 @@ function AnaliseDetalhada() {
     const push = (rows: any[], isReceber: boolean) => {
       rows.forEach((c) => {
         if (c.status !== "pago") return;
-        if (centroId && c.centro_custo_external_id !== centroId) return;
+        if (centroId && c.centro_custo_external_id && c.centro_custo_external_id !== centroId) return;
+        if (matchText && !rowMatchesText(c, matchText)) return;
         const dataRef = c.data_pagamento ?? c.data_vencimento;
         const plano = c.categoria_external_id ? planoMap.get(c.categoria_external_id) : undefined;
         if (isTransferencia(plano?.nome, c.descricao)) return;
@@ -552,7 +586,7 @@ function AnaliseDetalhada() {
     push(receber.data ?? [], true);
     push(pagar.data ?? [], false);
     return list.sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
-  }, [pagar.data, receber.data, planoMap, centroId]);
+  }, [pagar.data, receber.data, planoMap, centroId, matchText]);
 
   const lancFiltrados = useMemo(
     () => (categoriaSel ? lancamentos.filter((l) => l.categoria_external_id === categoriaSel) : lancamentos),
@@ -597,7 +631,7 @@ function AnaliseDetalhada() {
   const onClickCategoria = (catId: string) =>
     setCategoriaSel((cur) => (cur === catId ? null : catId));
 
-  const centroSelNome = centroId ? ccs.find((c) => c.external_id === centroId)?.nome ?? "" : "";
+  const centroSelNome = centroNomeSel;
   const ccsFiltrados = useMemo(() => {
     const q = centroSearch.trim().toLowerCase();
     if (!q) return ccs;
