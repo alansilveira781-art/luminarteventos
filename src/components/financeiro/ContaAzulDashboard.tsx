@@ -187,15 +187,17 @@ function PainelFinanceiro() {
     return m;
   }, [planosArr]);
 
+  const dreEstrutura = useDreEstrutura().data ?? DRE_STRUCTURE;
+
   // DRE ano corrente (caixa = realizado)
   const { totais, grupos } = useMemo(
-    () => calcularDRECaixa(pagar.data ?? [], receber.data ?? [], planoMap, anoEfetivo, mes),
-    [pagar.data, receber.data, planoMap, anoEfetivo, mes],
+    () => calcularDRECaixa(pagar.data ?? [], receber.data ?? [], planoMap, anoEfetivo, mes, dreEstrutura),
+    [pagar.data, receber.data, planoMap, anoEfetivo, mes, dreEstrutura],
   );
   // DRE ano anterior (mesmo mês) para comparativo de Receita LY
   const totaisAnt = useMemo(
-    () => calcularDRECaixa(pagar.data ?? [], receber.data ?? [], planoMap, anoEfetivo - 1, mes).totais,
-    [pagar.data, receber.data, planoMap, anoEfetivo, mes],
+    () => calcularDRECaixa(pagar.data ?? [], receber.data ?? [], planoMap, anoEfetivo - 1, mes, dreEstrutura).totais,
+    [pagar.data, receber.data, planoMap, anoEfetivo, mes, dreEstrutura],
   );
 
   const rb = totais.RB ?? 0;
