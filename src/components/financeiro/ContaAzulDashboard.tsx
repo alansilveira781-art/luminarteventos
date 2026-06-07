@@ -180,51 +180,6 @@ function useContaAzulData(ano?: number, mes?: number) {
   return { planos, centros, pagar, receber, extrato };
 }
 
-function useContaAzulPorCentro(centroIds: string[]) {
-  const planos = useQuery({
-    queryKey: ["ca-plano"],
-    queryFn: async () => {
-      const { data } = await sb.from("ca_plano_contas").select("external_id,nome,tipo,codigo,pai_external_id");
-      return (data ?? []) as PlanoConta[];
-    },
-  });
-  const centros = useQuery({
-    queryKey: ["ca-centros"],
-    queryFn: async () => {
-      const { data } = await sb.from("ca_centros_custo").select("external_id,nome").eq("ativo", true);
-      return (data ?? []) as CentroCusto[];
-    },
-  });
-
-  const pagarCols = "external_id,descricao,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
-  const receberCols = "external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status,observacoes";
-
-  const idsKey = [...centroIds].sort().join(",");
-  const enabled = centroIds.length > 0;
-
-  const pagar = useQuery({
-    queryKey: ["ca-pagar-cc", idsKey],
-    enabled,
-    queryFn: () =>
-      fetchPaged<ContaPagar>((from, to) =>
-        sb.from("ca_contas_pagar").select(pagarCols)
-          .in("centro_custo_external_id", centroIds)
-          .range(from, to),
-      ),
-  });
-  const receber = useQuery({
-    queryKey: ["ca-receber-cc", idsKey],
-    enabled,
-    queryFn: () =>
-      fetchPaged<ContaReceber>((from, to) =>
-        sb.from("ca_contas_receber").select(receberCols)
-          .in("centro_custo_external_id", centroIds)
-          .range(from, to),
-      ),
-  });
-
-  return { planos, centros, pagar, receber };
-}
 
 
 function KpiCard({
