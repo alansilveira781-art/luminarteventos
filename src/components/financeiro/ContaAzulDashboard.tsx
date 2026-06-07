@@ -122,7 +122,7 @@ function useContaAzulData(ano?: number, mes?: number) {
       for (let from = 0; ; from += pageSize) {
         const { data, error } = await sb
           .from("ca_contas_receber")
-          .select("external_id,descricao,cliente_nome,fornecedor_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status")
+          .select("external_id,descricao,cliente_nome,categoria_external_id,centro_custo_external_id,valor,data_vencimento,data_pagamento,status")
           .or(filtroPeriodo)
           .range(from, from + pageSize - 1);
         if (error || !data || data.length === 0) break;
