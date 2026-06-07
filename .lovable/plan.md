@@ -1,22 +1,45 @@
 ## Objetivo
-Alinhar os prefixos cadastrados na estrutura do DRE ao plano de contas real, conforme a lista do usuário: RB, DR, AC, DM, DC, CV, CD, CI, DS, DA, DT, RF, DF, OE, OS, IV. A lógica de classificação por prefixo, soma por grupo, cascata de subtotais e sinais (receber +, pagar −) já está implementada.
 
-## Mudanças
+Destravar visualização do painel (medida temporária) e coletar evidência empírica de onde a data de baixa aparece no payload do Conta Azul, sem alterar o sync ainda.
 
-### Migration em `ca_dre_estrutura`
-- Linha código `IN` (Investimentos): `prefixos` `{IN}` → `{IV}`.
-- Linha código `OE` (Outras Entradas): `prefixos` `{OE,OR}` → `{OE}`.
+## Passo 1 — Fallback temporário no painel (regime de caixa)
 
-### `src/lib/conta-azul/dre.ts` (fallback `DRE_STRUCTURE`)
-- `OE`: `prefixes: ["OE","OR"]` → `["OE"]`.
-- `IN`: `prefixes: ["IN"]` → `["IV"]` (id interno continua `"IN"`, só o prefixo do plano de contas muda).
+Em `src/components/ContaAzulDashboard.tsx`, aplicar `data_pagamento ?? data_vencimento` no filtro de período e no campo `data` da lista, com comentário `// TEMP: regime de caixa exige data_pagamento; fallback enquanto sync não popula a coluna`.
 
-## Sem mudanças
-- Extração de prefixo (`grupoDoPlanoNome`) e índice de prefixos (`buildPrefixIndex`).
-- Cálculo em cascata dos subtotais (= ) via `formula` de cada linha.
-- Sinal: contas a receber positivo, contas a pagar negativo.
-- Cards do topo (Receita Bruta, Despesas, Custos, Lucro) — já leem `totais` agrupados.
-- Filtro de transferências bancárias e lançamentos sem prefixo reconhecido (ignorados).
+Escopo: APENAS o filtro do list-view. Não tocar no DRE nem nos cards (já usam `data_vencimento` por outra razão).
 
-## Efeito esperado
-Contas `IV - …` passam a somar em Investimentos; contas `OR - …` deixam de cair em Outras Entradas. Demais grupos seguem iguais.
+## Passo 2 — Logs de diagnóstico no sync (sem alterar lógica)
+
+Em `src/lib/conta-azul/sync.server.ts`, dentro do loop de páginas de `ca_contas_pagar` e `ca_contas_receber`:
+
+- (a) Ao encontrar o **primeiro item com `status === 'pago'`** de cada tabela em cada execução, `console.log` do objeto cru completo retornado por `/buscar` (sem `JSON.stringify` filtrado — todas as chaves, marcado com prefixo `[CA-DIAG-LIST]`).
+- (b) Para esse mesmo item, fazer **uma chamada extra** a `GET /financeiro/contas-{a-pagar|a-receber}/buscar/{id}` e logar o objeto cru completo com prefixo `[CA-DIAG-DETAIL]`.
+- Guard: usar uma flag local (`let loggedPagar = false; let loggedReceber = false`) para garantir exatamente 1 par de logs por tabela por execução — não estourar rate limit.
+
+Não alterar mapeamento nem persistência. Apenas logar.
+
+## Passo 3 — Executar sync de 1 mês
+
+Disparar sync via UI ou server function existente para o mês atual (junho/2026), aguardar conclusão e coletar os 4 logs:
+- `[CA-DIAG-LIST]` contas a pagar
+- `[CA-DIAG-DETAIL]` contas a pagar
+- `[CA-DIAG-LIST]` contas a receber
+- `[CA-DIAG-DETAIL]` contas a receber
+
+Usar `stack_modern--server-function-logs` (ou `supabase--edge_function_logs` se o sync rodar como edge function) com filtro `CA-DIAG`.
+
+## Passo 4 — Reporte ao usuário
+
+Apresentar os 4 payloads brutos lado a lado e destacar:
+- Quais chaves de data existem na listagem (`data_quitacao`, `data_baixa`, `data_pagamento`, `data_recebimento`, etc.)
+- Se a listagem **já tem** a data de baixa → estratégia A (só mapear, sem detalhar 42k registros)
+- Se **só o detalhe** tem → estratégia B (precisa decidir entre detalhar tudo com rate-limit, ou só novos/atualizados via incremental)
+
+**Não decidir nem implementar a estratégia do sync nesta rodada.** Aguardar instrução do usuário após ver os payloads.
+
+## Arquivos afetados
+
+- `src/components/ContaAzulDashboard.tsx` — fallback temporário (1 edit pequeno)
+- `src/lib/conta-azul/sync.server.ts` — logs de diagnóstico (2 blocos, um por tabela)
+
+Nenhuma migração, nenhuma mudança de schema, nenhuma alteração de mapeamento.
