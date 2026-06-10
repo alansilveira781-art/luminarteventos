@@ -2372,6 +2372,7 @@ export type Database = {
       }
       next_pat_requisicao_numero: { Args: never; Returns: number }
       next_requisicao_numero: { Args: never; Returns: number }
+      reconciliar_estoque: { Args: { p_item_id: string }; Returns: number }
       refresh_item_status: { Args: { p_item_id: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
