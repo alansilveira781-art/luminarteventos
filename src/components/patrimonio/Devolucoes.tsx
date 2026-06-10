@@ -424,7 +424,16 @@ function DevolucaoForm({ saidas, devolvidoPorOrigem, itemMap, onSubmit, submitti
 
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Data</Label><Input type="datetime-local" value={meta.data_movimento} onChange={(e) => setM("data_movimento", e.target.value)} /></div>
-        <div><Label>Responsável recebimento</Label><Input value={meta.responsavel} onChange={(e) => setM("responsavel", e.target.value)} placeholder="Quem recebeu de volta" /></div>
+        <div>
+          <Label>Responsável recebimento</Label>
+          <ComboboxCreatable
+            options={responsavelOptions}
+            value={meta.responsavel}
+            onChange={(v) => setM("responsavel", v)}
+            placeholder="Quem recebeu de volta"
+            searchPlaceholder="Buscar solicitante ou digitar novo…"
+          />
+        </div>
         <div className="col-span-2">
           <Label>Condição</Label>
           <Select value={meta.condicao} onValueChange={(v) => setM("condicao", v)}>
