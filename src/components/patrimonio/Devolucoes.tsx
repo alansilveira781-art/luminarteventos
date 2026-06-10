@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Search, Trash2, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { normalize, cn } from "@/lib/utils";
+import { ComboboxCreatable } from "@/components/ComboboxCreatable";
 
 type Mov = {
   id: string; tipo: string; item_id: string | null; quantidade: number;
