@@ -399,6 +399,10 @@ function EstoquePage() {
         }}
       />
 
+      <ConferenciaEgestorDialog open={conferindo} onOpenChange={setConferindo} />
+
+
+
       <BulkEditDialog
         open={bulkOpen}
         onOpenChange={setBulkOpen}
