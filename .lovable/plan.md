@@ -1,43 +1,63 @@
-# Corrigir percepção de "estoque zerado" após entrada
+## 1) Estoque → Conferência com Egestor
 
-## Diagnóstico
+**Onde:** `src/routes/estoque.index.tsx`, no botão **"Nova importação"**.
 
-Validei o caso citado (PAPEL HIGIENICO FOLHA SIMPLES, entrada de 64 em 09/06):
-- O banco gravou: `itens.quantidade_atual = 44` (entrada +64 e depois saída −20 do mesmo dia).
-- A trigger `apply_movement` está somando entradas corretamente.
-- Existem 6 saídas antigas (maio) que **não deduziram** o saldo na época — foram inseridas antes da trigger estar ativa para esse item (ou via importação que bypassou triggers). Isso é histórico, não afeta entradas novas.
+**Mudança de UX:** transformar o botão atual em um menu (dropdown) com duas opções:
+- **Importar itens** (fluxo atual, sem alteração)
+- **Conferir estoque (Egestor)** (novo)
 
-Conclusão: a entrada **está** atualizando `itens.quantidade_atual`. O que está errado é onde/como a tela mostra o saldo (cache desatualizado, query que ignora `quantidade_atual` ou soma manualmente as movimentações).
+**Novo diálogo "Conferir estoque (Egestor)":**
+- Upload de planilha `.xlsx` (mesmo componente de upload do `ImportDialog`).
+- Parser específico para o arquivo Egestor: o cabeçalho real está na **linha 3** (`Código, Produto, Estoque, Custo, Total, Categoria, Estoque mínimo`); as linhas 1 e 2 são título/data e serão ignoradas.
+- **Chave de assimilação:** nome (`Produto` do Egestor ↔ `nome` do item no sistema), comparação normalizada (sem acento, case-insensitive, espaços colapsados). Como fallback, se houver `Código` igual ao `codigo` do sistema, casa por código.
+- **Cálculo:** `diferenca = saldo_sistema − saldo_egestor`.
 
-## Escopo (somente módulo Estoque)
+**Resultado em tabela com filtros (chips):**
+- Todos
+- Divergentes (diferença ≠ 0)
+- Apenas no Egestor (item não existe no sistema)
+- Apenas no sistema (item ativo, não veio na planilha)
 
-1. **Auditar as telas de leitura do saldo** e garantir que todas leiam `itens.quantidade_atual` direto (fonte da verdade), e não recalculem somando `movimentacoes`:
-   - `src/routes/estoque.index.tsx` (lista)
-   - `src/routes/estoque.$itemId.tsx` (detalhe)
-   - `src/routes/saidas.tsx` (campo "estoque disponível" no form de saída)
-   - `src/routes/entradas.tsx` (mesma checagem)
-   - `src/components/ItemInfoHover.tsx` e `src/components/compras/AlertaEstoqueCard.tsx`
+**Colunas da tabela:** Nome · Código sistema · Saldo sistema · Saldo Egestor · Diferença (com cor: verde = 0, vermelho = ≠ 0) · Status.
 
-2. **Forçar invalidação imediata** após inserir movimentação:
-   - Confirmar que `useEstoqueRealtimeSync` está montado em `__root.tsx` / layout, para que a tela de Estoque receba o `UPDATE` em `itens` em tempo real.
-   - Revisar as `onSuccess` das mutations de entrada/saída para invalidar também `["itens"]`, `["item", id]` e `["dashboard-itens"]` (entrada já invalida; conferir saída e devolução).
-   - Garantir `staleTime: 0` nas queries críticas de saldo (form de saída).
+**Ações:** botão "Exportar divergências (.xlsx)" gerando uma planilha com as linhas filtradas (reaproveitando `xlsx` já presente em `src/lib/import-utils.ts`).
 
-3. **Reconciliar itens com histórico inconsistente** (one-off, opt-in):
-   - Migration de um script `reconciliar_estoque(p_item_id uuid)` que recomputa `quantidade_atual` a partir do agregado de `movimentacoes` + `movimentacao_itens` aplicando as regras da trigger `apply_movement`.
-   - Botão "Recalcular saldo" no detalhe do item (visível só para admin do módulo `estoque`) que chama a função.
-   - **Não** rodar em massa automaticamente — usuário decide por item, para não sobrescrever ajustes manuais.
+**Observações importantes:**
+- A conferência é **apenas leitura** — nenhum saldo é alterado automaticamente. É só comparação.
+- Itens inativos no sistema são marcados, mas não contam como divergência por padrão.
 
-4. **Limpeza** (já aprovada):
-   - Migration removendo a trigger duplicada `trg_itens_updated` em `public.itens` (mantém apenas `trg_itens_set_updated_at`, idêntica).
+**Arquivos:**
+- `src/routes/estoque.index.tsx` — trocar o botão por `DropdownMenu` e adicionar estado `conferindo`.
+- `src/components/estoque/ConferenciaEgestorDialog.tsx` (novo) — todo o diálogo, parser, comparação e exportação.
 
-## Fora do escopo
+---
 
-- Mudar regra de devolução, compras, financeiro, ou qualquer outro módulo.
-- Backfill automático em massa de saldos (histórico ficaria como está, exceto onde o usuário clicar em "Recalcular saldo").
+## 2) Patrimônio → Devoluções → "Responsável recebimento"
 
-## Validação após implementar
+**Problema atual:** `src/components/patrimonio/Devolucoes.tsx` (linha 416) usa um `<Input>` livre, sem ligação com a lista de responsáveis.
 
-- Cadastrar uma entrada nova de teste e conferir que o card do item, o detalhe e o "estoque disponível" no form de saída sobem **sem precisar atualizar a página**.
-- Clicar "Recalcular saldo" no PAPEL HIGIENICO e confirmar que o saldo passa a refletir o histórico (ou continuar 44, caso o usuário confirme que as 6 saídas antigas não devem deduzir).
-- `SELECT * FROM pg_trigger WHERE tgrelid='public.itens'::regclass` mostra apenas uma trigger de `updated_at`.
+**Mudança:** substituir esse `<Input>` por um `ComboboxCreatable` alimentado pela mesma fonte usada no formulário de **Saída** (`src/components/patrimonio/Movimentacoes.tsx`, linhas 474-482):
+
+```ts
+const { data: solicitantes } = useQuery({
+  queryKey: ["solicitantes-select"],
+  queryFn: async () => (await supabase.from("solicitantes")
+    .select("nome").eq("status", "ativo").order("nome")).data ?? [],
+});
+const responsavelOptions = useMemo(
+  () => Array.from(new Set((solicitantes ?? []).map((s) => s.nome).filter(Boolean))),
+  [solicitantes],
+);
+```
+
+Comportamento: igual ao campo "Responsável" da Saída — permite escolher um solicitante existente ou digitar um nome novo (creatable). Placeholder mantido como "Quem recebeu de volta".
+
+**Arquivo:** apenas `src/components/patrimonio/Devolucoes.tsx`.
+
+---
+
+## Fora de escopo
+
+- Não altero saldos a partir da conferência (sem ajustes automáticos).
+- Não mexo em outras telas de importação, no módulo de compras, financeiro ou fluxo de saída de patrimônio.
+- Não crio migrations — nenhuma mudança de banco é necessária.
