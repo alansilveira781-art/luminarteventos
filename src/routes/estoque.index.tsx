@@ -15,6 +15,9 @@ import { Plus, Search, History, Pencil, Upload, Trash2, ArrowUp, ArrowDown, Arro
 import { ItemForm } from "@/components/forms/ItemForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImportDialog } from "@/components/ImportDialog";
+import { ConferenciaEgestorDialog } from "@/components/estoque/ConferenciaEgestorDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronDown, FileCheck2 } from "lucide-react";
 import { normalize } from "@/lib/utils";
 import { ITEM_TEMPLATE } from "@/lib/import-utils";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
