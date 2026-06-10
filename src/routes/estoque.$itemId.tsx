@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { movementKindLabels, entradaTipoLabels, saidaTipoLabels, condicaoLabels } from "@/lib/labels";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/estoque/$itemId")({
   component: ItemHistorico,
