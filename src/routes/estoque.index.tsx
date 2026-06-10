@@ -210,9 +210,22 @@ function EstoquePage() {
             <Button type="button" size="lg" variant="outline" onClick={() => setHideZero((v) => !v)}>
               {hideZero ? <><Eye className="h-4 w-4 mr-1" /> Mostrar zerados</> : <><EyeOff className="h-4 w-4 mr-1" /> Ocultar zerados</>}
             </Button>
-            <Button type="button" size="lg" variant="outline" onClick={() => setImporting(true)}>
-              <Upload className="h-4 w-4 mr-1" /> Nova importação
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="lg" variant="outline">
+                  <Upload className="h-4 w-4 mr-1" /> Nova importação
+                  <ChevronDown className="h-4 w-4 ml-1 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setImporting(true)}>
+                  <Upload className="h-4 w-4 mr-2" /> Importar itens
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setConferindo(true)}>
+                  <FileCheck2 className="h-4 w-4 mr-2" /> Conferir estoque (Egestor)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button type="button" size="lg" onClick={() => setCreating(true)}>
               <Plus className="h-4 w-4 mr-1" /> Novo item
             </Button>
