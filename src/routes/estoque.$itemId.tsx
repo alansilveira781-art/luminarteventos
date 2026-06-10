@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { movementKindLabels, entradaTipoLabels, saidaTipoLabels, condicaoLabels } from "@/lib/labels";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/estoque/$itemId")({
   component: ItemHistorico,
@@ -15,6 +17,9 @@ export const Route = createFileRoute("/estoque/$itemId")({
 
 function ItemHistorico() {
   const { itemId } = Route.useParams();
+  const qc = useQueryClient();
+  const { isModuleAdmin } = useAuth();
+  const isAdmin = isModuleAdmin("estoque");
 
   const { data: item } = useQuery({
     queryKey: ["item", itemId],
@@ -23,6 +28,21 @@ function ItemHistorico() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const reconciliar = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await (supabase as any).rpc("reconciliar_estoque", { p_item_id: itemId });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (novoSaldo) => {
+      qc.invalidateQueries({ queryKey: ["item", itemId] });
+      qc.invalidateQueries({ queryKey: ["item-movs", itemId] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success(`Saldo recalculado: ${Number(novoSaldo)} ${item?.unidade ?? ""}`);
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao recalcular"),
   });
 
   const { data: movs } = useQuery({
@@ -77,7 +97,25 @@ function ItemHistorico() {
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Quantidade atual</CardTitle></CardHeader>
-          <CardContent className="text-3xl font-semibold tabular-nums">{Number(item.quantidade_atual)} {item.unidade}</CardContent>
+          <CardContent className="text-3xl font-semibold tabular-nums flex items-center justify-between gap-2">
+            <span>{Number(item.quantidade_atual)} {item.unidade}</span>
+            {isAdmin && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                title="Recalcular o saldo a partir do histórico de movimentações"
+                onClick={() => {
+                  if (confirm("Recalcular o saldo deste item a partir de todo o histórico de movimentações? O valor atual será substituído.")) {
+                    reconciliar.mutate();
+                  }
+                }}
+                disabled={reconciliar.isPending}
+              >
+                <RefreshCw className={`h-4 w-4 ${reconciliar.isPending ? "animate-spin" : ""}`} />
+              </Button>
+            )}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Mínima</CardTitle></CardHeader>
