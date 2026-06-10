@@ -17,6 +17,9 @@ export const Route = createFileRoute("/estoque/$itemId")({
 
 function ItemHistorico() {
   const { itemId } = Route.useParams();
+  const qc = useQueryClient();
+  const { isModuleAdmin } = useAuth();
+  const isAdmin = isModuleAdmin("estoque");
 
   const { data: item } = useQuery({
     queryKey: ["item", itemId],
@@ -25,6 +28,21 @@ function ItemHistorico() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const reconciliar = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await (supabase as any).rpc("reconciliar_estoque", { p_item_id: itemId });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (novoSaldo) => {
+      qc.invalidateQueries({ queryKey: ["item", itemId] });
+      qc.invalidateQueries({ queryKey: ["item-movs", itemId] });
+      qc.invalidateQueries({ queryKey: ["itens"] });
+      toast.success(`Saldo recalculado: ${Number(novoSaldo)} ${item?.unidade ?? ""}`);
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao recalcular"),
   });
 
   const { data: movs } = useQuery({
